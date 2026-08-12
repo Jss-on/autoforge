@@ -8,19 +8,27 @@
 # runs-root defaults to ./autoresearch (the run-output convention). Answers the
 # questions the repo previously could not: what runs exist, which converged,
 # which carry evidence, did convergence quality move across runs.
-# grep/sed/awk only — no jq.
+# JSON via node's real parser (node = hard CORE dependency already); a handoff
+# that fails to parse is reported as BAD_JSON rather than silently mis-read.
 set -uo pipefail
 
 MODE="${1:-list}"
 ROOT="${2:-autoresearch}"
 
-str_field() { # $1 file, $2 field
-  grep -o "\"$2\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" "$1" 2>/dev/null | head -1 \
-    | sed -E 's/.*:[[:space:]]*"([^"]*)".*/\1/'
-}
-num_field() { # $1 file, $2 field — first numeric occurrence
-  grep -o "\"$2\"[[:space:]]*:[[:space:]]*-\{0,1\}[0-9.]*" "$1" 2>/dev/null | head -1 \
-    | grep -o -- '-\{0,1\}[0-9.]*$'
+parse_handoff() { # $1 file → "source<US>status<US>metric" (US = charCode 31)
+  node -e '
+    const fs = require("fs");
+    const US = String.fromCharCode(31);
+    let j;
+    try { j = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); }
+    catch { console.log(["BAD_JSON", "BAD_JSON", "n/a"].join(US)); process.exit(0); }
+    const s = (v) => (typeof v === "string" && v ? v : "");
+    let m = "n/a";
+    if (j.metric && typeof j.metric === "object" && typeof j.metric.value === "number") m = String(j.metric.value);
+    else if (typeof j.metric === "number") m = String(j.metric);
+    else if (typeof j.value === "number") m = String(j.value);
+    console.log([s(j.source) || "unknown", s(j.status) || "unknown", m].join(US));
+  ' "$1" 2>/dev/null
 }
 
 emit_rows() {
@@ -35,9 +43,8 @@ emit_rows() {
       [[ -f "$h" ]] && { handoff="$h"; break; }
     done
     if [[ -n "$handoff" ]]; then
-      source="$(str_field "$handoff" source)"; source="${source:-unknown}"
-      status="$(str_field "$handoff" status)"; status="${status:-unknown}"
-      metric="$(num_field "$handoff" value)"; metric="${metric:-n/a}"
+      IFS=$'\x1f' read -r source status metric <<< "$(parse_handoff "$handoff")"
+      source="${source:-unknown}"; status="${status:-unknown}"; metric="${metric:-n/a}"
     else
       # No handoff — infer source from the dir-name convention <source>-<stamp>.
       source="$(printf '%s' "$name" | sed -E 's/-[0-9]{6}-[0-9]{4}$//; s/-[0-9]{6}$//')"

@@ -108,6 +108,10 @@ Produce an SRS/PRD with:
   state transition + every decision branch must map to a golden vector**, so the diagrams are the
   completeness checklist for the logic spec.
 - **Constraints**, **assumptions**, **out-of-scope**
+- **Stack & reuse constraints** — name the expected battle-tested packages for the solved problems in
+  scope (validation, auth, money/date math, ORM, uploads) in the spec's `stack:` notes, so `build`
+  adopts them instead of reinventing; hand-rolled code is reserved for the domain rules the `logic`
+  golden vectors pin.
 - **Acceptance criteria** per requirement in **Given/When/Then** form (mechanically verifiable)
 - **Traceability**: every requirement → its acceptance criteria → the build dimension it maps to
 

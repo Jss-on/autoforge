@@ -79,22 +79,30 @@ next-hop() {
     echo "ERROR: missing state file" >&2; return 2
   fi
 
-  # Parse with sed/grep — no jq dependency (score-regression.sh doesn't use jq)
-  local errors regression gaps archetype
-  errors=$(grep -o '"errors_remaining"[[:space:]]*:[[:space:]]*[0-9]*' "$state_file" \
-             | grep -o '[0-9]*$')
-  regression=$(grep -o '"regression_verdict"[[:space:]]*:[[:space:]]*"[^"]*"' "$state_file" \
-                 | grep -o '"[^"]*"$' | tr -d '"')
-  gaps=$(grep -o '"untested_gaps"[[:space:]]*:[[:space:]]*[0-9]*' "$state_file" \
-           | grep -o '[0-9]*$')
-  archetype=$(grep -o '"archetype"[[:space:]]*:[[:space:]]*"[^"]*"' "$state_file" \
-                | grep -o '"[^"]*"$' | tr -d '"')
-
-  # Optional: pending_verify gates an independent acceptance check before DONE/ship.
-  # Absent (or false) → routing is identical to prior behavior.
-  local pending
-  pending=$(grep -o '"pending_verify"[[:space:]]*:[[:space:]]*[a-z]*' "$state_file" \
-              | grep -o '[a-z]*$')
+  # Parse with node's real JSON parser — node is already a hard CORE dependency
+  # (hooks, doctor), so grep/sed pseudo-parsing was hand-rolling around a solved
+  # problem: nested strings, reordered keys, and string-typed numbers all
+  # mis-parsed silently. Invalid JSON is now a hard malformed-state error.
+  # Fields join on unit-separator (charCode 31), NOT tab: tab is IFS-whitespace
+  # and bash read collapses leading whitespace-delimited empty fields, shifting
+  # values into the wrong variables.
+  local parsed
+  if ! parsed=$(node -e '
+      const fs = require("fs");
+      let j;
+      try { j = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); }
+      catch { process.exit(3); }
+      const num = (k) => (typeof j[k] === "number" ? String(j[k]) : "");
+      const str = (k) => (typeof j[k] === "string" ? j[k] : "");
+      const boo = (k) => (typeof j[k] === "boolean" ? String(j[k]) : "");
+      console.log([num("errors_remaining"), str("regression_verdict"),
+                   num("untested_gaps"), str("archetype"),
+                   boo("pending_verify")].join(String.fromCharCode(31)));
+    ' "$state_file" 2>/dev/null); then
+    echo "ERROR: malformed state file" >&2; return 2
+  fi
+  local errors regression gaps archetype pending
+  IFS=$'\x1f' read -r errors regression gaps archetype pending <<< "$parsed"
 
   # Guard: a routable ledger must at least carry its archetype (the same field
   # validate-state requires), so a file that passes validate-state never ERRORs
@@ -145,18 +153,21 @@ units() {
   fi
 
   local ft regressions delta target
-  # metric_delta may legitimately be negative (lower_is_better metric moved the
-  # wrong way, or target overshot) — the capture must include a leading minus or
-  # a negative value silently reads as empty → "unknown" → the loop terminates
-  # BLOCKED instead of reporting a regression.
-  ft=$(grep -o '"failing_tests"[[:space:]]*:[[:space:]]*-\{0,1\}[0-9.]*' "$results_file" \
-         | grep -o -- '-\{0,1\}[0-9.]*$')
-  regressions=$(grep -o '"open_hard_regressions"[[:space:]]*:[[:space:]]*-\{0,1\}[0-9.]*' "$results_file" \
-                  | grep -o -- '-\{0,1\}[0-9.]*$')
-  delta=$(grep -o '"metric_delta"[[:space:]]*:[[:space:]]*-\{0,1\}[0-9.]*' "$results_file" \
-            | grep -o -- '-\{0,1\}[0-9.]*$')
-  target=$(grep -o '"metric_target"[[:space:]]*:[[:space:]]*-\{0,1\}[0-9.]*' "$results_file" \
-             | grep -o -- '-\{0,1\}[0-9.]*$')
+  # node JSON parse (see next-hop for rationale + delimiter note) — numbers
+  # only, negatives handled natively by the real parser.
+  local parsed
+  if ! parsed=$(node -e '
+      const fs = require("fs");
+      let j;
+      try { j = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); }
+      catch { process.exit(3); }
+      const num = (k) => (typeof j[k] === "number" ? String(j[k]) : "");
+      console.log([num("failing_tests"), num("open_hard_regressions"),
+                   num("metric_delta"), num("metric_target")].join(String.fromCharCode(31)));
+    ' "$results_file" 2>/dev/null); then
+    echo "unknown"; return 2
+  fi
+  IFS=$'\x1f' read -r ft regressions delta target <<< "$parsed"
 
   if [[ -z "$ft" || -z "$regressions" || -z "$delta" || -z "$target" ]]; then
     echo "unknown"; return 2
@@ -396,13 +407,19 @@ verdict() {
     echo "BLOCKED"; echo "ship=no"; return 2
   fi
 
-  local units_val plateau_val ceiling_val
-  units_val=$(grep -o '"units"[[:space:]]*:[[:space:]]*[0-9.]*' "$state_file" \
-                | grep -o '[0-9.]*$')
-  plateau_val=$(grep -o '"plateau"[[:space:]]*:[[:space:]]*[a-z]*' "$state_file" \
-                  | grep -o '[a-z]*$')
-  ceiling_val=$(grep -o '"ceiling"[[:space:]]*:[[:space:]]*[a-z]*' "$state_file" \
-                  | grep -o '[a-z]*$')
+  local parsed units_val plateau_val ceiling_val
+  if ! parsed=$(node -e '
+      const fs = require("fs");
+      let j;
+      try { j = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); }
+      catch { process.exit(3); }
+      const num = (k) => (typeof j[k] === "number" ? String(j[k]) : "");
+      const boo = (k) => (typeof j[k] === "boolean" ? String(j[k]) : "");
+      console.log([num("units"), boo("plateau"), boo("ceiling")].join(String.fromCharCode(31)));
+    ' "$state_file" 2>/dev/null); then
+    echo "BLOCKED"; echo "ship=no"; return 2
+  fi
+  IFS=$'\x1f' read -r units_val plateau_val ceiling_val <<< "$parsed"
 
   if [[ -z "$units_val" ]]; then
     echo "BLOCKED"; echo "ship=no"; return 2
@@ -438,35 +455,24 @@ validate-state() {
     echo "invalid"; return 2
   fi
 
-  local f
-  # Required fields must be present.
-  for f in goal archetype predicate terminal_choice cycle; do
-    if ! grep -qE "\"$f\"[[:space:]]*:" "$state_file"; then
-      echo "invalid"; return 2
-    fi
-  done
-
-  # units_remaining and pipeline_log must be present AND be arrays.
-  for f in units_remaining pipeline_log; do
-    if ! grep -qE "\"$f\"[[:space:]]*:[[:space:]]*\[" "$state_file"; then
-      echo "invalid"; return 2
-    fi
-  done
-
-  # predicate must be a non-empty string.
-  if grep -qE '"predicate"[[:space:]]*:[[:space:]]*""' "$state_file"; then
-    echo "invalid"; return 2
+  # Full structural validation in node's real parser: field presence, array
+  # types, non-empty string predicate, non-negative integer cycle — and invalid
+  # JSON itself is invalid (the grep version happily "validated" a truncated
+  # ledger as long as the right substrings survived).
+  if node -e '
+      const fs = require("fs");
+      let j;
+      try { j = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); }
+      catch { process.exit(2); }
+      for (const f of ["goal", "archetype", "predicate", "terminal_choice", "cycle"])
+        if (!(f in j)) process.exit(2);
+      if (!Array.isArray(j.units_remaining) || !Array.isArray(j.pipeline_log)) process.exit(2);
+      if (typeof j.predicate !== "string" || j.predicate === "") process.exit(2);
+      if (typeof j.cycle !== "number" || !Number.isInteger(j.cycle) || j.cycle < 0) process.exit(2);
+    ' "$state_file" 2>/dev/null; then
+    echo "valid"; return 0
   fi
-
-  # cycle must be numeric (a quoted/string cycle is malformed).
-  local cyc
-  cyc=$(grep -o '"cycle"[[:space:]]*:[[:space:]]*[^,}]*' "$state_file" \
-          | sed -E 's/.*:[[:space:]]*//' | tr -d '" ')
-  if ! printf '%s' "$cyc" | grep -qE '^[0-9]+$'; then
-    echo "invalid"; return 2
-  fi
-
-  echo "valid"; return 0
+  echo "invalid"; return 2
 }
 
 # ---------------------------------------------------------------------------
@@ -482,15 +488,21 @@ screen-state-predicate() {
     echo "invalid"; return 2
   fi
 
-  # Extract the predicate value honoring backslash-escaped quotes. A naive "[^"]*"
-  # stops at the first interior \" and would leave the destructive tail of a poisoned
-  # predicate unscreened. Capture runs of (escaped-char | non-quote-non-backslash),
-  # then unescape so the full reconstructed command reaches screen-cmd.
+  # JSON.parse decodes escaped quotes natively — the previous sed reconstruction
+  # existed only because the parser was hand-rolled. A poisoned predicate now
+  # reaches screen-cmd exactly as the JSON encodes it, or the state is invalid.
   local pred
-  pred=$(sed -nE 's/.*"predicate"[[:space:]]*:[[:space:]]*"((\\.|[^"\])*)".*/\1/p' "$state_file" | head -1)
-  pred=$(printf '%s' "$pred" | sed -E 's/\\(.)/\1/g')
-
-  if [[ -z "$pred" ]]; then
+  if ! pred=$(node -e '
+      const fs = require("fs");
+      try {
+        const j = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+        if (typeof j.predicate === "string" && j.predicate.length > 0) {
+          process.stdout.write(j.predicate);
+          process.exit(0);
+        }
+      } catch {}
+      process.exit(2);
+    ' "$state_file" 2>/dev/null); then
     echo "invalid"; return 2
   fi
 

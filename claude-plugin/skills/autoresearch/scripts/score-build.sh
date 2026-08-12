@@ -120,6 +120,8 @@ rubric() {
     "devops|DevOps"
     "monitoring"
     "hardening|harden"
+    # --- efficiency / reuse ---
+    "battle-tested|reuse before build|registry"
     # --- domain logic correctness (Logic-First) ---
     "logic"
     "golden|golden case|golden vector|oracle"

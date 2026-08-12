@@ -50,6 +50,17 @@ mechanical requirements of this pipeline, not optional helpers. Run `bash $AR_RO
 --require-build` once at Phase 0: a missing gstack/docker means the ux/devops dimensions cannot be
 verified, which blocks convergence later — surface that now, not at iteration 30.
 
+## Reuse before build (efficiency principle)
+
+For every already-solved problem — input validation, auth/JWT/TOTP, password hashing, money/decimal
+and date math, ORM + migrations, file upload/storage, rate limiting, logging — **prefer the stack's
+battle-tested package over hand-rolled code** (e.g. zod, jose, otplib, bcrypt, decimal.js, Prisma).
+Check the ecosystem registry (npm/PyPI/crates.io) before writing any utility module. Hand-roll ONLY
+the domain layer the `logic` golden vectors own — tax/payroll/pricing/ledger business rules are the
+product; primitives are not. A hand-rolled implementation of a solved problem is a defect, not
+diligence: it adds untested surface that the hardening dimension must then re-verify from zero.
+Record each major library choice with a one-line rationale in the HLD (Phase 4 deliverable).
+
 ## Parse Arguments
 
 Extract from $ARGUMENTS:

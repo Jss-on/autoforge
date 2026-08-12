@@ -6,10 +6,9 @@
 #
 #   exit 0 VALID · exit 1 INVALID (missing fields on stderr) · exit 2 unreadable
 #
-# grep/sed only (no jq) — same portability rule as orchestrate.sh. Field checks
-# are presence + coarse-type, not full JSON parsing: good enough to catch every
-# drift class observed in real runs (missing results_tsv, absent status, wrong
-# source, converged-without-coverage) without a parser dependency.
+# Parsing uses node's real JSON parser — node is already a hard CORE dependency
+# of the harness (hooks, doctor), so there is no reason to hand-roll field
+# extraction with grep. A file that is not valid JSON is INVALID outright.
 set -uo pipefail
 
 FILE="${1:?usage: validate-handoff.sh <handoff.json> [expected-source]}"
@@ -22,16 +21,40 @@ fi
 ERRORS=0
 err() { echo "$1" >&2; ERRORS=$((ERRORS + 1)); }
 
-str_field() { # $1 field → prints value or empty
-  grep -o "\"$1\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" "$FILE" | head -1 \
-    | sed -E 's/.*:[[:space:]]*"([^"]*)".*/\1/'
-}
-has_field() { grep -qE "\"$1\"[[:space:]]*:" "$FILE"; }
+# One parse, all fields. Joined on unit-separator (charCode 31) — tab is
+# IFS-whitespace and read collapses leading empty fields.
+PARSED="$(node -e '
+  const fs = require("fs");
+  let j;
+  try { j = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); }
+  catch { console.log("__PARSE_ERROR__"); process.exit(0); }
+  const s = (k) => (typeof j[k] === "string" ? j[k] : "");
+  const h = (k) => (k in j ? "1" : "0");
+  console.log([s("version"), s("source"), s("status"), s("timestamp"), s("verdict"),
+               h("results_tsv"), h("metric"), h("config"), h("coverage"),
+               h("spec"), h("srs"), h("generated_spec"), h("errors_remaining")]
+              .join(String.fromCharCode(31)));
+' "$FILE" 2>/dev/null)"
 
-VERSION="$(str_field version)"
-SOURCE="$(str_field source)"
-STATUS="$(str_field status)"
-TS="$(str_field timestamp)"
+if [[ "$PARSED" == "__PARSE_ERROR__" || -z "$PARSED" ]]; then
+  echo "INVALID"; echo "not valid JSON: $FILE" >&2; exit 1
+fi
+IFS=$'\x1f' read -r VERSION SOURCE STATUS TS VERDICT \
+  H_RESULTS H_METRIC H_CONFIG H_COVERAGE H_SPEC H_SRS H_GENSPEC H_ERRREM <<< "$PARSED"
+
+has_field() { # reads the pre-parsed presence flags
+  case "$1" in
+    results_tsv)      [[ "$H_RESULTS"  == "1" ]] ;;
+    metric)           [[ "$H_METRIC"   == "1" ]] ;;
+    config)           [[ "$H_CONFIG"   == "1" ]] ;;
+    coverage)         [[ "$H_COVERAGE" == "1" ]] ;;
+    spec)             [[ "$H_SPEC"     == "1" ]] ;;
+    srs)              [[ "$H_SRS"      == "1" ]] ;;
+    generated_spec)   [[ "$H_GENSPEC"  == "1" ]] ;;
+    errors_remaining) [[ "$H_ERRREM"   == "1" ]] ;;
+    *) return 1 ;;
+  esac
+}
 
 [[ -n "$VERSION" ]] || err "missing: version"
 [[ -n "$SOURCE"  ]] || err "missing: source"
@@ -68,7 +91,7 @@ case "$SOURCE" in
       || err "missing: spec or srs (required for requirements)"
     ;;
   regression)
-    V="$(str_field verdict)"
+    V="$VERDICT"
     case "$V" in
       STABLE|UNSTABLE) ;;
       "") err "missing: verdict (required for regression)" ;;
