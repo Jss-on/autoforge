@@ -50,6 +50,30 @@ mechanical requirements of this pipeline, not optional helpers. Run `bash $AR_RO
 --require-build` once at Phase 0: a missing gstack/docker means the ux/devops dimensions cannot be
 verified, which blocks convergence later — surface that now, not at iteration 30.
 
+## Output repository — every build lives on GitHub (transparency contract)
+
+Every project this command builds gets its **own private GitHub repository** under the
+authenticated `gh` account, created in Phase 0 right after the local `git init`:
+`gh repo create <account>/<slug> --private` (slug = the spec/scope name; `Repo:` argument
+overrides). Then wire `origin` and push. This is non-optional plumbing, not shipping: the full
+GitHub lifecycle — Actions CI, PRs, issues, code review, merge conflicts, releases/pre-releases —
+must be exercisable on the ACTUAL output, so the client/owner can inspect what was built in a
+transparent, standard way. A generated `ci.yml` that never executes on GitHub is theater — the
+devops dimension's CI assertion is only satisfiable by a **workflow run on the output repo**.
+
+Cadence:
+- **Push at every phase gate** (minimum) and at every green milestone — CI runs accumulate as
+  evidence alongside `evidence/`.
+- **Branch + PR for feature-scale slices** once main is green; the PR's CI check is part of the
+  verify step. Small inner-loop experiment commits may push straight to the working branch.
+- **Found-but-deferred defects become GitHub issues** on the output repo (label `autoforge`),
+  not lost notes in the summary.
+- **Releases are `ship`'s job** (human-gated): tag + `gh release create` (`--prerelease` until
+  acceptance is fully converged). `build` never tags releases on its own.
+- Record the repo URL in `handoff.json` (`repo` field) and in the run summary.
+The repo stays **private** and its visibility is never changed by the loop. If `gh` is
+unauthenticated, say so and continue local-only — do not silently skip the contract.
+
 ## Reuse before build (efficiency principle)
 
 For every already-solved problem — input validation, auth/JWT/TOTP, password hashing, money/decimal
@@ -247,7 +271,9 @@ deploy → verify) then a canary check:
 - **Release Notes** (`RELEASE_NOTES.md`) — features, fixes, known issues for stakeholders/users.
 - **User manual** — a user-facing quickstart (in `README.md` or `docs/`): first-run onboarding, the
   primary workflows, settings.
-**Deployment is human-gated** — `build` never deploys, pushes, or publishes on its own.
+**Deployment is human-gated** — `build` never deploys to production, tags releases, or publishes on
+its own (pushing to the private output repo per the "Output repository" contract is standard-loop, not
+deployment).
 
 ## Phase 8 — Operations / Maintenance
 The SDLC is a **cycle** — maintenance feeds back into planning. Build's share is docs + wiring (build
@@ -344,7 +370,9 @@ can re-run the scorer on the stored ledger and check every pass row's evidence f
 "satisfy all PRD + design requirements" mechanical rather than a matter of opinion.
 
 ## Safety Invariants
-- **Never deploy, push, or publish.** Build + local verify only; shipping is human-gated.
+- **Never deploy to production, publish packages, or make a repo public.** Those stay human-gated
+  (`ship`). Pushing to the project's **own private output repo** (created in Phase 0, below) is NOT
+  publishing — it is part of the standard loop and is how the generated CI actually runs.
 - **Build into the declared Scope only** — never mutate the skill repo or unrelated trees.
 - Every derived shell command is safety-screened via `scripts/orchestrate.sh screen-cmd`. DB URLs obey
   the anchored localhost/_test allowlist. No real secrets — throwaway dev creds via env, never committed.
@@ -435,7 +463,8 @@ living — never heavyweight documents for their own sake.
   hypothesis.
 - **Comprehensive ≠ "tests pass".** Phase 6 requires the whole pyramid (unit→integration→e2e→a11y→visual),
   not just unit green. e2e + a11y run against the *running* app via `/browse`.
-- **Deployment is human-gated.** Phase 7 reuses `ship`; `build` never deploys/pushes on its own.
+- **Deployment is human-gated.** Phase 7 reuses `ship`; `build` never deploys to production or cuts
+  releases on its own — pushes to the private output repo are the standard loop, everything beyond is `ship`'s.
 - **Maintenance closes the cycle.** Phase 8 documents operations (runbook) and routes change requests
   to `feature`/`fix`/`improve` with the shipped acceptance baseline as the regression floor —
   maintenance feeds back into planning.

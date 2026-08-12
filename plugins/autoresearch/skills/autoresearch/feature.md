@@ -58,6 +58,13 @@ Per iteration, exactly as `build`:
    are hash-logged to `score-log.tsv`). Seam scripts + references resolve exactly as in `build`'s
    "Seam & reference resolution" section.
 
+## GitHub flow (the output repo is the workbench)
+The app's private output repo (`build` created it; if missing, create it now per `build`'s
+"Output repository" section) is where this feature is visible end-to-end: work on a
+`feat/<slug>` branch, push it, **open a PR** with the delta acceptance rows in the description,
+let the repo's CI run, and merge only after Phase 4's ratchet is STABLE and CI is green. Deferred
+findings become issues on that repo. Record the PR URL in `handoff.json`.
+
 ## Phase 4 — Regression ratchet (HARD gate)
 Every iteration, after the feature verify, run the floor:
 `scripts/score-regression.sh verdict <results.tsv>` (baseline = incumbent greens, candidate = now).
@@ -73,7 +80,9 @@ When the feature's assertions are green and `regression` is `STABLE`:
   baseline). The next feature starts from this higher floor — compounding. Bounded by `Iterations`.
 
 ## Safety Invariants
-- **Never deploy, push, or publish** — local build + verify only; shipping stays human-gated.
+- **Never deploy to production, publish packages, or make a repo public** — that stays human-gated
+  (`ship`). Pushing the feature branch to the app's own private output repo and opening a PR is part
+  of the standard loop (see "GitHub flow" below).
 - **Mutate only the `Target` app** (its declared dir); git is the safety net — every slice is an
   `experiment:` commit, auto-reverted on regression. Never touch the skill repo or unrelated trees.
 - Derived shell commands safety-screened via `scripts/orchestrate.sh screen-cmd`.

@@ -26,7 +26,10 @@ not finished until its handoff validates.
 | `fix` | `results_tsv` or `errors_remaining` (number). |
 
 Everything else (`status_reason`, `findings`, `verified_live_this_run`, `phases_completed`,
-`bound_extension`, …) is optional, additive, and must not be required by any consumer.
+`bound_extension`, `repo` — the project's private GitHub output-repo URL, `pr` — the feature PR
+URL, …) is optional, additive, and must not be required by any consumer. `build`/`feature` SHOULD
+write `repo` (and `feature` the `pr`) so the chain and `run-index` can link straight to the
+transparent output.
 
 ## Validation
 

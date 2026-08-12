@@ -7,7 +7,7 @@ version: 2.3.1
 # Autoresearch — Autonomous Goal-directed Iteration
 
 ## Safety Invariants (all subcommands)
-- Never push, publish, or deploy without explicit user approval.
+- Never deploy to production, publish packages/publicly, or change repo visibility without explicit user approval. `build`/`feature` push to the project's **own private output repo** as part of the standard loop (that is how its CI runs); everything beyond that repo is human-gated.
 - Bounded by default. Override with `Iterations: unlimited`.
 - All results logged to `autoresearch/{subcommand}-{YYMMDD}-{HHMM}/` directory.
 - Chain handoff via `handoff.json`. Evals reads `*-results.tsv`.

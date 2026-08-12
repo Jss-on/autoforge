@@ -87,7 +87,10 @@ If `--dry-run` or always before actual ship:
 
 Execute the ship action:
 - Code PR: create/update PR, request reviewers
-- Release: tag, build, publish
+- Release: tag, build, publish — for AutoForge output repos: `git tag vX.Y.Z` +
+  `gh release create vX.Y.Z --notes-file RELEASE_NOTES.md` on the project's own repo, with
+  `--prerelease` while acceptance is not fully converged; the release is the transparent,
+  addressable artifact of the build
 - Deployment: deploy to target environment
 - Content: publish to CMS/platform
 

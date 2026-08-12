@@ -317,6 +317,12 @@ bash "$REPO_ROOT/scripts/smoke-seam.sh" >/dev/null 2>&1 \
 [[ -f "$REPO_ROOT/.claude/skills/autoresearch/references/handoff-schema.md" ]] \
   && pass "handoff-schema.md reference present" || fail "handoff-schema.md missing"
 
+# Every build must create the project's own private GitHub output repo — the
+# full lifecycle (CI runs, PRs, issues, releases) must be exercisable on the
+# actual output, not just generated as inert files.
+spec_has "gh repo create" "spec: creates the private output repo"
+spec_has "Output repository" "spec: output-repo transparency contract"
+
 # No command file may still pin the frozen 2.1.0 handoff version.
 STALE_PINS=$(grep -rl 'version "2.1.0"' "$REPO_ROOT/.claude/commands/" 2>/dev/null | wc -l | tr -d ' ')
 assert_eq "0" "$STALE_PINS" "no command still pins handoff version 2.1.0"
