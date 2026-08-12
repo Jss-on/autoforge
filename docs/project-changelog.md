@@ -29,6 +29,13 @@ All notable changes to the autoresearch project are documented here.
 - `screen-cmd`: dev-container DB passwords (`POSTGRES_PASSWORD=… docker compose …`) allowed per build.md's own instruction; host allowlist extended to `mysql://`/`mongodb://`/`redis://` URLs.
 - Hook fixes: session-state pruning uses `os.tmpdir()` (was hardcoded `/tmp` — files accumulated forever on Windows); hook runner preserves `SystemRoot`/`APPDATA`/`TEMP`/`CLAUDE_PLUGIN_ROOT` through `env -i`; PreToolUse decisions nested under `hookSpecificOutput` so the `APPROVED:` bypass actually works (and rewrites the correct input key per tool); `stop-notify` uses the http module for http: webhooks.
 
+### P1 hardening (same release)
+- **Handoff contract:** `references/handoff-schema.md` (schema v2.3.1) + `scripts/validate-handoff.sh` — required core (version/source/status-enum/timestamp) + per-source fields; a CONVERGED build without coverage numbers is INVALID; colon-form sources rejected; expected-source mismatch detection. All 16 command handoff pins bumped 2.1.0 → 2.3.1; build/feature/requirements must validate their handoff before finishing.
+- **Run inventory:** `scripts/run-index.sh list|summary` — per-run rows (source, status, metric, results/evidence presence, score-log lines, iterations) + cross-run aggregation. First run against the repo's 34 historical dirs: 0 carried evidence — the pre-v2.3.1 gap, now measurable.
+- **Seam smoke:** `scripts/smoke-seam.sh` — deterministic end-to-end pipeline check (evidence store → strict scoring → demotion of fabricated rows → coverage → bound → score-log → handoff validation → run index) in <1s; runs in CI's main job and in test-build.
+- **Model-drift alarm:** `scripts/smoke-model.sh` — headless `claude -p` micro-build under scoped allowedTools; artifacts then verified from OUTSIDE the model (independent re-run of golden tests, strict scoring, coverage). Guarded (AR_SMOKE_MODEL=1 + manual CI dispatch). Verified live at release: 9/9.
+- Both new runtime scripts ship in all five trees; suites now 503 assertions.
+
 ### CI & release (W-5/W-6)
 - `.github/workflows/ci.yml` runs all six suites on every push/PR.
 - `publish-autoforge.sh` refuses to publish a tree that fails any suite (`AUTOFORGE_SKIP_TESTS=1` escape, logged) and tags the first publish of each version.

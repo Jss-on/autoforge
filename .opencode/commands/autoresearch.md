@@ -22,7 +22,7 @@ Extract from $ARGUMENTS:
 
 ## Setup (if required context missing)
 
-If Goal, Scope, Metric, or Verify missing → use question (single batched call):
+If Goal, Scope, Metric, or Verify missing → use AskUserQuestion (single batched call):
   Q1 (Goal): "What do you want to improve?"
   Q2 (Scope): "Which files?" — suggest globs from project
   Q3 (Metric+Verify): "How to measure? Provide a shell command that outputs a number"
@@ -106,5 +106,5 @@ If --evals present:
 
 ## Chain Handoff
 
-After completion, write handoff.json to output directory: version "2.1.0", source "loop", timestamp, status (COMPLETE|USER_INTERRUPT|BOUNDED|ERROR), results_tsv path, findings[], config{goal, scope, metric, direction, verify}.
+After completion, write handoff.json to output directory: version "2.3.1", source "loop", timestamp, status (COMPLETE|USER_INTERRUPT|BOUNDED|ERROR), results_tsv path, findings[], config{goal, scope, metric, direction, verify}.
 Invoke next target in --chain order. Propagate --evals flag.

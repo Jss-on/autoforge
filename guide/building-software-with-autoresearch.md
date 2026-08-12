@@ -110,8 +110,9 @@ they explain *why* the system behaves the way it does.
 
 The build pipeline adds two software-specific properties on top:
 
-- **Acceptance as a weighted metric** across five dimensions (functional, UI/UX, devops, monitoring,
-  hardening) — so "it works" is never enough on its own.
+- **Acceptance as a weighted metric** across six dimensions (logic, functional, UI/UX, devops,
+  monitoring, hardening) — so "it works" is never enough on its own, and domain math (`logic`) is
+  must-pass: while any business-rule golden case is red, the headline score is hard-capped at 0.50.
 - **The non-regression ratchet** for features — rule 5 (rollback) extended across the *whole*
   existing acceptance set, not just the current change.
 
@@ -151,24 +152,36 @@ design phase borrows `reason`, the debug phase borrows `debug`, the ratchet borr
 
 ### 5.1 The mechanical metric: `fullstack_pass_rate`
 
-A built app is graded by one number in `[0, 1]`, computed by `scripts/score-build.sh pass-rate`
-from a tab-separated results file. It is a weighted average over five **dimensions**:
+A built app is graded by one number in `[0, 1]`, computed by
+`scripts/score-build.sh pass-rate <results.tsv>` from a tab-separated results file (the path is
+explicit — the scorer never goes looking for one; see §12.4). It is a weighted average over six
+**dimensions**:
 
 | Dimension | Weight | What it gates |
 |---|---|---|
+| `logic` | 0.30 | Business-rule golden vectors (exact `input → expected output`); **must-pass** — while any is red the headline is hard-capped at 0.50. |
 | `functional` | 0.30 | The app does what it should (CRUD, endpoints, tests, coverage). |
 | `ux` | 0.20 | Responsive, accessible (WCAG AA / axe), real e2e flow, component states, DESIGN.md conformance. |
 | `devops` | 0.15 | Reproducible build, container, CI, compose/IaC, migrations. |
 | `monitoring` | 0.15 | Health/readiness, metrics, structured logs, tracing. |
 | `hardening` | 0.20 | No secrets, security headers, input validation, rate-limit, authz, dependency scan. |
 
-Two properties make it honest:
+The declared weights sum to 1.30 by design; the score is renormalized over the dimensions that ran,
+so with all six running the effective weights are ≈ 0.231 / 0.231 / 0.154 / 0.115 / 0.115 / 0.154.
+Three properties make it honest:
 
 - **Renormalization over dimensions that ran.** If a spec declares no `monitoring` assertions, the
   remaining weights are renormalized so the score is computed only over what was actually measured.
-  Absent ≠ failing; but a *declared-then-failing* assertion drops that dimension's score.
+  Absent ≠ failing; but a *declared-then-failing* assertion drops that dimension's score. (This is
+  also why adding `logic` never rescored legacy specs: a spec that declares no `logic` rows simply
+  renormalizes over the other five, with the logic gate reported `n/a`.)
 - **`skip` is excluded.** An assertion marked `skip` (genuinely not applicable, or environment-
   blocked) counts in neither numerator nor denominator — and every skip is reported, never hidden.
+- **The logic gate.** `logic` rows pin business rules to golden vectors and are must-pass: while any
+  is red, the headline is capped at `LOGIC_GATE_CAP` (default 0.50). Complex, multi-rule domains —
+  payroll, accounting, POS — otherwise converge on *stub math*: the app boots, screens render,
+  ops and UX polish accumulate, and the numbers are wrong. The cap makes domain correctness a
+  precondition for "done", not a component you can trade against polish.
 
 UI/UX is first-class at weight 0.20: a working-but-ugly or inaccessible app is capped, never "done".
 
@@ -178,6 +191,12 @@ Every acceptance row is verified by *executing* the app: build the image or bund
 endpoints, run the test pyramid, and drive a **real browser** via gstack `/browse` for end-to-end
 flows, accessibility (axe), responsiveness, and DESIGN.md conformance. The agent does not get to
 say "looks good." A row is `pass`, `fail`, or `skip` based on observed behavior.
+
+Since v2.3.1 that is enforced rather than trusted: every verification tees its raw output into the
+run's `evidence/` directory, a row may flip to `pass` only with a `detail` of
+`evidence:<relpath>[#locator]` naming the file that proves it, and convergence is scored with
+`score-build.sh pass-rate --strict-evidence`, which demotes any `pass` row whose evidence file does
+not exist. Every scorer invocation is hash-logged to `score-log.tsv` (§12.4).
 
 ### 5.3 The ratchet (compounding gains)
 
@@ -198,7 +217,9 @@ asserts they match the DESIGN.md tokens; off-system "slop" values fail.
 ### 5.5 Git as memory; bounded by default
 
 Each kept or attempted slice is an `experiment:` commit. The agent reads its own commit history each
-iteration. Loops are bounded (`Iterations: N`) unless you opt out. Your last good state is always in
+iteration. Loops are bounded (`Iterations: N`) unless you opt out — and the bound is enforced
+mechanically at convergence: `score-build.sh bound iterations.tsv <N>` must print `BOUND: OK`, so a
+run that overshot its budget cannot report CONVERGED (§12.4). Your last good state is always in
 git, so `Ctrl+C` is always safe.
 
 ### 5.6 Guard vs Verify vs Regression
@@ -262,19 +283,23 @@ It follows the classical requirements-engineering lifecycle:
    closes gaps. It never guesses on a scope-defining question — it asks.
 2. **Analysis & classification.** Functional requirements vs non-functional requirements (NFRs).
    Each NFR maps to a build dimension (usability/a11y → ux; performance/observability → monitoring;
-   security/compliance → hardening; deployability → devops; behavior → functional). Ambiguities and
+   security/compliance → hardening; deployability → devops; behavior → functional; computed
+   business rules → `logic` golden vectors). Ambiguities and
    conflicts go *back* to you. MoSCoW prioritization (Must / Should / Could / Won't).
 3. **Specification.** An SRS with user stories (INVEST), FR-n, NFR-n, constraints, assumptions,
    out-of-scope, acceptance criteria in Given/When/Then form, and a traceability matrix.
 4. **Validation (sign-off gate).** It plays the full requirements back to you and waits for explicit
    sign-off before generating anything.
 5. **Generate the spec.** Emits `evals/fullstack/<name>.spec.yaml` with `stack`, an optional
-   `design:` block, and an `acceptance:` block across all five dimensions, weighted by MoSCoW
+   `design:` block, and an `acceptance:` block across all six dimensions — golden `logic` vectors
+   for every computed business rule, plus the five operational dimensions — weighted by MoSCoW
    (Must = 2, Should = 1).
 6. **Mechanical validate-until-VALID.** Runs `scripts/score-requirements.sh validate <spec>`. The
-   spec is released to `build` only when it prints `VALIDATION: VALID` (all five dimensions present,
-   weighted). This is the first-principle applied to a single-pass command: a mechanical gate, not
-   opinion, decides "done".
+   spec is released to `build` only when it prints `VALIDATION: VALID`: the five operational
+   dimensions present and weighted, plus — for computational domains, validated with
+   `REQUIRE_LOGIC=1` — a `logic:` block carrying at least one `gate: true` golden row (a declared
+   `logic:` block must carry one either way). This is the first-principle applied to a single-pass
+   command: a mechanical gate, not opinion, decides "done".
 
 ### 7.2 Usage
 
@@ -344,7 +369,7 @@ The standard 8-phase model, each phase exiting with its named deliverable:
 |---|---|---|---|
 | 1. Planning / Initiation | vision, in/out scope, iteration budget, risk register | project charter (`charter.md`) | charter committed |
 | 2. Feasibility | go/no-go spike: toolchain boots, schedule sane, licenses ok | feasibility verdict (in charter) | verdict GO, stack pinned |
-| 3. Requirements Analysis | Spec → enumerated acceptance, seeded as `fail` in `build-results.tsv` | SRS (`requirements.md`) + RTM (`traces`) | `REQ_COVERAGE` 1.00; baseline `pass_rate` = 0.00 |
+| 3. Requirements Analysis | Spec → enumerated acceptance (incl `logic` golden vectors from the rule matrix), seeded as `fail` in `build-results.tsv` | SRS (`requirements.md`) + RTM (`traces`) | `REQ_COVERAGE` 1.00; baseline `pass_rate` = 0.00 |
 | 4. Design | HLD + LLD (domain engine + rule matrix) + DB schema + DESIGN.md + tokens | HLD/LLD + `DESIGN.md` | `DESIGN.md` committed; `DESIGN_COVERAGE` 1.00 |
 | 5. Implementation (TDD) | red→green ladder, lowest-scoring dimension first | source + CI | slices kept by the loop |
 | ‡ Defect loop (debugging) | root-cause loop on failures (no symptom patches), inside 5–6 | defect records (`iterations.tsv`) | failing assertions traced |
@@ -352,20 +377,31 @@ The standard 8-phase model, each phase exiting with its named deliverable:
 | 7. Deployment | release plan + notes + user manual, hand to `ship` (human-gated) | `RELEASE_NOTES.md` + user manual | — |
 | 8. Operations / Maintenance | runbook + change-request path (`feature`/`fix`/`improve`) | `RUNBOOK.md` | verified commands/endpoints; feeds back into planning |
 
+Before Phase 1, the build preflights the environment with `bash scripts/doctor.sh --require-build`
+(the gate scripts, doctor included, ship in `skills/autoresearch/scripts/` — see §18.2). gstack
+(`/browse`) and docker are hard requirements: without them the `ux` and `devops` dimensions cannot
+be *verified*, which blocks convergence — doctor surfaces that at iteration 0, not at iteration 30.
+
 ### 9.2 The iteration loop (the autoresearch core)
 
 Within Phases 5–6, every change goes through the loop:
 
 ```
 1. Read    — git log/diff of recent experiment: commits + build-results.tsv; pick the
-             lowest-scoring dimension that still has red rows.
+             lowest-scoring dimension that still has red rows — but while any logic
+             (golden) row is red, fix it FIRST: only logic lifts the 0.50 cap.
 2. One     — one atomic slice toward that dimension.
 3. Commit  — git commit -m "experiment: <dimension> — <slice>"   (before verify)
-4. Verify  — build, boot, probe, run the test pyramid + /browse e2e/axe; update the touched
-             rows in build-results.tsv; recompute pass_rate.
+4. Verify  — build, boot, probe, run the test pyramid + /browse e2e/axe; tee every raw
+             output into <run-dir>/evidence/; flip a row to pass only with
+             detail = evidence:<relpath>[#locator] naming its proof file; recompute
+             scripts/score-build.sh pass-rate --strict-evidence build-results.tsv
+             (unproven pass rows are demoted; the call is hash-logged to score-log.tsv).
 5. Decide  — keep if pass_rate rose AND guard green; simplicity wins on ties; else git revert.
 6. Log     — append the iteration to iterations.tsv.
-7. Repeat  — until pass_rate >= Target-rate (default 1.00) or Iterations hit.
+7. Repeat  — until strict pass_rate >= Target-rate (default 1.00) with logic_gate PASS,
+             REQ_COVERAGE = DESIGN_COVERAGE = 1.00, and `bound` printing BOUND: OK —
+             or the Iterations budget is hit.
 ```
 
 A **floor-guard** keeps scaffolding commits that compile and add no failures but pass zero
@@ -373,9 +409,12 @@ assertions (so the project can be stood up before any assertion is satisfiable).
 
 ### 9.3 Verification order within a build
 
-Implementation proceeds lowest-scoring dimension first, and functional before ops while functional
-has reds (a `/metrics` endpoint on a broken app is worthless). Typical order: scaffold → functional
-→ devops → monitoring → UX → hardening, but the loop reorders based on observed scores.
+Implementation proceeds lowest-scoring dimension first — except that `logic` is attacked before any
+ops/UX polish while it has red rows (the headline is capped at 0.50 until every golden case is
+green, so only logic lifts the ceiling), and functional before ops while functional has reds (a
+`/metrics` endpoint on a broken app is worthless). Typical order: scaffold → logic (the pure domain
+engine, golden-tested before any shell leans on it) → functional → devops → monitoring → UX →
+hardening, but the loop reorders based on observed scores.
 
 ### 9.4 Independent verify before convergence
 
@@ -421,6 +460,12 @@ Regression: scripts/score-regression.sh verdict <results.tsv>
    any existing assertion green→red  →  git revert HEAD --no-edit   (HARD gate, no exceptions)
 keep iff: new-assertion pass_rate rose  AND  regression STABLE  AND  guard green
 ```
+
+The delta spans the same six dimensions: any new business rule ships its `logic` golden vectors
+first, and the 0.50 logic-gate cap applies to the **union** — a feature with wrong domain math
+cannot converge on polish. Verification carries `build`'s evidence contract too: raw outputs teed
+into `<run-dir>/evidence/`, rows flipped to pass only with an `evidence:` detail, and the union
+scored with `pass-rate --strict-evidence`.
 
 On convergence the new assertions are **ratcheted into** `evals/fullstack/<app>.spec.yaml` — they
 are now permanent baseline, and the next feature starts from the higher floor. Improvements compound.
@@ -476,47 +521,59 @@ Acceptance lives in a tab-separated file, one row per assertion:
 
 ```
 # metric_direction: higher_is_better
-spec	dimension	assertion	weight	status	detail
-todo-api	functional	GET /todos returns 200	1	pass	ok
-todo-api	ux	axe zero serious/critical	2	pass	39 passes
-todo-api	monitoring	/metrics prometheus	1	fail	endpoint missing
-todo-api	devops	forward-only migration	1	skip	needs live postgres
+spec	dimension	assertion	weight	status	detail	traces
+todo-api	logic	golden: 3 of 12 tasks due < now → overdue badge "3"	2	pass	evidence:logic-goldens.txt#overdue	FR-3
+todo-api	functional	GET /todos returns 200	1	pass	evidence:probe-todos.txt	FR-1
+todo-api	ux	axe zero serious/critical	2	pass	evidence:axe-home.txt	NFR-2,design:states
+todo-api	monitoring	/metrics prometheus	1	fail	endpoint missing	NFR-4
+todo-api	devops	forward-only migration	1	skip	needs live postgres	NFR-5
 ```
 
-- `dimension` ∈ `functional | ux | devops | monitoring | hardening`.
+- `dimension` ∈ `logic | functional | ux | devops | monitoring | hardening`.
 - `weight` — per-assertion weight within its dimension (MoSCoW: Must = 2, Should = 1).
 - `status` ∈ `pass | fail | skip`. `skip` = not applicable / environment-blocked; excluded from the
   score and always reported.
+- `detail` — for a `pass` row, must name its proof: `evidence:<relpath>[#locator]`, a file under the
+  run's `evidence/` store. Strict scoring demotes any pass row whose file is missing (§12.4).
+- `traces` (col 7, comma-separated `FR-n` / `NFR-n` / `design:<group>`) — what the row satisfies;
+  read by the coverage gate, which also fails on traces pointing at requirements that do not exist.
 
 ### 12.2 The scoring math
 
-`scripts/score-build.sh pass-rate` computes, for each dimension that ran:
+`scripts/score-build.sh pass-rate build-results.tsv` (the TSV path is required — pass it explicitly
+or set `BUILD_RESULTS`) computes, for each dimension that ran:
 
 ```
 dim_score   = sum(weight of pass) / sum(weight of pass + fail)     # skip excluded
 ```
 
-then a weighted average, renormalized over the dimensions that ran:
+then a weighted average, renormalized over the dimensions that ran, with the logic gate applied last:
 
 ```
 pass_rate   = Σ ( dim_weight[d] * dim_score[d] )  /  Σ dim_weight[d]    for d in dims_that_ran
+if logic ran and dim_score[logic] < 1.00:  pass_rate = min(pass_rate, 0.50)   # LOGIC_GATE_CAP
 ```
 
 Output is one line — `PASS_RATE: 0.NN` — floored to two decimals (so a near-miss never displays as
-a perfect pass). Worked example:
+a perfect pass); the per-dimension breakdown and `logic_gate=PASS|CAPPED@0.50|n/a` go to stderr.
+Worked example, all six dimensions running (declared weights sum 1.30, so each is renormalized by
+÷1.30):
 
-| Dim | weight | dim_score | contribution |
-|---|---|---|---|
-| functional | 0.30 | 1.00 | 0.30 |
-| ux | 0.20 | 1.00 | 0.20 |
-| devops | 0.15 | 1.00 | 0.15 |
-| monitoring | 0.15 | 0.667 (2 of 3 weight green) | 0.10 |
-| hardening | 0.20 | 1.00 | 0.20 |
-| **total** | 1.00 | | **0.95** |
+| Dim | declared weight | effective weight | dim_score | contribution |
+|---|---|---|---|---|
+| logic | 0.30 | ≈ 0.231 | 1.00 | 0.231 |
+| functional | 0.30 | ≈ 0.231 | 1.00 | 0.231 |
+| ux | 0.20 | ≈ 0.154 | 1.00 | 0.154 |
+| devops | 0.15 | ≈ 0.115 | 1.00 | 0.115 |
+| monitoring | 0.15 | ≈ 0.115 | 0.667 (2 of 3 weight green) | 0.077 |
+| hardening | 0.20 | ≈ 0.154 | 1.00 | 0.154 |
+| **total** | 1.30 | 1.00 | | **0.96** |
 
-That 0.95 is a real signal: four dimensions perfect, one (`monitoring`) carrying one failed
+That 0.96 is a real signal: every dimension perfect except `monitoring`, which carries one failed
 assertion. The loop's job is to find the slice that turns that red row green without dropping any
-other dimension.
+other dimension. Had a `logic` golden row been red instead, the headline would print 0.50 no matter
+how much polish accumulated elsewhere — a complex domain cannot converge "done" on stub math, and
+only a fully green `logic` dimension lifts the cap.
 
 ### 12.3 The spec.yaml schema
 
@@ -533,6 +590,7 @@ design:                      # optional; build adopts as DESIGN.md
   source: catalog            # catalog | file | url | generate
   ref: linear                # slug / path / url
 acceptance:
+  logic:      [ { id, assert, weight, gate: true } , ... ]   # business-rule golden vectors: exact input → expected output; must-pass
   functional: [ { id, assert, weight } , ... ]
   ux:         [ { id, assert, weight } , ... ]   # responsive, a11y, e2e, states, design-conformance
   devops:     [ { id, assert, weight } , ... ]   # docker, CI, compose, migrations
@@ -540,8 +598,41 @@ acceptance:
   hardening:  [ { id, assert, weight } , ... ]   # secrets, headers, validation, rate-limit, authz
 ```
 
-All five dimensions must be present for `score-requirements.sh validate` to return VALID. Each
-`assert` is a single mechanical check derived from a Given/When/Then acceptance criterion.
+The five operational dimensions must be present and weighted for `score-requirements.sh validate`
+to return VALID; for computational domains, validate with `REQUIRE_LOGIC=1` so a `logic:` block
+with at least one `gate: true` golden row is also required (a declared `logic:` block must carry
+one either way — a pure-CRUD app may simply omit the block and renormalize over the other five).
+Each `assert` is a single mechanical check derived from a Given/When/Then acceptance criterion.
+
+### 12.4 Evidence, coverage, and the bound (what CONVERGED requires)
+
+v2.3.1 closed the gap between "the loop says it passed" and "a third party can check it".
+Convergence now requires the strict pass-rate at `Target-rate` with `logic_gate=PASS`, plus every
+gate below:
+
+1. **Strict evidence.** Every verification tees its raw output into `<run-dir>/evidence/` —
+   test-runner stdout with exit code, probe responses, `/browse` screenshot paths, axe reports; one
+   file per suite/probe (e.g. `evidence/unit-tests.txt`, `evidence/e2e-checkout.txt`). A row flips
+   to `pass` only with `detail = evidence:<relpath>[#locator]` naming its proof file, and
+   convergence is scored with `score-build.sh pass-rate --strict-evidence`, which demotes any `pass`
+   row whose evidence file does not exist (marking it `EVIDENCE-MISSING`) before scoring. "The model
+   says it passed" stops being scoreable currency.
+2. **A hash-anchored audit trail.** Every scorer invocation (`pass-rate`, `coverage`) appends a line
+   to `<run-dir>/score-log.tsv`: UTC timestamp, subcommand, file, sha256 content hash, headline —
+   so anyone can re-run the scorer on the stored ledger and confirm the number matches.
+3. **No implicit results discovery.** `score-build.sh` requires an explicit TSV path (or
+   `BUILD_RESULTS`); given neither, it prints the honest `PASS_RATE: 0.00` baseline. The old
+   conventional-location fallback could silently score a *different project's* stale ledger as 1.00.
+4. **Coverage.** `score-build.sh coverage build-results.tsv requirements.md` must report
+   `REQ_COVERAGE: 1.00` (every `FR-`/`NFR-` ID traced by ≥1 row) **and** `DESIGN_COVERAGE: 1.00`
+   (every DESIGN.md token group traced by ≥1 `ux` row), with no orphan traces — a green pass-rate
+   can never hide an unbuilt requirement or an invented assertion.
+5. **The bound.** `score-build.sh bound iterations.tsv <N>` must print `BOUND: OK`.
+   `BOUND: EXCEEDED` mechanically blocks a CONVERGED report — the run either stops as BOUNDED, or
+   you grant an explicit extension, recorded (your approval + the new bound) in `handoff.json`.
+
+The final run directory therefore contains `build-results.tsv`, `iterations.tsv`, `evidence/`, and
+`score-log.tsv` — a self-auditing ledger, not a claim.
 
 ---
 
@@ -558,14 +649,18 @@ feature under the ratchet.
 ```
 
 The interview settles (after your answers) on: multi-user with email+password auth, web (responsive),
-Node + Fastify + Postgres + React, a `linear` design reference, production-grade. It emits and
-validates `evals/fullstack/taskflow.spec.yaml`:
+Node + Fastify + Postgres + React, a `linear` design reference, production-grade. TaskFlow computes
+progress roll-ups and due-soon flags, so the spec is validated with `REQUIRE_LOGIC=1` and carries
+gated golden vectors. It emits and validates `evals/fullstack/taskflow.spec.yaml`:
 
 ```yaml
 name: taskflow
 stack: { language: typescript, framework: fastify, datastore: postgres, frontend: react, auth: jwt, test: vitest }
 design: { source: catalog, ref: linear }
 acceptance:
+  logic:
+    - { id: progress-rollup, assert: "golden: 7 done of 9 active tasks -> project progress 77% (floor)", weight: 2, gate: true }
+    - { id: due-soon,        assert: "golden: due 2026-03-02T09:00+08:00, now 2026-03-01T18:00Z -> flagged due-soon", weight: 2, gate: true }
   functional:
     - { id: auth,         assert: "signup+login returns JWT; protected routes require it", weight: 2 }
     - { id: projects-crud,assert: "create/list/delete projects scoped to the user's team", weight: 2 }
@@ -605,20 +700,30 @@ Iteration 0 seeds every row as `fail` → `pass_rate = 0.00`. The loop then clim
 iter  commit    dimension    slice                              pass_rate  delta  guard  status
 0     a1b2c3d   -            baseline (all fail)                0.00       0.00   -      keep
 1     b2c3d4e   functional   scaffold + fastify app + vitest    0.00       0.00   pass   keep(scaffold)
-4     e5f6a7b   functional   auth + JWT + per-team isolation    0.18       +0.06  pass   keep
-9     1a2b3c4   functional   projects + tasks CRUD              0.30       +0.09  pass   keep
-12    4d5e6f7   monitoring   /healthz /readyz /metrics + logs   0.45       +0.15  pass   keep
-16    7a8b9c0   devops       Dockerfile + compose + migrations  0.60       +0.15  pass   keep
-19    0d1e2f3   ux           design system from DESIGN.md       0.68       +0.08  pass   keep
-21    3a4b5c6   ux           a11y fixes (labels, contrast)      0.72       -      pass   discard  (axe still 2)
-22    6d7e8f9   ux           a11y fixes round 2 (aria, focus)   0.80       +0.12  pass   keep
-27    9a0b1c2   hardening    authz + validation + rate-limit    0.94       +0.14  pass   keep
-31    2d3e4f5   ux           e2e flow + design-conformance      1.00       +0.06  pass   keep
+2     c3d4e5f   logic        pure engine: progress + due-soon   0.23       +0.23  pass   keep
+4     e5f6a7b   functional   auth + JWT + per-team isolation    0.29       +0.06  pass   keep
+9     1a2b3c4   functional   projects + tasks CRUD; suite green 0.46       +0.17  pass   keep
+12    4d5e6f7   monitoring   /healthz /readyz /metrics + logs   0.57       +0.11  pass   keep
+16    7a8b9c0   devops       Dockerfile + compose + migrations  0.69       +0.12  pass   keep
+19    0d1e2f3   ux           design system from DESIGN.md       0.71       +0.02  pass   keep
+21    3a4b5c6   ux           a11y fixes (labels, contrast)      0.71       -      pass   discard  (axe still 2)
+22    6d7e8f9   ux           a11y fixes round 2 (aria, focus)   0.76       +0.05  pass   keep
+27    9a0b1c2   hardening    authz + validation + rate-limit    0.92       +0.16  pass   keep
+31    2d3e4f5   ux           e2e flow + design-conformance      1.00       +0.08  pass   keep
 ```
 
-At iteration 31 the cold-boot independent verify passes and the run converges at `pass_rate = 1.00`.
-Note iteration 21: an accessibility slice did not move the metric (axe still flagged two issues), so
-it was reverted — the incumbent never got worse — and iteration 22 found the slice that worked.
+Iteration 2 is logic-first discipline: the pure domain engine (progress roll-up, due-soon window)
+goes golden-green before any shell leans on it — until both golden rows passed, the headline was
+hard-capped at 0.50, so no amount of ux/devops polish could have reached the target. Every flip to
+`pass` cites its proof (e.g. `detail = evidence:logic-goldens.txt#progress`), and each re-score
+appends a hashed line to `score-log.tsv`.
+
+At iteration 31 the cold-boot independent verify passes under `pass-rate --strict-evidence`,
+coverage reports `REQ_COVERAGE: 1.00` / `DESIGN_COVERAGE: 1.00`, and
+`score-build.sh bound iterations.tsv 40` prints `BOUND: OK used=31 max=40` — the run converges at
+`pass_rate = 1.00`. Note iteration 21: an accessibility slice did not move the metric (axe still
+flagged two issues), so it was reverted — the incumbent never got worse — and iteration 22 found
+the slice that worked.
 
 The app now lives in `build-output/taskflow/`, with a real Dockerfile, CI, migrations, `/healthz`,
 `/metrics`, axe-clean accessible UI conforming to the Linear-style DESIGN.md, and authz tested by a
@@ -678,8 +783,9 @@ evals/fullstack/
   taskflow-notifications.spec.yaml
 ```
 
-Each has its own five-dimension acceptance and its own `DESIGN.md` reference (share one DESIGN.md
-across front-ends for consistency).
+Each has its own six-dimension acceptance — with `logic` golden vectors wherever the service owns
+business rules — and its own `DESIGN.md` reference (share one DESIGN.md across front-ends for
+consistency).
 
 ### 14.2 Sequence by dependency
 
@@ -723,12 +829,17 @@ For a fuzzy, system-level goal, hand it to the bare orchestrator and let it clas
   assumption baked into a build.
 - Push Won't-haves to out-of-scope explicitly — it keeps the spec (and the build) bounded.
 - Prefer measurable NFRs ("p95 < 200ms", "WCAG 2.1 AA", "0 high CVEs") over vibes.
+- Pin every computed business rule to `logic` golden vectors (exact `input → expected output`)
+  during the interview — the logic gate is only as sharp as its rule matrix.
 
 **Design**
 - Pick a DESIGN.md early; consistency is far cheaper to start with than to retrofit.
 - Reuse one DESIGN.md across all front-ends of a system.
 
 **Build**
+- Preflight with `bash scripts/doctor.sh --require-build` before the first build on a machine —
+  gstack and docker are required to verify the `ux`/`devops` dimensions, and a missing tool blocks
+  convergence; find out before iteration 1, not iteration 30.
 - Start with a generous `Iterations:` for the first build (40+); features need fewer (20–25).
 - Keep specs honest: if you cannot run a dimension in your environment (no Docker daemon, etc.),
   expect `skip` rows — and run the build on a host that can clear them before you call it shipped.
@@ -754,7 +865,11 @@ Real builds hit real walls. The pipeline is built to surface them honestly rathe
 | Symptom | Cause | What the pipeline does / what to do |
 |---|---|---|
 | `pass_rate` stuck below 1.00 | a dimension has a genuine red | read the failing rows in `build-results.tsv`; the loop targets the lowest dimension. Run `/autoresearch:evals`. |
-| `skip` rows for docker/compose/migrations | Docker daemon not running | env limit, not a defect. Run on a host with Docker; specs validate, image just isn't built. |
+| `pass_rate` pinned at exactly 0.50 | a `logic` golden row is still red — the logic gate cap | fix the domain engine first; only a fully green `logic` dimension lifts the cap. |
+| a green row demoted `EVIDENCE-MISSING` | strict scoring found no `evidence:` file behind a `pass` row | re-run the verification, tee its output into `<run-dir>/evidence/`, set `detail = evidence:<relpath>`. |
+| `PASS_RATE: 0.00` + `reason=no-results-tsv` | scorer called without an explicit TSV path | pass the path (or set `BUILD_RESULTS`) — the scorer never discovers results implicitly. |
+| `BOUND: EXCEEDED` at convergence | more iterations used than the declared bound | the run may not report CONVERGED — stop as BOUNDED, or record a user-approved extension in `handoff.json`. |
+| `skip` rows for docker/compose/migrations | Docker daemon not running | env limit, not a defect — `bash scripts/doctor.sh --require-build` catches it at Phase 0. Run on a host with Docker; specs validate, image just isn't built. |
 | `skip` for SIGTERM/graceful shutdown | OS can't deliver the signal (e.g. Windows) | code is correct; verify on Linux/CI. |
 | a11y dimension won't go green | chart/canvas/SVG widgets without names | mark decorative subtrees `inert` + provide a text/table alternative; re-run axe via `/browse`. |
 | tests crash only in jsdom | a component needs real browser layout (e.g. charts) | mock the heavy lib in unit tests; verify the real thing in the `/browse` e2e phase. |
@@ -799,22 +914,43 @@ The pipeline is autonomous but fenced:
 |---|---|---|
 | `evals/fullstack/<name>.spec.yaml` | requirements | the acceptance contract (and the ratchet's growing record) |
 | `build-results.tsv` | build / feature | per-assertion pass/fail/skip; reduced to `pass_rate` |
-| `iterations.tsv` | build / feature | one row per iteration: change, pass_rate, delta, guard, keep/discard |
-| `handoff.json` | every command | chain bridge: version, source, status, metric, config, findings |
+| `iterations.tsv` | build / feature | one row per iteration: change, pass_rate, delta, guard, keep/discard — the ledger `bound` checks |
+| `<run-dir>/evidence/` | build / feature | raw verification outputs; every `pass` row's `evidence:` detail names its proof file here |
+| `<run-dir>/score-log.tsv` | score-build.sh | hash-anchored audit trail: one line (UTC time, subcommand, file, sha256, headline) per scorer invocation |
+| `handoff.json` | every command | chain bridge: version "2.3.1", source, status, metric, coverage, config, findings (and any approved `bound_extension`) |
 | `autoresearch/<cmd>-<YYMMDD>-<HHMM>/` | every command | the run's log directory |
 | `DESIGN.md` | build / feature | committed design source in the built app |
 | `regression/<date>-<slug>/` | regression | stability report + per-dimension detail |
 
-### 18.2 Scorer contracts
+### 18.2 Scorer contracts and where the scripts live
 
-- `scripts/score-build.sh pass-rate <results.tsv>` → `PASS_RATE: 0.NN` (stdout, one line).
+The mechanical gates ship inside `skills/autoresearch/scripts/` wherever the skill is installed.
+Commands resolve them in order: `${CLAUDE_PLUGIN_ROOT}/skills/autoresearch` (installed plugin) →
+`.claude/skills/autoresearch` (project-local) → in this repo, plain `scripts/`. Preflight the
+environment once with `bash scripts/doctor.sh --require-build` — gstack (`/browse`) and docker are
+required to verify the `ux`/`devops` dimensions.
+
+- `scripts/score-build.sh pass-rate [--strict-evidence] <results.tsv>` → `PASS_RATE: 0.NN` (stdout,
+  one line; per-dimension breakdown + `logic_gate=PASS|CAPPED@0.50|n/a` on stderr). The TSV path is
+  required (or `BUILD_RESULTS`) — there is no implicit discovery. `--strict-evidence` demotes
+  unproven `pass` rows; every invocation is hash-logged to `score-log.tsv`.
+- `scripts/score-build.sh coverage <results.tsv> <requirements.md>` → `REQ_COVERAGE: N.NN` +
+  `DESIGN_COVERAGE: N.NN`; exit 0 only when both are 1.00 with no orphan traces.
+- `scripts/score-build.sh bound <iterations.tsv> <max>` → `BOUND: OK|EXCEEDED|UNKNOWN`; `OK` is
+  required to report CONVERGED.
 - `scripts/score-build.sh rubric <build.md>` → `SCORE: N` (spec-quality grep rubric).
-- `scripts/score-requirements.sh validate <spec.yaml>` → `VALIDATION: VALID|INVALID|ERROR` + dims.
+- `scripts/score-requirements.sh validate <spec.yaml>` → `VALIDATION: VALID|INVALID|ERROR` + dims
+  (`REQUIRE_LOGIC=1` makes a gated `logic:` block mandatory for computational domains).
 - `scripts/score-regression.sh verdict <results.tsv>` → `VERDICT: STABLE|UNSTABLE` + score, exit code.
+- `bash scripts/doctor.sh [--require-build]` → CORE / BUILD / OPTIONAL tool report;
+  `--require-build` fails when gstack or docker is missing.
 
 ### 18.3 Command cheat-sheet
 
 ```
+# Preflight (once per machine)
+bash scripts/doctor.sh --require-build      # gstack + docker required to verify ux/devops
+
 # Idea → spec
 /autoresearch:requirements Brief: "<what you want>" [--chain build]
 
@@ -834,6 +970,11 @@ The pipeline is autonomous but fenced:
 
 # Inspect
 /autoresearch:evals [--file <results.tsv>]
+
+# Score a ledger by hand (explicit TSV path — no implicit discovery)
+bash scripts/score-build.sh pass-rate --strict-evidence <run-dir>/build-results.tsv
+bash scripts/score-build.sh coverage <run-dir>/build-results.tsv requirements.md
+bash scripts/score-build.sh bound <run-dir>/iterations.tsv 40
 ```
 
 ### 18.4 Universal flags
@@ -854,13 +995,26 @@ Both. `build Goal: "..."` derives a spec on the fly; `requirements` produces a v
 spec — preferred for anything you intend to ship or grow.
 
 **Q: What if my environment can't run part of the acceptance (no Docker, etc.)?**
-Those rows become `skip` (excluded from the score, always reported). Run on a host that can clear
-them before you treat the build as shippable. The pipeline never fakes a pass.
+Run `bash scripts/doctor.sh --require-build` first — it fails fast when gstack or docker is missing,
+since those verify the `ux`/`devops` dimensions. Rows you genuinely cannot run become `skip`
+(excluded from the score, always reported). Run on a host that can clear them before you treat the
+build as shippable. The pipeline never fakes a pass.
 
 **Q: How is UI/UX actually graded, not just claimed?**
 A committed DESIGN.md defines the tokens; `/browse` reads the live computed styles and asserts they
 match (conformance), runs axe for accessibility, checks responsiveness, and drives the real user
 flow. All mechanical.
+
+**Q: What stops the agent from just claiming a row passed?**
+The evidence contract. A `pass` row must cite its proof — `detail = evidence:<relpath>[#locator]`,
+pointing at a real file of raw verification output in the run's `evidence/` store — and convergence
+is scored with `pass-rate --strict-evidence`, which demotes any unproven pass. Every scorer run is
+hash-logged to `score-log.tsv`, so the final ledger can be re-audited by a third party.
+
+**Q: Why is my build stuck at exactly 0.50?**
+A `logic` golden row is red. Business-rule vectors are must-pass and cap the headline at 0.50
+(`LOGIC_GATE_CAP`) until every one is green — a complex domain cannot converge on stub math. Fix
+the domain engine; the cap lifts on its own.
 
 **Q: Will adding a feature break my app?**
 Not silently. The hard non-regression ratchet auto-reverts any slice that turns an existing green
@@ -877,10 +1031,14 @@ features, gate at the system boundary with regression.
 
 ## 20. Glossary
 
-- **Acceptance dimension** — one of `functional | ux | devops | monitoring | hardening`; each has a
-  weight and a set of assertions.
+- **Acceptance dimension** — one of `logic | functional | ux | devops | monitoring | hardening`;
+  each has a weight and a set of assertions.
+- **Golden vector (golden case)** — a business rule pinned to an exact `input → expected output`;
+  the unit of the `logic` dimension.
+- **Logic gate** — the must-pass rule for `logic` rows: while any is red, the headline pass-rate is
+  capped at 0.50 (`LOGIC_GATE_CAP`).
 - **`fullstack_pass_rate`** — the single mechanical metric in `[0,1]`; weighted average of dimension
-  scores, renormalized over dimensions that ran.
+  scores, renormalized over dimensions that ran, hard-capped at 0.50 while any `logic` row is red.
 - **Incumbent** — the current best state (for greenfield, the last kept commit; for a feature, the
   whole working app + its passing acceptance).
 - **Delta** — the new assertions a feature appends to the spec.
@@ -893,6 +1051,13 @@ features, gate at the system boundary with regression.
   and flakes are excluded.
 - **Skip** — an assertion not applicable / not runnable in this environment; excluded from the score
   and always reported.
+- **Evidence store** — `<run-dir>/evidence/`, the raw verification outputs; a `pass` row must cite
+  one via `evidence:<relpath>[#locator]`, and `--strict-evidence` demotes rows that cannot.
+- **`score-log.tsv`** — the hash-anchored scorer audit trail: one line (timestamp, subcommand, file,
+  sha256, headline) per invocation.
+- **Bound** — the mechanical iteration-budget check (`score-build.sh bound iterations.tsv <N>`);
+  `BOUND: OK` is required for CONVERGED, and exceeding it needs a user-approved extension recorded
+  in the handoff.
 - **handoff.json** — the structured bridge file that chains one command's output into the next.
 
 ---

@@ -261,12 +261,65 @@ bash "$REPO_ROOT/scripts/doctor.sh" --help >/dev/null 2>&1 && pass "doctor.sh --
 for tree in .claude claude-plugin .opencode .agents plugins/autoresearch; do
   sdir="$REPO_ROOT/$tree/skills/autoresearch/scripts"
   ok=1
-  for s in score-build.sh score-requirements.sh score-regression.sh orchestrate.sh doctor.sh; do
+  for s in score-build.sh score-requirements.sh score-regression.sh orchestrate.sh doctor.sh validate-handoff.sh run-index.sh; do
     [[ -f "$sdir/$s" ]] || ok=0
   done
   [[ "$ok" -eq 1 ]] && pass "enforcement shipped: $tree/skills/autoresearch/scripts" \
                     || fail "enforcement shipped: $tree missing seam scripts"
 done
+
+# ============================================================================
+printf '\n--- v2.3.1 P1: handoff contract, run index, seam smoke ---\n'
+# ============================================================================
+
+VH="$REPO_ROOT/scripts/validate-handoff.sh"
+_ht="$(mktemp -d)"
+cat > "$_ht/handoff.json" <<'EOF'
+{"version":"2.3.1","source":"build","timestamp":"2026-01-01T00:00:00+00:00","status":"CONVERGED",
+ "results_tsv":"x.tsv","metric":{"name":"fullstack_pass_rate","value":1.0},
+ "coverage":{"requirements":1.0},"config":{"spec":"x"}}
+EOF
+VH_OUT=$(bash "$VH" "$_ht/handoff.json" build); VH_CODE=$?
+assert_eq "VALID" "$VH_OUT" "validate-handoff: canonical build handoff VALID"
+assert_eq 0 "$VH_CODE" "validate-handoff: VALID → exit 0"
+
+printf '{"version":"2.3.1","source":"build","timestamp":"t","status":"CONVERGED","results_tsv":"x","metric":"m","config":{}}' > "$_ht/noconv.json"
+VH2=0; bash "$VH" "$_ht/noconv.json" >/dev/null 2>&1 || VH2=$?
+assert_eq 1 "$VH2" "validate-handoff: CONVERGED without coverage → INVALID"
+
+printf '{"version":"2.3.1","source":"autoresearch:build","timestamp":"t","status":"COMPLETE","results_tsv":"x","metric":"m","config":{}}' > "$_ht/colon.json"
+VH3=0; bash "$VH" "$_ht/colon.json" >/dev/null 2>&1 || VH3=$?
+assert_eq 1 "$VH3" "validate-handoff: colon-form source → INVALID"
+
+VH4=0; bash "$VH" "$_ht/handoff.json" feature >/dev/null 2>&1 || VH4=$?
+assert_eq 1 "$VH4" "validate-handoff: expected-source mismatch → INVALID"
+
+VH5=0; bash "$VH" "$_ht/does-not-exist.json" >/dev/null 2>&1 || VH5=$?
+assert_eq 2 "$VH5" "validate-handoff: missing file → exit 2"
+
+# run-index: one fixture run dir → correct row + summary counts.
+mkdir -p "$_ht/runs/build-000101-0000/evidence"
+cp "$_ht/handoff.json" "$_ht/runs/build-000101-0000/handoff.json"
+printf 'x\n' > "$_ht/runs/build-000101-0000/evidence/e.txt"
+printf 'spec\tdim\ta\t1\tpass\td\tt\n' > "$_ht/runs/build-000101-0000/build-results.tsv"
+RI_ROW=$(bash "$REPO_ROOT/scripts/run-index.sh" list "$_ht/runs" | awk -F'\t' 'NR==2 {print $2"/"$3"/"$5"/"$6}')
+assert_eq "build/CONVERGED/yes/yes" "$RI_ROW" "run-index: source/status/results/evidence row"
+RI_SUM=$(bash "$REPO_ROOT/scripts/run-index.sh" summary "$_ht/runs" | grep -c 'runs_total	1')
+assert_eq "1" "$RI_SUM" "run-index: summary counts one run"
+rm -rf "$_ht"
+
+# The deterministic seam smoke must pass end-to-end (spec → evidence → strict
+# score → coverage → bound → score-log → handoff → index).
+bash "$REPO_ROOT/scripts/smoke-seam.sh" >/dev/null 2>&1 \
+  && pass "smoke-seam: full pipeline OK" || fail "smoke-seam: pipeline broken"
+
+# The schema reference ships with the skill.
+[[ -f "$REPO_ROOT/.claude/skills/autoresearch/references/handoff-schema.md" ]] \
+  && pass "handoff-schema.md reference present" || fail "handoff-schema.md missing"
+
+# No command file may still pin the frozen 2.1.0 handoff version.
+STALE_PINS=$(grep -rl 'version "2.1.0"' "$REPO_ROOT/.claude/commands/" 2>/dev/null | wc -l | tr -d ' ')
+assert_eq "0" "$STALE_PINS" "no command still pins handoff version 2.1.0"
 
 # Commands must tell the model how to find the seam + references off this machine.
 grep -q "CLAUDE_PLUGIN_ROOT" "$SPEC" && pass "build.md carries path-resolution for installed plugins" \

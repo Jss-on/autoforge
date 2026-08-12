@@ -24,3 +24,24 @@ jobs:
             bash "$t" || fail=1
           done
           exit $fail
+      - name: Seam smoke (deterministic end-to-end pipeline)
+        run: bash scripts/smoke-seam.sh
+
+  # The model-drift alarm. Costs real tokens, needs CLAUDE_CODE_OAUTH_TOKEN or
+  # ANTHROPIC_API_KEY as a repo secret — manual dispatch only.
+  model-smoke:
+    name: Model smoke (drift alarm)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install claude CLI
+        run: npm install -g @anthropic-ai/claude-code
+      - name: Run headless micro-build
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AR_SMOKE_MODEL: "1"
+        run: bash scripts/smoke-model.sh

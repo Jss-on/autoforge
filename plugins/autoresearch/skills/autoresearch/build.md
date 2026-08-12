@@ -353,10 +353,13 @@ interval, print pass-rate trend + per-dimension breakdown (F/ux/D/M/H). Plateau 
 recommend a spec/stack/design rethink. At loop end → `evals-summary.md` in the output directory.
 
 ## Chain Handoff
-Write handoff.json: version "2.1.0", source "build", timestamp, status
+Write handoff.json: version "2.3.1", source "build", timestamp, status
 (COMPLETE|BOUNDED|CONVERGED|BLOCKED|USER_INTERRUPT|ERROR), results_tsv, metric (fullstack_pass_rate),
 coverage{requirements, design}, phases_completed, findings = remaining red assertions + untraced
 requirements/tokens, config{spec, scope, stack, target_rate}.
+The handoff shape is the chain contract — `references/handoff-schema.md`. After writing it, run
+`scripts/validate-handoff.sh <run-dir>/handoff.json build`; on `INVALID`, fix the handoff before
+printing the summary — a run with an invalid handoff is NOT finished.
 Invoke next target in --chain order (commonly `regression` then `ship`). Propagate --evals.
 
 ---
