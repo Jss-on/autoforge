@@ -1,0 +1,21 @@
+{
+  "name": "autoresearch",
+  "description": "Autonomous improvement engine. 17 commands: iterate, plan, debug, fix, security, ship, scenario, predict, learn, reason, probe, improve, evals, regression, build, requirements, feature.",
+  "version": "2.3.1",
+  "author": {
+    "name": "Jss-on",
+    "url": "https://github.com/Jss-on"
+  },
+  "repository": "https://github.com/Jss-on/autoforge",
+  "license": "Proprietary",
+  "homepage": "https://github.com/Jss-on/autoforge",
+  "keywords": [
+    "autonomous",
+    "iteration",
+    "optimization",
+    "debugging",
+    "security-audit",
+    "shipping",
+    "evals"
+  ]
+}

@@ -1,0 +1,56 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+
+# Claude Code local state
+.claude/agents/
+.claude/hooks/*
+!.claude/hooks/autoresearch/
+.claude/metadata.json
+.claude/rules/
+.claude/skills/*
+!.claude/skills/autoresearch/
+
+# Debug/temp files
+autoresearch-debug-fix-results.tsv
+*.log
+*.bak
+
+# Local session/output state (not for distribution)
+.claude/session-state/
+Users/
+plans/
+debug/
+learn/
+scenario/
+# Run-output dirs at the repo root (autoresearch/<cmd>-<timestamp>/) are client
+# work products, never harness source. Root-anchored: a bare `autoresearch/`
+# would also ignore every */skills/autoresearch/ mirror tree.
+/autoresearch/
+# Client design artifacts + Windows redirect residue
+/DESIGN.md
+/DESIGN1.md
+/plugins/DESIGN.md
+/nul
+# Client working data at the repo root — never product source
+/data/
+/research/
+/live-demo/
+/*.jpg
+/*.zip
+/*.pdf
+
+# Node
+node_modules/
+
+# Environment
+.env
+.env.*
+!.env.example
+.gstack/
+
+build-output

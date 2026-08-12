@@ -1,0 +1,7 @@
+# metric_direction: higher_is_better
+spec	dimension	assertion	weight	status	detail	traces
+x	logic	golden-sss	2	pass	ok	FR-1
+x	logic	golden-tax	2	fail	wrong	FR-2
+x	functional	crud	1	pass	ok	FR-3
+x	ux	a11y	1	pass	ok	FR-4
+x	devops	docker	1	pass	ok	FR-5

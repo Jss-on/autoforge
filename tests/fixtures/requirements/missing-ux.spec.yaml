@@ -1,0 +1,20 @@
+name: no-ux-app
+stack:
+  language: typescript
+acceptance:
+  functional:
+    - id: boots
+      assert: app boots
+      weight: 1
+  devops:
+    - id: dockerfile
+      assert: multistage dockerfile
+      weight: 1
+  monitoring:
+    - id: healthz
+      assert: GET /healthz 200
+      weight: 1
+  hardening:
+    - id: headers
+      assert: security headers
+      weight: 1

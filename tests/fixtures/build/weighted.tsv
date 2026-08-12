@@ -1,0 +1,5 @@
+# metric_direction: higher_is_better
+# weight column honored: 3-weight pass + 1-weight fail → 3/4 = 0.75 (not 0.50 unweighted)
+spec	dimension	assertion	weight	status	detail
+todo-api	functional	app boots	3	pass	critical path ok
+todo-api	functional	GET /todos 200	1	fail	minor

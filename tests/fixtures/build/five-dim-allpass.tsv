@@ -1,0 +1,11 @@
+# metric_direction: higher_is_better
+# all 5 dimensions present incl ux, all pass → 1.00
+spec	dimension	assertion	weight	status	detail
+todo-api	functional	app boots	1	pass	ok
+todo-api	functional	GET /todos 200	1	pass	ok
+todo-api	ux	responsive layout	1	pass	mobile+desktop
+todo-api	ux	a11y axe clean	1	pass	wcag aa
+todo-api	ux	e2e add+complete flow	1	pass	/browse green
+todo-api	devops	dockerfile multistage	1	pass	non-root
+todo-api	monitoring	/metrics 200	1	pass	prom
+todo-api	hardening	security headers	1	pass	helmet

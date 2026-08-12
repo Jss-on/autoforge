@@ -1,0 +1,98 @@
+# autoresearch:build eval spec — declares what to build + per-dimension acceptance.
+name: url-shortener
+summary: Link shortener with redirect, persistence, cache, and per-token rate limits.
+stack:
+  language: python
+  runtime: python3.12
+  framework: fastapi
+  datastore: postgres
+  cache: redis
+  test: pytest
+design:
+  source: catalog        # catalog | file | url | generate
+  ref: stripe            # build adopts this as the project's DESIGN.md (else generates)
+
+acceptance:
+  functional:
+    - id: builds
+      assert: docker build succeeds from clean checkout
+      weight: 1
+    - id: boots
+      assert: container starts and binds :8000
+      weight: 1
+    - id: shorten
+      assert: POST /shorten returns a short code
+      weight: 1
+    - id: redirect
+      assert: GET /{code} 302-redirects to the original URL
+      weight: 2
+    - id: persist
+      assert: code resolves after restart (postgres-backed)
+      weight: 1
+    - id: tests-green
+      assert: pytest suite passes, coverage >= 80
+      weight: 1
+  ux:
+    - id: responsive
+      assert: form + result layout works at 375px / 768px / 1280px
+      weight: 1
+    - id: a11y
+      assert: axe scan via /browse reports zero serious/critical violations
+      weight: 2
+    - id: e2e-flow
+      assert: /browse drives paste URL -> shorten -> copy code -> follow redirect
+      weight: 2
+    - id: states
+      assert: loading / empty / error (invalid URL) states render
+      weight: 1
+    - id: design-system
+      assert: consistent type scale + spacing; text contrast >= WCAG AA
+      weight: 1
+    - id: design-conformance
+      assert: live computed styles match DESIGN.md tokens (palette, type, spacing); no off-system slop
+      weight: 1
+  devops:
+    - id: dockerfile
+      assert: multi-stage Dockerfile, non-root user, HEALTHCHECK present
+      weight: 1
+    - id: ci
+      assert: CI runs ruff+pytest+build+pip-audit, all green
+      weight: 1
+    - id: compose
+      assert: docker-compose brings up api + postgres + redis
+      weight: 1
+    - id: migrations
+      assert: alembic forward-only migration creates links table
+      weight: 1
+    - id: env-config
+      assert: all config via env; .env.example documents every var
+      weight: 1
+  monitoring:
+    - id: healthz
+      assert: GET /healthz returns 200
+      weight: 1
+    - id: readyz
+      assert: GET /readyz checks postgres + redis reachability
+      weight: 1
+    - id: metrics
+      assert: GET /metrics exposes prometheus counters + latency
+      weight: 1
+    - id: json-logs
+      assert: structured JSON logs with correlation id
+      weight: 1
+  hardening:
+    - id: no-secrets
+      assert: no hardcoded secrets; secret-scan clean
+      weight: 1
+    - id: validation
+      assert: reject non-http(s) and malformed URLs with 422
+      weight: 1
+    - id: rate-limit
+      assert: per-token rate limit returns 429 past threshold
+      weight: 1
+    - id: dep-scan
+      assert: pip-audit clean above moderate
+      weight: 1
+    - id: ssrf-guard
+      assert: shortened target cannot point at internal/link-local addresses
+      weight: 1

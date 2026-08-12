@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Harness test suites
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run all six suites
+        run: |
+          set -e
+          fail=0
+          for t in tests/test-*.sh; do
+            echo "== $t"
+            bash "$t" || fail=1
+          done
+          exit $fail

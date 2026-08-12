@@ -1,0 +1,102 @@
+# autoresearch:build eval spec — declares what to build + per-dimension acceptance.
+# The build mode satisfies these; score-build.sh grades the resulting build-results.tsv.
+name: todo-api
+summary: REST todo service with a persistent store and a minimal web UI.
+stack:
+  language: typescript
+  runtime: node
+  framework: express
+  datastore: postgres
+  frontend: react
+  test: vitest
+design:
+  source: catalog        # catalog | file | url | generate
+  ref: linear            # build adopts this as the project's DESIGN.md (else generates)
+
+acceptance:
+  functional:
+    - id: builds
+      assert: docker build succeeds from clean checkout
+      weight: 1
+    - id: boots
+      assert: container starts and binds :8080
+      weight: 1
+    - id: crud
+      assert: POST then GET /todos round-trips; survives restart
+      weight: 2
+    - id: list-200
+      assert: GET /todos returns 200 with JSON array
+      weight: 1
+    - id: tests-green
+      assert: vitest suite passes, coverage >= 80
+      weight: 1
+    - id: ui-flow
+      assert: web UI can add and complete a todo
+      weight: 1
+  ux:
+    - id: responsive
+      assert: layout works at 375px / 768px / 1280px without overflow
+      weight: 1
+    - id: a11y
+      assert: axe scan via /browse reports zero serious/critical violations
+      weight: 2
+    - id: e2e-flow
+      assert: /browse drives add todo -> see it -> complete -> reload persists
+      weight: 2
+    - id: states
+      assert: loading / empty / error states render
+      weight: 1
+    - id: design-system
+      assert: consistent type scale + spacing; text contrast >= WCAG AA
+      weight: 1
+    - id: design-conformance
+      assert: live computed styles match DESIGN.md tokens (palette, type, spacing); no off-system slop
+      weight: 1
+  devops:
+    - id: dockerfile
+      assert: multi-stage Dockerfile, non-root user, HEALTHCHECK present
+      weight: 1
+    - id: ci
+      assert: CI runs lint+test+build+dep-scan, all green
+      weight: 1
+    - id: compose
+      assert: docker-compose brings up api + postgres
+      weight: 1
+    - id: migrations
+      assert: forward-only migration creates todos table on boot
+      weight: 1
+    - id: sigterm
+      assert: graceful shutdown on SIGTERM drains and closes pool
+      weight: 1
+  monitoring:
+    - id: healthz
+      assert: GET /healthz returns 200
+      weight: 1
+    - id: readyz
+      assert: GET /readyz returns 200 only when postgres reachable
+      weight: 1
+    - id: metrics
+      assert: GET /metrics returns prometheus format with request histogram
+      weight: 1
+    - id: json-logs
+      assert: logs are one JSON object per line with level+timestamp
+      weight: 1
+    - id: trace-id
+      assert: inbound x-request-id propagated into every log line
+      weight: 1
+  hardening:
+    - id: no-secrets
+      assert: no hardcoded secrets; secret-scan clean; .env.example present
+      weight: 1
+    - id: headers
+      assert: security headers set (CSP, HSTS, X-Frame-Options)
+      weight: 1
+    - id: validation
+      assert: request bodies schema-validated, 400 on invalid
+      weight: 1
+    - id: dep-scan
+      assert: npm audit clean above moderate
+      weight: 1
+    - id: rate-limit
+      assert: per-IP rate limit returns 429 past threshold
+      weight: 1

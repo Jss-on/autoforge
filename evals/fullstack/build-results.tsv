@@ -1,0 +1,27 @@
+# metric_direction: higher_is_better
+# build: kanban-board (local real-time autoresearch board)  run: 260628-0051  verified live via gstack /browse on :4317
+spec	dimension	assertion	weight	status	detail
+kanban-board	functional	server boots on 127.0.0.1	2	pass	/healthz 200, GET / 200
+kanban-board	functional	discover + switch runs	2	pass	/api/runs lists live-demo + real runs; switcher works
+kanban-board	functional	cards from build-results	2	pass	assertions bucketed Backlog/In-Progress/Done; skip muted
+kanban-board	functional	activity feed from iterations	1	pass	iterations.tsv -> chronological feed
+kanban-board	functional	SSE live update	2	pass	flip TSV row fail->pass -> card moved Backlog->Done, no reload
+kanban-board	functional	panels render	2	pass	pass-rate trend + per-dim bars + phase banner + card-detail
+kanban-board	functional	states	1	pass	no-runs/empty/loading/disconnected
+kanban-board	functional	tests green coverage>=80	1	pass	vitest 23/23, coverage 93%
+kanban-board	ux	responsive 375/768/1280	1	pass	/browse 375px scrollWidth==innerWidth; columns stack
+kanban-board	ux	accessibility (axe)	2	pass	axe via /browse 0 violations, 39 passes
+kanban-board	ux	e2e live card move	2	pass	/browse: card moved Backlog->Done on TSV flip, pass-rate->100%
+kanban-board	ux	design-conformance	1	pass	Linear-style DESIGN.md tokens; no off-system slop
+kanban-board	ux	states styled	1	pass	empty + disconnected states styled
+kanban-board	devops	build (tsc + vite)	2	pass	npm run build green
+kanban-board	devops	CI lint+test+build+dep-scan	1	pass	ci.yml; steps run locally green
+kanban-board	devops	one-command launcher	1	pass	npm start builds web + serves localhost
+kanban-board	monitoring	/healthz	1	pass	200 {status:ok,clients}
+kanban-board	monitoring	watch/SSE status indicator	1	pass	UI shows "connected"
+kanban-board	monitoring	structured logs	1	pass	server emits JSON logs (listening, artifact changed)
+kanban-board	hardening	localhost-only bind	2	pass	app.listen(PORT,'127.0.0.1')
+kanban-board	hardening	read-only over artifacts	2	pass	only fs.readFile/access/stat; no write paths (unit-tested)
+kanban-board	hardening	path-traversal guard	2	pass	safeRunId rejects ../ + separators; a..b -> 400 (unit + supertest)
+kanban-board	hardening	no secrets + dep-scan	1	pass	npm audit --omit=dev: 0 vulnerabilities
+kanban-board	hardening	input validation	1	pass	bad run id -> 400; missing -> 404 (no crash)

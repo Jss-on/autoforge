@@ -1,0 +1,10 @@
+# metric_direction: higher_is_better
+spec	dimension	assertion	weight	status	detail
+todo-api	functional	app boots	1	pass	listens :8080
+todo-api	functional	GET /todos 200	1	pass	ok
+todo-api	devops	dockerfile multistage	1	pass	non-root
+todo-api	devops	ci pipeline green	1	pass	lint+test+build
+todo-api	monitoring	/metrics 200	1	fail	no endpoint
+todo-api	monitoring	/healthz 200	1	fail	no endpoint
+todo-api	hardening	no hardcoded secrets	1	pass	scan clean
+todo-api	hardening	security headers	1	pass	helmet

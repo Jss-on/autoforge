@@ -1,0 +1,4 @@
+# metric_direction: higher_is_better
+spec	dimension	assertion	weight	status	detail
+todo-api	functional	app boots	1	fail	crash on start
+todo-api	functional	GET /todos 200	1	fail	500

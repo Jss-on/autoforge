@@ -1,0 +1,26 @@
+name: sample-app
+summary: a valid generated build spec covering all five dimensions
+stack:
+  language: typescript
+  framework: express
+acceptance:
+  functional:
+    - id: boots
+      assert: app boots and binds port
+      weight: 1
+  ux:
+    - id: a11y
+      assert: axe scan zero serious/critical
+      weight: 1
+  devops:
+    - id: dockerfile
+      assert: multi-stage Dockerfile non-root HEALTHCHECK
+      weight: 1
+  monitoring:
+    - id: healthz
+      assert: GET /healthz 200
+      weight: 1
+  hardening:
+    - id: headers
+      assert: security headers present
+      weight: 1

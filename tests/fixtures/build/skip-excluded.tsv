@@ -1,0 +1,5 @@
+# metric_direction: higher_is_better
+# skip rows are n/a and must be excluded from numerator AND denominator
+spec	dimension	assertion	weight	status	detail
+todo-api	functional	app boots	1	pass	ok
+todo-api	functional	GET /todos 200	1	skip	endpoint not in spec

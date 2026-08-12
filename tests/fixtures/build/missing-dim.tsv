@@ -1,0 +1,7 @@
+# metric_direction: higher_is_better
+# only functional + devops ran; monitoring + hardening absent → renormalize over 0.60
+spec	dimension	assertion	weight	status	detail
+todo-api	functional	app boots	1	pass	ok
+todo-api	functional	GET /todos 200	1	pass	ok
+todo-api	devops	dockerfile multistage	1	pass	ok
+todo-api	devops	ci pipeline green	1	fail	no ci

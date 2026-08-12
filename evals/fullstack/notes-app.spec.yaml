@@ -1,0 +1,102 @@
+# autoresearch:build eval spec — declares what to build + per-dimension acceptance.
+name: notes-app
+summary: Authenticated notes app — user signup/login, per-user notes, web UI.
+stack:
+  language: typescript
+  runtime: node
+  framework: fastify
+  datastore: postgres
+  frontend: svelte
+  auth: jwt
+  test: vitest
+design:
+  source: catalog        # catalog | file | url | generate
+  ref: notion            # build adopts this as the project's DESIGN.md (else generates)
+
+acceptance:
+  functional:
+    - id: builds
+      assert: docker build succeeds from clean checkout
+      weight: 1
+    - id: boots
+      assert: container starts and binds :3000
+      weight: 1
+    - id: signup-login
+      assert: signup then login returns a JWT
+      weight: 2
+    - id: per-user-notes
+      assert: a user only sees their own notes (CRUD scoped by owner)
+      weight: 2
+    - id: tests-green
+      assert: vitest suite passes, coverage >= 80
+      weight: 1
+    - id: ui-flow
+      assert: web UI signs in and creates a note
+      weight: 1
+  ux:
+    - id: responsive
+      assert: auth + notes layout works at 375px / 768px / 1280px
+      weight: 1
+    - id: a11y
+      assert: axe scan via /browse reports zero serious/critical violations
+      weight: 2
+    - id: e2e-flow
+      assert: /browse drives signup -> login -> create note -> see it after reload
+      weight: 2
+    - id: states
+      assert: loading / empty / error (bad credentials) states render
+      weight: 1
+    - id: design-system
+      assert: consistent type scale + spacing; text contrast >= WCAG AA
+      weight: 1
+    - id: design-conformance
+      assert: live computed styles match DESIGN.md tokens (palette, type, spacing); no off-system slop
+      weight: 1
+  devops:
+    - id: dockerfile
+      assert: multi-stage Dockerfile, non-root user, HEALTHCHECK present
+      weight: 1
+    - id: ci
+      assert: CI runs lint+test+build+dep-scan, all green
+      weight: 1
+    - id: compose
+      assert: docker-compose brings up app + postgres
+      weight: 1
+    - id: migrations
+      assert: forward-only migrations create users + notes tables
+      weight: 1
+    - id: sigterm
+      assert: graceful shutdown on SIGTERM
+      weight: 1
+  monitoring:
+    - id: healthz
+      assert: GET /healthz returns 200
+      weight: 1
+    - id: readyz
+      assert: GET /readyz gated on postgres reachability
+      weight: 1
+    - id: metrics
+      assert: GET /metrics prometheus format
+      weight: 1
+    - id: json-logs
+      assert: structured JSON logs with user/request correlation
+      weight: 1
+  hardening:
+    - id: no-secrets
+      assert: JWT secret from env only; secret-scan clean
+      weight: 1
+    - id: password-hash
+      assert: passwords stored with bcrypt/argon2, never plaintext
+      weight: 2
+    - id: authz
+      assert: accessing another user's note returns 403
+      weight: 2
+    - id: headers
+      assert: security headers set on all responses
+      weight: 1
+    - id: rate-limit
+      assert: login endpoint rate-limited against brute force
+      weight: 1
+    - id: validation
+      assert: request bodies schema-validated, 400 on invalid
+      weight: 1
