@@ -10,8 +10,17 @@ The front end of the SDLC. Takes a client's full requirements (a brief, a transc
 runs the **standard requirements-engineering process** — elicitation → analysis → specification →
 validation — then **generates the arguments for `/autoresearch:build`**: a validated
 `evals/fullstack/<name>.spec.yaml` plus the exact build invocation. Output is documents and a spec,
-never code. **Self-contained** — the full requirements-engineering process (elicitation → analysis →
-specification → validation → generation) is defined below; no separate protocol file.
+never product code (throwaway elicitation mockups in the run dir are instruments, not product).
+
+**Core premise: the client is the authority on their business and their taste, never on software
+structure — and a raw interview captures only *stated* intent.** The expensive misses are the
+must-be needs clients assume ("obviously it has refunds"), the taste they cannot verbalize, and the
+domain rules neither party said out loud. The elicitation therefore follows
+`references/elicitation-protocol.md`: **domain recon before the first question**, a
+**day-in-the-life walkthrough** per role, the **must-be (Kano) checklist** dispositioned item by
+item, an **artifact-reaction loop** (reference triage + throwaway wireframe screenshots) for design
+intent, an **ambiguity audit** (adjective→number, rule→boundary, workflow→failure-path), and a
+**provenance ledger** so every derived requirement is read back for individual confirmation.
 
 **Autoresearch first principle (single-pass form):** requirements is a single-pass dispatch — no
 metric optimization loop — but it still obeys the principle. The interview iterates until
@@ -50,25 +59,50 @@ stance exists to prevent. (Pure games / static sites legitimately opt out — co
 
 ---
 
+## Phase 0 — Domain recon (research BEFORE the first question)
+Per the protocol's research-first rule: one bounded research pass on the stated domain — category
+leaders, standard workflow vocabulary, and the **statutory/regulatory layer** (tax, receipts,
+mandated discounts, retention, audit, accessibility law). Write the **domain brief** to the run dir:
+table-stakes feature list for the category, domain glossary, regulatory checklist **with
+citations**, and the 3–5 highest-risk questions a domain expert would open with. Question quality is
+capped by domain knowledge — every derived item enters the interview as a **confirmation with a
+recommended default**, not an open-ended question.
+
 ## Phase 1 — Elicitation (iterative interview, until saturation)
-Run a **multi-round** AskUserQuestion interview (same spirit as `probe` — interrogate until
-saturation). Never assume on a scope-defining question — ask it.
-- **Round 1 — frame:** who uses it + who it's for (scope), the core features they need, the data
-  involved, and the money/scale shape. (≤4 questions.)
-- **Round 2 — deepen:** based on Round 1, drill into auth/identity, data sensitivity & compliance,
-  platforms (web/mobile/API), integrations, the **desired look & feel** (a `DESIGN.md` reference — a
-  style from the getdesign.md catalog like `linear`/`stripe`, an existing site to match, or generate
-  one), and any hard constraints (stack, budget, deadline).
-- **Round 2 also — product surface (real product, not demo):** confirm durable **persistence**,
-  **accounts + onboarding** (fresh account starts empty), the **CRUD management** surface for each core
-  entity, and **settings** (account + org). Default these IN; only drop them if the user scopes a
-  throwaway/game/static site.
-- **Round 3+ — close gaps:** keep asking until no scope-defining question remains open. Surface
-  ambiguities and conflicts back to the user and let them decide. Stop when the user confirms the
-  picture is complete (saturation) — not before.
-- Capture **stakeholders**, goals, explicit asks, and implicit needs from the answers (never invented).
-- Each round: ONE AskUserQuestion call (batch its questions); always offer an "Other / not sure" path
-  and a recommended default the user can accept — but the user, not the command, makes the call.
+Run a **multi-round** AskUserQuestion interview per `references/elicitation-protocol.md` —
+progressive disclosure, one facet per round, ≤4 questions per round, ONE batched AskUserQuestion
+call each, every question carrying a recommended default the client can accept in one click. Never
+assume on a scope-defining question — ask it; the client, not the command, makes the call.
+- **Round order (protocol §2):** vision & stakes (ladder every feature to its GOAL) → actors & roles
+  (who may see/do/approve what) → **day-in-the-life walkthrough** → objects & lifecycle (create /
+  states / edit-void-delete / correction path / retention per noun) → **money & rules** (exact
+  rates, caps, boundaries, rounding — a **worked example per rule**, which becomes its golden
+  vector) → design via artifacts → edges & elasticity (offline, concurrent edits, peak numbers,
+  import from the old system) → out-of-scope + MoSCoW.
+- **Day-in-the-life walkthrough (protocol §3)** for each primary role, open to close, probing the
+  **unhappy paths** (returns, fat-fingered entries, over/short drawer, dead internet mid-sale,
+  absent approver), the **rhythms** (end-of-shift/day/month/year rituals), and the **paper** (every
+  current physical artifact = a data model + report). Each walkthrough becomes a numbered scenario —
+  later an SRS use case AND an e2e acceptance journey.
+- **Must-be checklist (protocol §4):** disposition EVERY item — in / out / N-A-because — password
+  reset, permissions, correction paths, search/filter, exports, receipts, audit trail,
+  backup/restore, data import, empty states, offline, locale, pagination, the new-hire and
+  someone-quit paths. Clients never state these because they assume them; silently absent =
+  protocol violation. (This subsumes the anti-demo product-surface confirmation: persistence,
+  accounts + onboarding from empty, full CRUD, settings — defaulted IN unless the client scopes a
+  throwaway/game/static site.)
+- **Artifact-reaction loop (protocol §5) for design intent:** show 3–5 named design directions and
+  collect what they **dislike**; generate 2–3 **throwaway static HTML wireframes** of the 1–2
+  highest-traffic screens in the run dir (THROWAWAY banner in-file, never reused by `build`),
+  screenshot via Playwright, present the PNGs, capture reactions per screen. Outcome = the
+  `DESIGN.md` source + density/navigation/states patterns, each traced to a client reaction —
+  taste is captured by **selection and correction, never adjectives**.
+- **Round N — close gaps:** surface ambiguities and conflicts back to the client as closed-choice
+  questions. **Saturation** = two consecutive rounds surface nothing scope-defining AND the must-be
+  checklist is fully dispositioned AND the client has corrected at least one artifact playback.
+- Capture **stakeholders**, goals, explicit asks, and implicit needs from the answers (never
+  invented) — every item tagged with **provenance** (protocol §7): `stated` · `derived-domain` ·
+  `default-confirmed` · `open` (an `open` item blocks sign-off).
 
 ## Phase 2 — Analysis & Classification
 - Split **functional requirements** (what the system does) from **non-functional requirements (NFRs)**
@@ -84,11 +118,20 @@ saturation). Never assume on a scope-defining question — ask it.
 - Detect **ambiguities, conflicts, and scope creep** → take them BACK to the user (another round), do
   not resolve by assumption. Record **constraints**. Only client-confirmed defaults may be written down,
   labeled "confirmed with user" — never silent assumptions.
+- **Ambiguity audit (protocol §6, mechanical sweep of the draft):** adjective→**number** with a
+  stated load model (a p95 without concurrency is not testable) · rule→**boundary** (inclusive?
+  calendar or rolling window? behavior AT the edge, rounding mode) · workflow→**failure path** (who
+  sees what on failure/timeout/double-submit) · every mutation→**correction path** · every
+  list→**expected volume** · every integration→**contract + retry owner** · **pronoun test** (no
+  ambiguous "the user"). Every hit goes back to the client as a closed-choice question — these are
+  exactly the gaps a later `test` engagement would otherwise file as open SRS questions.
 - **Prioritize with MoSCoW** (Must / Should / Could / Won't). "Won't" becomes out-of-scope.
 
 ## Phase 3 — Specification (write `requirements.md`)
 Produce an SRS/PRD with:
 - Overview + stakeholders + goals
+- **Day-in-the-life scenarios** (the numbered walkthroughs from elicitation — the use-case set, each
+  later an e2e acceptance journey), incl. the unhappy paths and periodic rituals they surfaced
 - **User stories** in INVEST form: "As a <role>, I want <capability>, so that <benefit>"
 - **Functional requirements** FR-1…FR-n (atomic, testable)
 - **Product-completeness FRs (mandatory unless a confirmed throwaway/game/static site)** — explicit
@@ -108,6 +151,8 @@ Produce an SRS/PRD with:
   state transition + every decision branch must map to a golden vector**, so the diagrams are the
   completeness checklist for the logic spec.
 - **Constraints**, **assumptions**, **out-of-scope**
+- **Provenance appendix** — every FR/NFR tagged `stated` / `derived-domain` / `default-confirmed`,
+  plus the dispositioned must-be checklist (in / out / N-A-because per item)
 - **Stack & reuse constraints** — name the expected battle-tested packages for the solved problems in
   scope (validation, auth, money/date math, ORM, uploads) in the spec's `stack:` notes, so `build`
   adopts them instead of reinventing; hand-rolled code is reserved for the domain rules the `logic`
@@ -115,11 +160,19 @@ Produce an SRS/PRD with:
 - **Acceptance criteria** per requirement in **Given/When/Then** form (mechanically verifiable)
 - **Traceability**: every requirement → its acceptance criteria → the build dimension it maps to
 
-## Phase 4 — Validation (explicit sign-off gate)
-Play the full requirements back to the user (functional + NFRs + MoSCoW + out-of-scope) and get
-**explicit sign-off** before generating anything. Check **complete, consistent, testable, feasible,
-unambiguous** — every requirement verifiable and traced. If the user wants changes, loop back to
-elicitation. Do NOT generate the spec until the user says the requirements are final.
+## Phase 4 — Validation (playback in the client's language, then explicit sign-off)
+Playback is **never the SRS document** (protocol §7). Present, in order: (a) the numbered
+day-in-the-life scenarios re-told **with the system in place** ("Maria scans 3 items, the customer
+shows an SC card, the screen shows ₱X because …"), (b) the wireframe screenshots, (c) the
+worked-example table for every money rule, (d) the **derived-requirements list read back item by
+item** — `derived-domain` provenance is where miscommunication lives, so each gets its own yes/no —
+(e) the Won't-list. Clients correct narratives and pictures far more reliably than clauses;
+sign-off on the playback IS sign-off on the SRS. Check **complete, consistent, testable, feasible,
+unambiguous** — every requirement verifiable, traced, and provenance-tagged with zero `open` items.
+If the user wants changes, loop back to elicitation. Do NOT generate the spec until the user says
+the requirements are final. Close with the **honesty clause** (protocol §8): the built app is the
+best elicitation artifact there is — reactions to v1 land as GitHub issues on the project's own repo
+and re-enter through `feature`/`fix`; the goal here is that nothing *knowable today* is missing.
 
 ## Phase 5 — Generate the build spec
 Emit `evals/fullstack/<name>.spec.yaml` for `autoresearch:build`. Schema (consumed by `build` +
@@ -183,10 +236,13 @@ summary. Schema: `references/handoff-schema.md`; after writing, `scripts/validat
 If `--chain build` → invoke `/autoresearch:build` with the generated spec.
 
 ## Safety
-Documents + spec only — no code, no deploy. **Never proceed on assumptions** — elicit interactively
-and require the user's explicit sign-off before generating. Won't-haves stay out-of-scope. Deployment
-downstream stays human-gated.
+Documents + spec only — no product code, no deploy. Throwaway wireframes are the ONE code-shaped
+artifact allowed: static HTML in the run dir, THROWAWAY-bannered, never copied into the build scope.
+**Never proceed on assumptions** — elicit interactively and require the user's explicit sign-off
+before generating. Won't-haves stay out-of-scope. Deployment downstream stays human-gated.
 
 ## Summary
-Print: # functional reqs, # NFRs (by dimension), MoSCoW counts, generated spec path, validation verdict,
-and the `/autoresearch:build` invocation. List unresolved assumptions as risks.
+Print: # functional reqs, # NFRs (by dimension), MoSCoW counts, **provenance counts (stated /
+derived-domain / default-confirmed — zero open)**, must-be checklist disposition tally, # scenarios +
+# wireframes reacted to, generated spec path, validation verdict, and the `/autoresearch:build`
+invocation. List unresolved assumptions as risks.

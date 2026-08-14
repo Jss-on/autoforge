@@ -2,6 +2,51 @@
 
 All notable changes to the autoresearch project are documented here.
 
+## v2.4.4 — latent-intent elicitation: capture what the client cannot articulate (2026-08-14)
+
+**Theme:** A raw interview captures only *stated* intent. The expensive misses are the must-be needs
+clients assume ("obviously it has refunds"), the taste they cannot verbalize, and the domain rules
+neither party said out loud. `requirements` now runs a protocol built to beat all three.
+
+### Added
+- **`references/elicitation-protocol.md`** — grounded in ISO 29148 elicitation guidance, BABOK v3,
+  Volere, the Kano model and JTBD interviewing, adapted to the pipeline's structural advantage:
+  it can generate throwaway artifacts in minutes, so **prototyping becomes an interview technique**.
+  - **Research-first rule:** domain recon BEFORE the first question — category table-stakes,
+    glossary, the statutory/regulatory layer with citations. Question quality is capped by domain
+    knowledge; derived items enter the interview as confirmations with defaults, not open questions.
+  - **Day-in-the-life walkthrough** per role — the unhappy paths (returns, fat-fingers, dead
+    internet, absent approver), the rhythms (end-of-shift/day/month/year), the paper (every current
+    physical artifact = a data model + a report). Each becomes a numbered scenario → SRS use case →
+    e2e acceptance journey.
+  - **Must-be (Kano) checklist** dispositioned item by item (in / out / N-A-because): password
+    reset, permissions, correction paths, exports, receipts, audit trail, backup/restore, import,
+    offline, locale, the new-hire and someone-quit paths. Silently absent = protocol violation,
+    never a client oversight.
+  - **Artifact-reaction loop for design:** taste is captured by selection and correction, never
+    adjectives — reference triage (what do you *dislike*?) + 2–3 THROWAWAY-bannered static HTML
+    wireframes screenshotted via Playwright, reactions per screen → DESIGN.md source + patterns,
+    each traced to a client reaction.
+  - **Ambiguity audit:** adjective→number (with a load model), rule→boundary (calendar vs rolling,
+    behavior AT the edge, rounding), workflow→failure path, mutation→correction path, list→volume,
+    integration→contract, pronoun test. Exactly the class of gap the djn-pos `test` engagement
+    filed as open SRS questions — now caught at requirements time.
+  - **Provenance ledger:** every requirement tagged `stated` / `derived-domain` /
+    `default-confirmed` / `open`; `open` blocks sign-off; `derived-domain` items are read back
+    individually — that is where miscommunication lives.
+  - **Playback in the client's language:** never the SRS document — scenarios re-told with the
+    system in place, wireframe screenshots, worked-example tables per money rule, the derived list,
+    the Won't-list. Plus the **honesty clause**: the built app is the best elicitation artifact;
+    v1 reactions land as issues and re-enter via `feature`/`fix`.
+- **`requirements` command rewired:** new Phase 0 (domain recon + domain brief deliverable),
+  Phase 1 rebuilt around the protocol's round order and saturation rule, Phase 2 gains the
+  mechanical ambiguity audit, Phase 3 SRS gains scenarios + provenance appendix, Phase 4 is the
+  client-language playback gate, Summary reports provenance counts + must-be tally + artifacts
+  reacted to. Safety carve-out: throwaway wireframes are the one code-shaped artifact allowed —
+  run-dir only, never reused by `build`.
+- `tests/test-requirements.sh` 35 → 68 asserts (protocol invariants + 5-surface parity). Battery:
+  **677 asserts across 8 suites**.
+
 ## v2.4.3 — the loop finishes its own PRs (2026-08-14)
 
 **Theme:** The human supplies requirements and a command; the pipeline should not hand back repo

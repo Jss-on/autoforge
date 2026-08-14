@@ -82,6 +82,53 @@ spec_has "/autoresearch:build|autoresearch build" "spec: emits build invocation"
 spec_has "handoff"                                "spec: handoff/chain"
 
 # ============================================================================
+printf '\n--- spec: latent-intent elicitation (protocol-driven) ---\n'
+# ============================================================================
+spec_has "elicitation-protocol\.md"               "spec: references the elicitation protocol"
+spec_has "Domain recon"                           "spec: domain recon before questioning"
+spec_has "domain brief"                           "spec: domain brief deliverable"
+spec_has "regulatory checklist.*citation|citations" "spec: regulatory layer with citations"
+spec_has "day-in-the-life"                        "spec: day-in-the-life walkthrough"
+spec_has "unhappy paths"                          "spec: unhappy paths probed"
+spec_has "must-be checklist|must-be \(Kano\)"     "spec: Kano must-be checklist"
+spec_has "N-A-because|in / out"                   "spec: per-item disposition"
+spec_has "worked example"                         "spec: worked example per money rule"
+spec_has "Artifact-reaction|artifact-reaction"    "spec: artifact-reaction loop"
+spec_has "throwaway.*wireframe|THROWAWAY"         "spec: throwaway wireframes"
+spec_has "selection and correction, never adjectives|never via adjectives" "spec: taste via selection not description"
+spec_has "Ambiguity audit"                        "spec: ambiguity audit sweep"
+spec_has "adjective|rule.{0,3}boundary"           "spec: adjective->number / rule->boundary"
+spec_has "correction path"                        "spec: every mutation has a correction path"
+spec_has "provenance"                             "spec: provenance ledger"
+spec_has "stated.*derived-domain|derived-domain"  "spec: provenance tags"
+spec_has "zero .open.|open. item blocks"          "spec: open items block sign-off"
+spec_has "never the SRS document"                 "spec: playback in client language"
+spec_has "Saturation|saturation"                  "spec: saturation stop condition"
+spec_has "honesty clause"                         "spec: iterative-capture honesty clause"
+
+# --- protocol reference file exists + parity across the 5 surfaces ---
+PROTO="$REPO_ROOT/claude-plugin/skills/autoresearch/references/elicitation-protocol.md"
+[[ -f "$PROTO" ]] && pass "protocol: reference file exists" || fail "protocol: reference file exists"
+proto_has() { grep -qiE -- "$1" "$PROTO" 2>/dev/null && pass "$2" || fail "$2 (protocol missing /$1/)"; }
+proto_has "Kano"                                  "protocol: Kano model grounding"
+proto_has "research-first|BEFORE the first question" "protocol: research-first rule"
+proto_has "laddering|Laddering"                   "protocol: laddering to goals"
+proto_has "end-of-shift|rhythms"                  "protocol: periodic rituals probed"
+proto_has "criticize an artifact|selection and correction" "protocol: react-not-specify premise"
+proto_has "pronoun test"                          "protocol: pronoun ambiguity check"
+proto_has "authority on their business"           "protocol: client-authority stance"
+for m in "$REPO_ROOT/.claude/skills/autoresearch/references/elicitation-protocol.md" \
+         "$REPO_ROOT/.agents/skills/autoresearch/references/elicitation-protocol.md" \
+         "$REPO_ROOT/plugins/autoresearch/skills/autoresearch/references/elicitation-protocol.md" \
+         "$REPO_ROOT/.opencode/skills/autoresearch/references/elicitation-protocol.md"; do
+  if [[ -f "$m" ]] && diff -q "$PROTO" "$m" >/dev/null 2>&1; then
+    pass "protocol parity: ${m#$REPO_ROOT/}"
+  else
+    fail "protocol parity: ${m#$REPO_ROOT/} (missing or diverged)"
+  fi
+done
+
+# ============================================================================
 printf '\n--- distribution: mirror parity (5 surfaces) ---\n'
 # ============================================================================
 
