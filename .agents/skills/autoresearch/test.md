@@ -25,7 +25,7 @@ Resolve `AR_ROOT` exactly as in `build`: first existing of `${CLAUDE_PLUGIN_ROOT
 `.claude/skills/autoresearch`, the directory containing this command file, else glob
 `**/skills/autoresearch/scripts/score-test.sh` and take its grandparent. Every `scripts/<x>` below
 means `$AR_ROOT/scripts/<x>`; every `references/<x>` means `$AR_ROOT/references/<x>`. Run
-`bash $AR_ROOT/scripts/doctor.sh --require-build` at Phase 0 — a missing gstack/docker means E2E and
+`bash $AR_ROOT/scripts/doctor.sh --require-build` at Phase 0 — a missing Playwright/docker means E2E and
 compatibility rows cannot be verified; surface that in the test plan as a scope limitation, not at
 iteration 15.
 
@@ -54,7 +54,7 @@ iteration 15.
   carries `evidence:<relpath>` — scored by `scripts/score-build.sh pass-rate --strict-evidence`.
 - `defects.tsv` — the incident ledger (`id severity priority status test_id summary evidence`),
   validated by `scripts/score-test.sh defects`; prose twin `defect-reports.md` with full repro anatomy.
-- `evidence/` — raw outputs: test-runner stdout + exit codes, probe responses, `/browse` screenshots,
+- `evidence/` — raw outputs: test-runner stdout + exit codes, probe responses, Playwright screenshots,
   axe reports, load-test summaries. A row or defect without its evidence file does not count.
 - `exploratory/session-<n>.md` — SBTM session sheets (charter, timebox, PQIP notes, debrief).
 - `test-summary.md` — the test completion report + go/no-go. `score-log.tsv`, `handoff.json`.
@@ -115,7 +115,7 @@ Per iteration, exactly one focused slice:
 1. **Pick** the highest-risk not-yet-executed area (risk register order; while any `logic` golden row
    is red, it goes first).
 2. **Execute at the lowest layer that can catch the bug** — unit/API-level where the behavior lives
-   there; a **live `/browse` E2E** (Playwright fallback) for anything user-facing; per-role authz
+   there; a **live Playwright E2E** (Playwright fallback) for anything user-facing; per-role authz
    sweeps for permission rows. Implement automated test code under `<target>/tests/` or `qa/` when
    needed — **added, never edited into app source**.
 3. **Record**: tee raw output to `evidence/`; flip executed rows pass/fail with

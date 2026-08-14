@@ -26,7 +26,7 @@ requires full coverage** — every PRD requirement (`FR-`/`NFR-`) and every `DES
 traces to ≥1 acceptance assertion (`scripts/score-build.sh coverage`), so a green pass-rate can never
 hide an unbuilt requirement. **Coverage is necessary but not sufficient — every requirement must also be
 EXERCISED at the right level.** The logic dimension's **wired-in rule generalizes to all user-facing
-FRs** (a workflow, an output, a screen): a FR is satisfied only by a **live `/browse` e2e that drives it
+FRs** (a workflow, an output, a screen): a FR is satisfied only by a **live Playwright e2e that drives it
 through the running app** — a generator / engine / unit test never called from the UI does **not**
 satisfy it ("defined but never called"). Before convergence, a **requirement-satisfaction audit**
 re-reads `requirements.md` and confirms every **goal (G-n) + FR + NFR** is genuinely met by such an
@@ -47,7 +47,7 @@ that exists, then read every `scripts/<x>` below as `$AR_ROOT/scripts/<x>` and e
 4. Last resort: glob `**/skills/autoresearch/scripts/score-build.sh` and take its grandparent.
 If nothing resolves, STOP and tell the user to reinstall (`bash scripts/install.sh`) — the gates are
 mechanical requirements of this pipeline, not optional helpers. Run `bash $AR_ROOT/scripts/doctor.sh
---require-build` once at Phase 0: a missing gstack/docker means the ux/devops dimensions cannot be
+--require-build` once at Phase 0: a missing Playwright/docker means the ux/devops dimensions cannot be
 verified, which blocks convergence later — surface that now, not at iteration 30.
 
 ## Output repository — every build lives on GitHub (transparency contract)
@@ -142,7 +142,7 @@ A lightweight **go/no-go spike**, not a study (the agile adaptation of the Feasi
 Business Case): prove the build can succeed in THIS environment before iterations are committed.
 - **Technical** — the toolchain boots: runtime + package manager resolve, DB/docker reachable (or a
   fallback picked), a hello-world of the target stack compiles and runs.
-- **Operational** — ports free, throwaway dev creds obtainable via env, `/browse` available for e2e.
+- **Operational** — ports free, throwaway dev creds obtainable via env, Playwright available for e2e.
 - **Schedule** — acceptance-row estimate vs the iteration budget (a 200-row rule matrix does not fit
   10 iterations); surface the mismatch now, not at iteration 39.
 - **Legal/licensing** — direct dependencies carry permissive licenses (no copyleft surprise).
@@ -181,8 +181,8 @@ Design the system **and** the interface before coding:
 - **Database design** — the concrete schema/ER + a forward-only migration plan derived from the
   domain model.
 - **Adopt a `DESIGN.md`** — the canonical design source (Google DESIGN.md spec). Resolve in order:
-  the `Design:` arg → the spec's `design:` block → else **generate** one with gstack
-  `design-consultation`. Sources: a **catalog** slug from getdesign.md / `awesome-design-md`
+  the `Design:` arg → the spec's `design:` block → else **generate** one (derive tokens + component
+  states from the product's needs and write them straight into `DESIGN.md`). Sources: a **catalog** slug from getdesign.md / `awesome-design-md`
   (e.g. `linear`, `stripe`), a **file**, a **URL**, or **generate**. Copy the chosen one to the project
   root as `DESIGN.md`.
 - **Tokens FROM DESIGN.md** — translate its typography scale, color palette (with contrast targets),
@@ -224,7 +224,7 @@ since the pass-rate is capped at 0.50 until every golden case is green. Order wi
      autocannon / locust); **no N+1** (JOIN/batch); every collection endpoint **paginated + bounded**
      (`LIMIT`/cursor); indexes on hot filter/join/sort columns; **caching** on expensive reads with
      correct invalidation; response compression; frontend **bundle budget + Core Web Vitals**
-     (LCP/CLS/INP) measured via `/browse`.
+     (LCP/CLS/INP) measured via Playwright.
 A floor-guard keeps scaffolding commits that compile and add no failures but pass zero assertions.
 
 ## Defect Loop — Debugging (cross-phase, runs inside Phases 5–6)
@@ -246,15 +246,17 @@ IEEE-829-style incident report, right-sized to its `iterations.tsv` line.
   store, not in-memory); a **fresh account/tenant starts empty** (no pre-seed); each core entity's
   **create / edit / delete** round-trips; **settings** save. An app that only renders seeded, read-only
   data fails this layer.
-- **e2e (end-to-end)** — drive the running app in a real browser via **gstack `/browse`** (preferred)
-  or Playwright fallback: the primary user flow must actually work click-by-click.
-- **Accessibility** — run **axe** against rendered pages via `/browse`; zero serious/critical violations.
+- **e2e (end-to-end)** — drive the running app in a real browser with **Playwright** (headless
+  Chromium, installed as a project devDependency so CI runs the same suite): the primary user flow
+  must actually work click-by-click.
+- **Accessibility** — run **axe** against rendered pages via Playwright; zero serious/critical violations.
 - **Visual** — screenshot the primary views; flag layout/contrast/slop regressions.
-- **DESIGN.md conformance** — `/browse` reads computed styles and asserts color / type scale / spacing
-  match the committed `DESIGN.md` tokens; flag off-system ("slop") values. Then run gstack
-  **`/design-review`** to fix visual inconsistency, hierarchy, and slop, re-verifying via screenshots.
+- **DESIGN.md conformance** — Playwright reads computed styles and asserts color / type scale / spacing
+  match the committed `DESIGN.md` tokens; flag off-system ("slop") values. Then run a **screenshot
+  self-review pass** — read the captured views back and fix visual inconsistency, hierarchy and slop,
+  re-verifying with fresh screenshots.
 - **Performance** — run a **load test** (k6 / autocannon / locust) asserting the p95 latency SLO and
-  **zero N+1** on the primary flows; check frontend bundle budget + Core Web Vitals via `/browse`.
+  **zero N+1** on the primary flows; check frontend bundle budget + Core Web Vitals via Playwright.
 - **Security** — an **OWASP Top 10** pass (reuse `/autoresearch:security`): headers, input validation,
   per-resource authZ, secret-scan, and dependency-scan all clean.
 - **Coverage** — unit+integration coverage ≥ the project floor (default 80%).
@@ -304,8 +306,8 @@ iteration:
 3. **Commit before verify** — `git commit -m "experiment: <dimension> — <slice>"` BEFORE measuring, so
    every attempt is recoverable. Git is the experiment ledger.
 4. **Verify mechanically (run it, don't self-report) — and leave evidence.** Build, boot, probe
-   endpoints, run the test pyramid + `/browse` e2e/axe; **tee every verification's raw output into
-   `<run-dir>/evidence/`** (test-runner stdout with exit code, probe responses, `/browse` screenshot
+   endpoints, run the test pyramid + Playwright e2e/axe; **tee every verification's raw output into
+   `<run-dir>/evidence/`** (test-runner stdout with exit code, probe responses, Playwright screenshot
    paths, axe reports — one file per suite/probe, e.g. `evidence/unit-tests.txt`,
    `evidence/e2e-checkout.txt`). A row may only be flipped to `pass` with its `detail` column set to
    `evidence:<relpath>[#locator]` naming the file that proves it. Then recompute
@@ -339,7 +341,7 @@ prevent overfitting a flaky pass. High-impact slices set `pending_verify`; route
 
 **Requirement-satisfaction audit (mandatory before DONE):** re-read `requirements.md` and walk **every
 goal (G-n) + FR + NFR**, confirming the LIVE app satisfies each via the *right* exercise — `logic`
-golden for computations; a **live `/browse` e2e for every user-facing FR** (the run create→calculate→
+golden for computations; a **live Playwright e2e for every user-facing FR** (the run create→calculate→
 approve→pay workflow, file generate/download, CRUD, timesheets, leave, settings, onboarding); real-DB
 integration for persistence; the `hardening` checks for each NFR. A requirement met **only** by an
 isolated unit/generator test, where the FR implies a user-facing workflow or output, is **UNSATISFIED**
@@ -414,12 +416,12 @@ living — never heavyweight documents for their own sake.
 | # | Phase | Reuses | Key deliverables | Exit gate (must all pass) |
 |---|---|---|---|---|
 | 1 | **Planning / Initiation** | `plan`, `predict` | **Project charter** (`charter.md`): vision, in/out scope, stakeholders/ICP, iteration budget, risk register | charter committed with objectives, in/out scope, iteration budget, ≥3 risks + mitigations; build target dir resolved (never the skill repo) |
-| 2 | **Feasibility** | — | **Feasibility verdict** in `charter.md` (spike results: technical, operational, schedule, licensing) | toolchain spike boots (runtime + DB/docker + `/browse`); acceptance-size vs iteration budget sane; licenses permissive; verdict **GO** with stack pinned (NO-GO → re-scope with the user) |
+| 2 | **Feasibility** | — | **Feasibility verdict** in `charter.md` (spike results: technical, operational, schedule, licensing) | toolchain spike boots (runtime + DB/docker + Playwright); acceptance-size vs iteration budget sane; licenses permissive; verdict **GO** with stack pinned (NO-GO → re-scope with the user) |
 | 3 | **Requirements Analysis** | `probe`, `predict` | **SRS** (`requirements.md`, IEEE 830 / ISO 29148-shaped) + **RTM** (the `traces` column + coverage report) | every requirement carries a stable `FR-`/`NFR-` ID; **for logic-heavy domains, logic diagrams (ER + state machines + sequence + decision flowcharts) with every state transition / decision branch mapped to a golden vector**; every acceptance assertion enumerated + tagged `dimension`+`weight`+`traces`; `REQ_COVERAGE == 1.00` (every ID traced, no orphan assertion); baseline `build-results.tsv` seeded (`fail`) → pass-rate `0.00` |
 | 4 | **Design** | `reason` | **HLD** (architecture) + **LLD** (domain engine + rule matrix, diagrams) + **DB schema** + **UI/UX system** (`DESIGN.md` + tokens + wireframes) | `DESIGN.md` (architecture: modules, data model, API contract; **for logic-heavy domains, a pure calculation engine + the rule matrix with citations**) **and** UI/UX design system (tokens: type, color+contrast, spacing, motion, component states, wireframes) committed; `DESIGN_COVERAGE == 1.00` (every token group traced by ≥1 `ux` assertion) |
 | 5 | **Implementation** | TDD ladder | **Source code + build artifacts + CI** (lint, tests, container) | domain engine built first and **every `logic` golden case green** (incl one end-to-end case proving it is wired in); each accepted slice turns a red assertion green; guard green; no green→red regression; the app is wired to a **real persisted datastore** (UI→API→DB) with full CRUD + accounts + settings + onboarding (**fresh account starts empty**), not a seed-only/in-memory demo; headline pass-rate stays capped at 0.50 until the `logic` gate clears |
 | ‡ | **Defect loop (debugging — cross-phase, inside 5–6)** | `debug` | **Defect records** (symptom → root cause → fix, in `iterations.tsv`) | every failing assertion traced to a **root cause** before a fix lands (iron law: no symptom patches) |
-| 6 | **Testing** | — | **Test plan** (acceptance TSV + pyramid) + **test cases** (suites) + **Test summary report** (`evals-summary.md`) | test pyramid green: **golden oracle (every rule-matrix vector + edge cases, incl end-to-end)** + unit + integration + e2e (`/browse`) + accessibility (axe) + visual + **load/perf (p95 SLO, no N+1)** + **security (OWASP Top 10)** + **real-product (anti-demo): a UI-created record persists across a restart, a fresh account starts empty, CRUD + settings round-trip**; **requirement-satisfaction audit — every goal/FR/NFR exercised end-to-end in the live app, no user-facing FR met by an engine/unit test alone**; coverage ≥ floor (80%) |
+| 6 | **Testing** | — | **Test plan** (acceptance TSV + pyramid) + **test cases** (suites) + **Test summary report** (`evals-summary.md`) | test pyramid green: **golden oracle (every rule-matrix vector + edge cases, incl end-to-end)** + unit + integration + e2e (Playwright) + accessibility (axe) + visual + **load/perf (p95 SLO, no N+1)** + **security (OWASP Top 10)** + **real-product (anti-demo): a UI-created record persists across a restart, a fresh account starts empty, CRUD + settings round-trip**; **requirement-satisfaction audit — every goal/FR/NFR exercised end-to-end in the live app, no user-facing FR met by an engine/unit test alone**; coverage ≥ floor (80%) |
 | 7 | **Deployment** | `ship` | **Deployment/release plan** + **Release notes** (`RELEASE_NOTES.md`) + **user manual** (quickstart) | checklist → dry-run → deploy → verify + canary — **human-gated**, never automatic |
 | 8 | **Operations / Maintenance** | `feature`, `fix`, `improve` | **Runbook** (`RUNBOOK.md`) + **change-request path** (handoff to feature/fix/improve) | runbook committed with commands/endpoints **verified against the running app**; maintenance path in handoff — the cycle feeds back into planning |
 
@@ -445,7 +447,7 @@ living — never heavyweight documents for their own sake.
   onboarding from an **empty** state. Seeded data is fixtures-for-tests only — a read-only, seed-only
   app that resets on restart is not a product and does not converge.
 - **Wired-in, end-to-end (every requirement).** The logic dimension's "defined but never called" guard
-  generalizes to all requirements: a user-facing FR is satisfied only by a **live `/browse` e2e** that
+  generalizes to all requirements: a user-facing FR is satisfied only by a **live Playwright e2e** that
   drives it through the running app, and an NFR only when its control is **applied** (an encryption
   helper that no write path calls does not satisfy "encrypt at rest"). Coverage (every FR *traced*) is
   necessary; *exercised* is sufficient. The pre-convergence **requirement-satisfaction audit** re-reads
@@ -462,7 +464,7 @@ living — never heavyweight documents for their own sake.
 - **Root cause before fix.** The defect loop forbids symptom patching; a fix references the falsified
   hypothesis.
 - **Comprehensive ≠ "tests pass".** Phase 6 requires the whole pyramid (unit→integration→e2e→a11y→visual),
-  not just unit green. e2e + a11y run against the *running* app via `/browse`.
+  not just unit green. e2e + a11y run against the *running* app via Playwright.
 - **Deployment is human-gated.** Phase 7 reuses `ship`; `build` never deploys to production or cuts
   releases on its own — pushes to the private output repo are the standard loop, everything beyond is `ship`'s.
 - **Maintenance closes the cycle.** Phase 8 documents operations (runbook) and routes change requests

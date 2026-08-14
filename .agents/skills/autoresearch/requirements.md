@@ -152,7 +152,7 @@ acceptance:
   entity has a working **create / edit / delete** path — a spec whose functional rows only *read*
   seeded data fails this bar. **Each assertion must EXERCISE its requirement at the right level**: pure
   computations → `logic` golden; **every user-facing FR (a workflow, an output, a screen) → a live
-  `/browse` e2e assertion that drives the actual UI flow** (the run create→calculate→approve→pay
+  Playwright e2e assertion that drives the actual UI flow** (the run create→calculate→approve→pay
   workflow, file generate/download, CRUD, timesheets, leave, settings) — never just a unit test of an
   isolated function, since a generator/engine the UI never calls leaves the FR unbuilt. This is what
   lets `build`'s **requirement-satisfaction audit** confirm each goal/FR is *wired in*, not merely

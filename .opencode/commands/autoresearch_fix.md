@@ -28,7 +28,7 @@ Resolve `AR_ROOT` exactly as in `build`: first existing of `${CLAUDE_PLUGIN_ROOT
 `**/skills/autoresearch/scripts/score-test.sh` and take its grandparent. Every `scripts/<x>` below
 means `$AR_ROOT/scripts/<x>`; every `references/<x>` means `$AR_ROOT/references/<x>`. Run
 `bash $AR_ROOT/scripts/doctor.sh` at setup; if a defect's verification needs a tool the doctor reports
-missing (docker, gstack), surface that as a scope limitation now. Every derived shell command is
+missing (docker, Playwright), surface that as a scope limitation now. Every derived shell command is
 screened via `scripts/orchestrate.sh screen-cmd`.
 
 ## Parse Arguments

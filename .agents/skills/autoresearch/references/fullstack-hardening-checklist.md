@@ -109,7 +109,7 @@ For any domain with computation or stateful rules (payroll, accounting, POS, bil
 - [ ] **Indexes** — hot filter / join / sort columns indexed; no full scans on the primary flows
 - [ ] **Caching** — expensive / hot reads cached (HTTP cache headers or server cache) with correct invalidation
 - [ ] **Compression + payload limits** — gzip/br on responses; request body size capped
-- [ ] **Frontend budget** — bundle-size budget held; Core Web Vitals (LCP / CLS / INP) within target (via `/browse`)
+- [ ] **Frontend budget** — bundle-size budget held; Core Web Vitals (LCP / CLS / INP) within target (via Playwright)
 
 ## Scoring notes
 

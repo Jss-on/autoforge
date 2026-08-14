@@ -84,11 +84,11 @@ rubric() {
     "design system"
     "DESIGN.md|design.md"
     "conformance|design-review"
-    "getdesign|awesome-design|design-consultation"
+    "getdesign|awesome-design|design tokens"
     "responsive"
     "accessibility|a11y|WCAG"
     "axe"
-    "/browse|browse|playwright"
+    "playwright|headless browser|e2e"
     "loading state|empty state|error state|states"
     "contrast|keyboard|focus|aria"
     # --- devops ---

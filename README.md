@@ -28,7 +28,7 @@ Based on [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) —
 >
 > **v2.2.0 — Autonomous Orchestrator:** Type a plain-language goal to `/autoresearch` and it classifies your goal, derives a Success predicate, confirms it once, then loops across subcommands until done. No manual chaining required. `Metric:`/`Verify:` invocations run the classic loop unchanged. See [guide/autoresearch-orchestrator.md](guide/autoresearch-orchestrator.md).
 >
-> **Build pipeline:** a full **SDLC engine** for building complex software — `/autoresearch:requirements` → `/autoresearch:build` (greenfield) or `/autoresearch:feature` (existing app) → `regression` → `ship`. Builds to **passing acceptance across six weighted dimensions** (logic · functional · UI/UX · devops · monitoring · hardening), conforms to a `DESIGN.md`, and verifies live in a real browser via gstack `/browse`. See **[Building Complex Software](#building-complex-software)**.
+> **Build pipeline:** a full **SDLC engine** for building complex software — `/autoresearch:requirements` → `/autoresearch:build` (greenfield) or `/autoresearch:feature` (existing app) → `regression` → `ship`. Builds to **passing acceptance across six weighted dimensions** (logic · functional · UI/UX · devops · monitoring · hardening), conforms to a `DESIGN.md`, and verifies live in a real browser with **Playwright**. See **[Building Complex Software](#building-complex-software)**.
 
 <br>
 
@@ -324,9 +324,9 @@ deploys or pushes autonomously.
 
 The design system is a committed `DESIGN.md` (Google DESIGN.md spec; reference catalog at
 [getdesign.md](https://getdesign.md) / `awesome-design-md`). `build` / `feature` adopt one (catalog ref ·
-file · URL · or generate via gstack `design-consultation`), derive **all** UI tokens from it, and verify
+file · URL · or generate), derive **all** UI tokens from it, and verify
 **conformance mechanically** via `/browse` (computed styles match the tokens; no off-system "slop").
-gstack `/design-review` auto-fixes visual issues.
+a screenshot self-review pass fixes visual issues.
 
 ### Autonomy
 
@@ -373,7 +373,7 @@ Your git must be able to reach it: authenticate with `gh auth login`, or set up 
 | bash + POSIX tools (Git Bash on Windows) | scripts, hooks, scorers |
 | Node.js >= 18 | hooks, verification probes |
 | git | the loop itself — commit / revert is the memory |
-| gstack (separate plugin) | **required for the build pipeline** — provides `/browse`, `design-consultation`, `/design-review` (the ux dimension + live e2e verification) |
+| Playwright | **required for the build pipeline** — headless Chromium for live e2e, axe a11y and DESIGN.md conformance (the ux dimension). Installed per project: `npm i -D playwright && npx playwright install --with-deps chromium` |
 
 Optional, per spec: `docker` (devops dimension), `axe` CLI (accessibility), `k6` or `autocannon` (perf SLOs), `gh` (release tooling).
 
@@ -536,7 +536,7 @@ Builds new software via the **standard SDLC** — plan → feasibility → requi
 (HLD/LLD + `DESIGN.md`) → implement (TDD, with a root-cause defect loop) → comprehensive test →
 deploy → operate/maintain — every phase gated with its named deliverable (project charter, SRS + RTM,
 test summary, release notes, runbook) — to **passing acceptance across six weighted
-dimensions** with the gating `logic` golden vectors, verified live in a real browser via gstack `/browse`.
+dimensions** with the gating `logic` golden vectors, verified live in a real browser with Playwright.
 
 ```
 /autoresearch:build Spec: evals/fullstack/<name>.spec.yaml Iterations: 40

@@ -4,7 +4,7 @@
 # Verifies every external tool the 17 commands actually invoke, split by tier:
 #   CORE      — required for any command to work (bash/node/git/coreutils)
 #   BUILD     — required for the build/feature pipeline's verification gates
-#               (gstack /browse drives the ux dimension; docker the devops one)
+#               (Playwright drives the ux dimension; docker the devops one)
 #   OPTIONAL  — needed only when a spec declares the matching rows
 #
 # Usage:
@@ -62,12 +62,16 @@ if command -v node >/dev/null 2>&1; then
 fi
 
 printf '\nBUILD PIPELINE (build/feature verification gates)\n'
-# gstack ships as a Claude Code plugin (browse daemon under ~/.gstack), not
-# necessarily a PATH binary — accept either install form.
-if command -v gstack >/dev/null 2>&1 || [[ -d "$HOME/.gstack" ]]; then
-  row "gstack" "ok" "/browse live e2e + design-review drive the ux dimension"
+# Playwright drives every live-browser gate (e2e, axe, DESIGN.md conformance). It is a
+# project devDependency rather than a global binary, so accept a local install, a global
+# one, or a downloaded browser cache — anything `npx playwright` can resolve.
+if command -v playwright >/dev/null 2>&1 \
+  || node -e "require.resolve('playwright')" >/dev/null 2>&1 \
+  || node -e "require.resolve('playwright-core')" >/dev/null 2>&1 \
+  || [[ -d "$HOME/.cache/ms-playwright" ]] || [[ -d "$HOME/AppData/Local/ms-playwright" ]]; then
+  row "playwright" "ok" "live e2e + axe + DESIGN.md conformance drive the ux dimension"
 else
-  row "gstack" "MISSING" "REQUIRED: /browse live e2e + design-review drive the ux dimension"
+  row "playwright" "MISSING" "REQUIRED: install with 'npm i -D playwright && npx playwright install --with-deps chromium'"
   BUILD_MISSING=$((BUILD_MISSING + 1))
 fi
 check build docker docker     "devops dimension (containers, compose, healthchecks)"
@@ -84,7 +88,7 @@ if [[ "$CORE_MISSING" -gt 0 ]]; then
   exit 1
 fi
 if [[ "$REQUIRE_BUILD" -eq 1 && "$BUILD_MISSING" -gt 0 ]]; then
-  printf 'RESULT: FAIL — %d build-pipeline tool(s) missing (gstack/docker). The ux/devops dimensions cannot be verified without them.\n' "$BUILD_MISSING"
+  printf 'RESULT: FAIL — %d build-pipeline tool(s) missing (playwright/docker). The ux/devops dimensions cannot be verified without them.\n' "$BUILD_MISSING"
   exit 1
 fi
 if [[ "$BUILD_MISSING" -gt 0 ]]; then

@@ -51,7 +51,7 @@ Per iteration, exactly as `build`:
    the lowest-scoring *new* assertion.
 2. **One change** — one atomic slice toward that assertion.
 3. **Commit before verify** — `git commit -m "experiment: feature/<slice>"` (git is the ledger).
-4. **Verify mechanically, leave evidence** — build/boot/probe + test pyramid + `/browse`
+4. **Verify mechanically, leave evidence** — build/boot/probe + test pyramid + Playwright
    e2e/axe/conformance; tee raw outputs into `<run-dir>/evidence/`; a row flips to `pass` only with
    `detail` = `evidence:<relpath>` naming its proof file; recompute
    `scripts/score-build.sh pass-rate --strict-evidence` (unproven pass rows are demoted; invocations

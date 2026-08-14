@@ -2,6 +2,35 @@
 
 All notable changes to the autoresearch project are documented here.
 
+## v2.4.2 — Playwright replaces gstack as the browser driver (2026-08-14)
+
+**Theme:** Remove the harness's dependency on a workstation-local tool. Every live-browser gate —
+e2e, axe accessibility, DESIGN.md conformance, Core Web Vitals — now runs on **Playwright**, a
+project devDependency, so the same suite executes unchanged on a developer machine and on a CI
+runner. A gate that can only pass on one laptop is not a gate.
+
+### Changed
+- **`scripts/doctor.sh`** — the BUILD tier now probes Playwright (global binary, resolvable
+  `playwright`/`playwright-core` module, or a downloaded browser cache) instead of gstack, and names
+  the install command when it is missing.
+- **`build` / `feature` / `test` / `fix` / `requirements`** — every `/browse` reference is now
+  Playwright: live e2e for user-facing FRs, axe scans, DESIGN.md conformance from computed styles,
+  CWV measurement, evidence screenshots, and the Phase-2 feasibility spike.
+- **`references/uiux-checklist.md`, `references/fullstack-hardening-checklist.md`** — same swap;
+  the checklist now states the driver is a devDependency so CI parity is explicit.
+- **DESIGN.md sourcing** no longer routes through a gstack skill: a catalog slug, file or URL is
+  adopted as before, and `generate` derives tokens + component states directly. The former
+  `/design-review` step becomes a **screenshot self-review pass** in the same loop.
+- **`scripts/score-build.sh`** rubric keywords updated (`playwright|headless browser|e2e`).
+- README + `tests/test-build.sh` assertion updated to match.
+
+### Why it mattered
+The djn-pos output repo demonstrated the failure mode: its accessibility job drove the gstack browse
+daemon from `~/.claude`, which no GitHub runner has, so that job could never pass — and the probe
+crashed with an opaque `TypeError` rather than saying so. Ported to Playwright, the same 48
+assertions pass with axe clean on all 16 routes, **on the runner as well as locally**, and the repo
+reached its first fully green CI run.
+
 ## v2.4.1 — `/autoresearch:fix` rebuilt: defect remediation aligned with requirements/build/test (2026-08-14)
 
 **Theme:** The old `fix` predated the evidence/seam/output-repo generation and only understood
