@@ -66,6 +66,12 @@ Cadence:
   evidence alongside `evidence/`.
 - **Branch + PR for feature-scale slices** once main is green; the PR's CI check is part of the
   verify step. Small inner-loop experiment commits may push straight to the working branch.
+- **PRs merge themselves** (`gh pr merge --squash --delete-branch`, preferring `--auto`) once every
+  CI check is green, the branch is `MERGEABLE`, and the diff stays inside Scope with no secrets —
+  the loop does its own repo chores. Then confirm the base branch's own CI run is green; a
+  PR-green/main-red split re-opens the loop. Blocked by branch protection or a required review →
+  say so and leave it open (the owner's rule stands). `--no-merge` opts out. Merging is not
+  deploying: `ship` stays human-gated.
 - **Found-but-deferred defects become GitHub issues** on the output repo (label `autoforge`),
   not lost notes in the summary.
 - **Releases are `ship`'s job** (human-gated): tag + `gh release create` (`--prerelease` until

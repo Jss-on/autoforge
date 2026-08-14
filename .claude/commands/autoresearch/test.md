@@ -166,7 +166,10 @@ RELEASE_RECOMMENDED as a deploy action (shipping stays `ship`, human-gated).
 Test artifacts are evidence — push them. Commit the run directory to the invoking workspace; when the
 Target is its own output repo (per `build`'s Output repository contract), copy `test-summary.md` +
 `defects.tsv` into `<target>/qa/` on a `qa/test-<stamp>` branch, push, and open a PR so the QA report
-rides CI and review. **File every unresolved critical/high defect as a GitHub issue** on the Target's
+rides CI and review. **That report PR merges itself** (`gh pr merge --squash --delete-branch`) once
+its checks are green and it is `MERGEABLE` — the report is evidence, and evidence belongs on the base
+branch whatever the verdict was; a `RELEASE_BLOCKED` verdict blocks the *release*, never the record of
+it. `--no-merge` opts out; branch protection wins if it requires a review. **File every unresolved critical/high defect as a GitHub issue** on the Target's
 repo (label `qa`, body = the full defect report) — deferred findings must live where the fix work
 happens, not in a summary nobody reopens.
 

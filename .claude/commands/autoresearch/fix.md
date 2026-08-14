@@ -48,6 +48,8 @@ Extract from $ARGUMENTS:
   an error disappear by changing specified behavior is a new defect, not a fix.
 - `Iterations:` / `--iterations` — default 20. "unlimited" for unbounded. `--category` — filter:
   test, type, lint, build. `--evals`, `--evals-interval N`, `--chain <targets>` (commonly `test`).
+- `Merge:` / `--merge` — `auto` (default: squash-merge the PR once CI is green, see the GitHub flow)
+  or `manual`. `--no-merge` is shorthand for `Merge: manual`.
 
 ## Setup (if required context missing)
 If Target, Defects, and Scope all missing:
@@ -143,9 +145,32 @@ When the working repo is an output repo (per `build`'s contract), fixes ride the
   (and when the defect WAS the red CI, the green run is the proof).
 - **Comment on each `qa` issue** as its fix lands: root cause + commit + evidence path + "awaiting
   independent verification by `/autoresearch:test`".
-- Merge stays with review/human. The re-engagement `test` can target the `fix/<stamp>` branch
-  pre-merge.
 Commit the fix run directory to the invoking workspace as usual.
+
+### Auto-merge (default ON — the loop finishes its own PRs)
+The pipeline is meant to run hands-off: the human supplies requirements and a command, not repo
+chores. So the PR **merges itself once it has earned it**. All of these must hold — every one is a
+mechanical check, never a judgement call:
+1. **Every CI check on the PR is green** (`gh pr checks --watch`; on `--required` repos the required
+   set, else all). A red or still-running check never merges.
+2. **Guard + targeted regression green** on the final commit (the run's own evidence).
+3. **No item left `open`** in this run's ledger except ones explicitly recorded as
+   not-reproducible/needs-adjudication (those merge only when the branch changes nothing about them).
+4. **No unresolved merge conflict** with the base branch (`gh pr view --json mergeable` = `MERGEABLE`;
+   on `CONFLICTING`, rebase onto base, re-run guard, push, re-check — never force-merge).
+5. **Nothing in the diff outside Scope**, and no secret/credential added (re-screen the final diff).
+Then: `gh pr merge <n> --squash --delete-branch`. Prefer `--auto` (GitHub merges when checks pass) and
+fall back to a direct merge after `gh pr checks --watch` when the repo plan does not offer auto-merge;
+if merging is blocked by branch protection or a required review, **say so and leave the PR open** —
+that is the repo owner's rule, not a failure to work around.
+After merging: confirm the **base branch's own CI run is green** (a PR-green/main-red split means the
+merge surfaced something the PR never ran) and confirm the linked `qa` issues actually closed. A red
+base branch immediately re-opens the loop as a new item — the run is not COMPLETE while `main` is red.
+- **Escape hatches:** `--no-merge` (open the PR and stop), `Merge: manual`, or a repo where protection
+  requires review. Merging is still never deploying: `ship` stays human-gated, releases are not tagged.
+- A **contract change** or any finding needing the owner's adjudication does not block the merge — it
+  is called out in the PR body, the issue comment, and the summary, and it stays reverted-in-one-click
+  (squash merge = one commit to `git revert`).
 
 ## Safety Invariants
 - **Never deploy, tag releases, or publish** — `ship` stays human-gated. Pushing the fix branch + PR
@@ -162,8 +187,9 @@ Commit the fix run directory to the invoking workspace as usual.
 Print: mode + metric trajectory (baseline → final: blocking count / error count); per-defect table —
 id, severity, root cause (one line), status (`fixed` | still `open` + why); errors fixed by type
 (error mode); iterations used, kept vs discarded; guard + regression outcomes; evidence checklist;
-branch + PR + issue links; and the explicit reminder that `fixed ≠ verified` — the next step is the
-`test` re-engagement.
+branch + PR + issue links + **merge state** (merged / auto-merge armed / left open + the exact reason);
+base-branch CI conclusion after the merge; anything flagged for the owner's adjudication; and the
+explicit reminder that `fixed ≠ verified` — the next step is the `test` re-engagement.
 
 ## Eval Checkpoint (--evals flag)
 Interval: floor(max_iterations / 3), min 1 (fixed 10 if unbounded; override `--evals-interval N`).
@@ -174,7 +200,8 @@ silent grinding.
 ## Chain Handoff
 Write handoff.json: version "2.4.0", source "fix", timestamp, status
 (COMPLETE|BOUNDED|USER_INTERRUPT|ERROR), results_tsv (iterations.tsv) and/or errors_remaining,
-defects_tsv (the updated ledger copy, defect mode), findings = items still open (with the
+defects_tsv (the updated ledger copy, defect mode), merge{state: merged|auto-armed|open, pr, sha,
+base_ci}, findings = items still open (with the
 cannot-reproduce list) + any oracle conflicts discovered, config{target, defects_source, scope,
 guard}, repo/branch/PR links. Validate with `scripts/validate-handoff.sh <run>/handoff.json fix`;
 on `INVALID`, fix the handoff before printing the summary. Invoke next target in `--chain` order —

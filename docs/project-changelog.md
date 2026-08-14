@@ -2,6 +2,39 @@
 
 All notable changes to the autoresearch project are documented here.
 
+## v2.4.3 — the loop finishes its own PRs (2026-08-14)
+
+**Theme:** The human supplies requirements and a command; the pipeline should not hand back repo
+chores. PRs opened by the loop now **merge themselves once they have earned it**, on mechanical
+evidence only.
+
+### Added
+- **Auto-merge in `/autoresearch:fix`** (default ON). A PR merges when *all* of these hold: every CI
+  check green (`gh pr checks --watch`; a red or still-running check never merges) · guard + targeted
+  regression green on the final commit · no ledger item left `open` beyond ones explicitly recorded
+  as not-reproducible · `mergeable == MERGEABLE` (a `CONFLICTING` branch is rebased onto base,
+  re-guarded and re-pushed — never force-merged) · the final diff stays inside Scope with no secrets
+  added. Then `gh pr merge --squash --delete-branch`, preferring `--auto` and falling back to a
+  direct merge after the checks pass. **After merging** the base branch's own CI run is verified —
+  a PR-green/main-red split re-opens the loop, and the run is not COMPLETE while `main` is red — and
+  the linked `qa` issues are confirmed closed.
+- New args: `Merge: auto|manual`, `--merge`, `--no-merge`. `handoff.json` gains
+  `merge{state, pr, sha, base_ci}`; the summary reports merge state and the exact reason when a PR
+  is left open.
+- **Same policy in `build` and `test`.** `build`'s feature-scale slice PRs self-merge on green;
+  `test`'s QA-report PR self-merges too — the report is evidence and belongs on the base branch
+  whatever the verdict was (a `RELEASE_BLOCKED` verdict blocks the *release*, never the record of it).
+
+### Boundaries kept
+Branch protection and required reviews always win: when merging is blocked the command says so and
+leaves the PR open rather than working around the owner's rule. A flagged contract change does not
+block the merge — it is called out in the PR body, the issue comment and the summary, and a squash
+merge stays revertible in one commit. **Merging is still not deploying:** `ship` remains human-gated
+and no releases are tagged.
+
+- `tests/test-fix.sh` grows to 64 asserts (merge preconditions, protection deference, post-merge base
+  CI, escape hatches). Battery: **644 asserts across 8 suites**.
+
 ## v2.4.2 — Playwright replaces gstack as the browser driver (2026-08-14)
 
 **Theme:** Remove the harness's dependency on a workstation-local tool. Every live-browser gate —
