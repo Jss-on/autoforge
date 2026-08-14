@@ -2,6 +2,42 @@
 
 All notable changes to the autoresearch project are documented here.
 
+## v2.4.0 — `/autoresearch:test`: the QA-Engineer Engagement (2026-08-13)
+
+**Theme:** An 18th command that performs the full software-test-engineer role on existing software,
+standards-aligned and evidence-anchored. Built from primary-source research: ISO/IEC/IEEE 29119
+(-1:2022/-2:2021/-3:2021/-4:2021/-5:2024), ISTQB CTFL v4.0.1, ISO/IEC 25010:2023 (nine
+characteristics, 2023 naming), WCAG 2.2 (55 AA criteria), OWASP Top 10 2021/2025 + ASVS 5.0.
+
+### Added
+- **`/autoresearch:test`** — a complete QA engagement: static requirements review + ambiguity
+  interrogation → risk register (likelihood × impact drives test depth) → 29119-3 test plan with
+  entry/exit criteria → formal test design (EP, BVA, decision tables, state transition, pairwise,
+  scenario, error guessing; `logic` golden rows for business rules) with a bidirectional RTM gate →
+  smoke gate (BUILD_REJECTED on failure) → bounded execution loop at the lowest-catching pyramid
+  layer with strict-evidence scoring → SBTM exploratory sessions (charters, PQIP notes, PROOF
+  debriefs) → non-functional passes (WCAG 2.2 AA, OWASP-checklist security-functional, percentile
+  SLO load, compatibility) → machine-validated defect ledger → test completion report with a
+  mechanical go/no-go. **Tester independence enforced**: app source is read-only; remediation chains
+  to `fix`/`feature`. Unresolved critical/high defects become GitHub issues on the target's repo.
+- **`scripts/score-test.sh`** — `defects` (ledger validation: severity/priority/status model,
+  evidence requirement, duplicate detection; blocking rule: a critical may never be deferred) and
+  `exit-criteria` (strict pass-rate ≥ TEST_TARGET_RATE + logic gate + RTM coverage 1.00 + zero
+  unresolved critical/high → `RELEASE_RECOMMENDED`/`RELEASE_BLOCKED`). Reuses score-build for
+  rate/coverage — no reimplementation.
+- **`references/qa-testing-protocol.md`** — standards contract: ISTQB↔29119↔phase mapping, technique
+  catalog with when-to-use, 25010:2023 nine-characteristic mapping to result dimensions, SBTM
+  mechanics, hostile-user attack list, defect model, auditor-grade evidence/RTM expectations,
+  regulated-industry deltas (IEC 62304, ISO 26262, PCI DSS v4.0.1, SOC 2).
+- **`tests/test-qa.sh`** — 75 assertions: seam behaviors (blocking rules, verdict paths, threshold
+  override), spec standards coverage, 5-tree parity, router rows, manifest counts, handoff rule.
+
+### Changed
+- Routers and manifests: 18 commands everywhere; handoff schema pins bumped to "2.4.0" across all
+  command files; `validate-handoff.sh` gains the `test` source rule (results_tsv required).
+- Docs swept: README (pipeline diagram gains the Test/QA stage), AGENTS.md, guides — all at 18.
+- Suites: 503 → 580 assertions across seven files.
+
 ## v2.3.1 — AutoForge: Fatal-Flaw Remediation (2026-08-12)
 
 **Theme:** The three critical audit findings — unfalsifiable acceptance evidence, an enforcement layer that never shipped, and a distribution still pointing at the upstream fork — resolved, plus the orchestrator seam gaps and a CI/publish gate. First release from the private product repo `Jss-on/autoforge`.

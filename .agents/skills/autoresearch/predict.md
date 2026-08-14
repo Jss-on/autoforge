@@ -90,5 +90,5 @@ If `--fail-on` set: check findings against threshold. Exit non-zero if exceeded.
 
 ## Chain Handoff
 
-Write handoff.json: version "2.3.1", source "predict", timestamp, status (COMPLETE|ERROR), findings = consensus findings with severity + confidence + file:line, config{scope, goal, depth}.
+Write handoff.json: version "2.4.0", source "predict", timestamp, status (COMPLETE|ERROR), findings = consensus findings with severity + confidence + file:line, config{scope, goal, depth}.
 Invoke next target in --chain order.

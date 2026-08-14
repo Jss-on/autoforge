@@ -22,7 +22,7 @@ Based on [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) —
 
 *You don't need AGI. You need a goal, a metric, and a loop that never quits.*
 
-**Supports Claude Code, OpenCode, and OpenAI Codex. 17 commands. 9 safety hooks. Thin-router token architecture — command bodies load only when invoked.**
+**Supports Claude Code, OpenCode, and OpenAI Codex. 18 commands. 9 safety hooks. Thin-router token architecture — command bodies load only when invoked.**
 
 > **v2.3 — Logic-first acceptance:** the build pipeline now grades **six weighted dimensions** with a **gating `logic` dimension** — golden vectors derived from the SRS must all compute correctly, or the headline score is hard-capped at 0.50. See **[Logic-first (v2.3)](#logic-first-v23)**.
 >
@@ -66,13 +66,13 @@ Based on [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) —
 
    ── Build pipeline (full SDLC) ──────────────────────────────
 
- ┌──────────┐     ┌──────────┐     ┌──────────┐
- │ Require- │     │  Build   │     │ Feature  │
- │  ments   │────▶│Greenfield│────▶│ Brownfld │
- │  → spec  │     │full SDLC │     │ +ratchet │
- └──────────┘     └──────────┘     └──────────┘
- /autoresearch:   /autoresearch:   /autoresearch:
-   requirements     build            feature
+ ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
+ │ Require- │     │  Build   │     │ Feature  │     │   Test   │
+ │  ments   │────▶│Greenfield│────▶│ Brownfld │     │ QA / RTM │
+ │  → spec  │     │full SDLC │     │ +ratchet │     │ Verdict  │
+ └──────────┘     └──────────┘     └──────────┘     └──────────┘
+ /autoresearch:   /autoresearch:   /autoresearch:   /autoresearch:
+   requirements     build            feature          test
 ```
 
 ---
@@ -179,6 +179,7 @@ See [guide/hooks.md](guide/hooks.md) for full reference.
 | `/autoresearch:requirements` | Interview client (no assumptions) → validated build spec via a mechanical gate | one-shot |
 | `/autoresearch:build` | Build greenfield full-stack software via the full SDLC to passing acceptance (6 weighted dims, logic-gated) | 40 |
 | `/autoresearch:feature` | Add a feature to existing software — delta acceptance + hard non-regression ratchet | 25 |
+| `/autoresearch:test` | Full QA engagement on existing software — risk-based plan, RTM, formal test design, execution + defect ledger, exit-criteria verdict (ISO 29119/ISTQB-aligned) | 20 |
 | `/autoresearch:debug` | Hunt bugs via hypothesis iteration | 15 |
 | `/autoresearch:fix` | Crush errors one-by-one to zero | 20 |
 | `/autoresearch:security` | STRIDE + OWASP audit with red-team | 15 |
@@ -196,7 +197,7 @@ See [guide/hooks.md](guide/hooks.md) for full reference.
 
 **All commands use interactive setup when invoked without arguments.** Just type the command — the agent asks for what it needs with smart defaults based on your codebase.
 
-> **OpenCode users:** Commands use underscore naming (`/autoresearch_debug`, `/autoresearch_fix`, etc.). All 17 commands available.
+> **OpenCode users:** Commands use underscore naming (`/autoresearch_debug`, `/autoresearch_fix`, etc.). All 18 commands available.
 >
 > **Codex users:** Invoke via `$autoresearch` mention syntax. Subcommands are keywords: `$autoresearch debug`, `$autoresearch plan`, etc.
 
@@ -207,6 +208,7 @@ See [guide/hooks.md](guide/hooks.md) for full reference.
 | Build a new full-stack app from scratch (full SDLC) | `/autoresearch:build` |
 | Turn a client brief into a validated build spec | `/autoresearch:requirements` |
 | Add a feature to an existing app without regressions | `/autoresearch:feature` |
+| Run a full QA engagement on an existing app (plan → RTM → verdict) | `/autoresearch:test` |
 | Give a plain-language goal, let it self-orchestrate | `/autoresearch <goal>` (bare, no Metric/Verify) |
 | Improve test coverage / reduce bundle size / any metric | `/autoresearch` |
 | Run bounded iterations | Add `Iterations: N` to any command |
@@ -465,7 +467,7 @@ cp -r autoforge/.opencode/skills/autoresearch ~/.config/opencode/skills/autorese
 cp autoforge/.opencode/commands/autoresearch*.md ~/.config/opencode/commands/
 ```
 
-> All 17 commands available as `/autoresearch_debug`, `/autoresearch_fix`, `/autoresearch_improve`, etc.
+> All 18 commands available as `/autoresearch_debug`, `/autoresearch_fix`, `/autoresearch_improve`, etc.
 
 ### Codex Quick Start
 
@@ -917,12 +919,12 @@ autoforge/
 │   │                                                orchestrator routing, ux + hardening checklists)
 │   └── commands/
 │       ├── autoresearch.md                        ← core loop (self-contained)
-│       └── autoresearch/                          ← 16 subcommand files (17 commands total)
+│       └── autoresearch/                          ← 17 subcommand files (18 commands total)
 ├── .claude-plugin/marketplace.json                ← marketplace manifest (marketplace name: autoforge)
 ├── claude-plugin/                                 ← Claude Code plugin package (skills + commands + hooks)
 ├── .opencode/                                     ← OpenCode port (via transform.sh)
 │   ├── skills/autoresearch/
-│   └── commands/                                  ← 17 command files (autoresearch_*.md)
+│   └── commands/                                  ← 18 command files (autoresearch_*.md)
 ├── .agents/                                       ← Codex port (via transform.sh)
 │   └── skills/autoresearch/
 └── plugins/autoresearch/                          ← Codex plugin package
@@ -947,7 +949,7 @@ A: Logic-first acceptance. The build pipeline now grades **six** weighted dimens
 A: The root `/autoresearch` command now supports an autonomous orchestrator mode. Type a plain-language goal (e.g., `/autoresearch help me fix the login bug`) instead of `Metric:`/`Verify:` and the orchestrator classifies your goal, derives a verifiable Success predicate, confirms it once, then loops across subcommands until done. Classic metric-loop behavior is unchanged when `Metric:` or `Verify:` are present.
 
 **Q: What changed in v2.1.0?**
-A: Architecture rebuild. The monolithic SKILL.md was replaced with a thin router that stays resident (~8KB) plus self-contained command files — now 17 commands whose bodies (~3–35KB each) load only when invoked, with reference files pulled on demand. A new `/autoresearch:evals` command analyzes iteration results. Every looping command now has a bounded default instead of running unlimited.
+A: Architecture rebuild. The monolithic SKILL.md was replaced with a thin router that stays resident (~8KB) plus self-contained command files — now 18 commands whose bodies (~3–35KB each) load only when invoked, with reference files pulled on demand. A new `/autoresearch:evals` command analyzes iteration results. Every looping command now has a bounded default instead of running unlimited.
 
 **Q: How do bounded defaults work?**
 A: Every looping command ships with a sensible default (e.g., `/autoresearch` defaults to 25 iterations). Override inline: `Iterations: 50` for more, `Iterations: unlimited` for the old unbounded behavior.
@@ -959,7 +961,7 @@ A: Point it at any `*-results.tsv` file from a previous run. It reports trends, 
 A: Yes. Any language, framework, or domain. Install via plugin (Claude Code), installer script, or manual copy.
 
 **Q: Does this work with OpenCode?**
-A: Yes. Run `./scripts/install.sh --opencode --global` or manually copy `.opencode/` files. Commands use underscore naming (`/autoresearch_debug`, `/autoresearch_evals`, etc.). All 17 commands available.
+A: Yes. Run `./scripts/install.sh --opencode --global` or manually copy `.opencode/` files. Commands use underscore naming (`/autoresearch_debug`, `/autoresearch_evals`, etc.). All 18 commands available.
 
 **Q: Does this work with OpenAI Codex?**
 A: Yes. Run `./scripts/install.sh --codex --global` or copy `.agents/skills/autoresearch/` to `~/.codex/skills/autoresearch`. Invoke via `$autoresearch` mention syntax.

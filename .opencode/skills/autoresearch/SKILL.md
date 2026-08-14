@@ -1,7 +1,7 @@
 ---
 name: autoresearch
 description: "Autonomous iteration loop: modify, verify, keep/discard against any metric"
-version: 2.3.1
+version: 2.4.0
 ---
 
 # Autoresearch — Autonomous Goal-directed Iteration
@@ -47,6 +47,7 @@ Print a banner on every invocation: `[autoresearch] mode: classic | orchestrator
 | `/autoresearch_improve` | Research ICP challenges, discover improvements, generate PRDs | 15 |
 | `/autoresearch_evals` | Analyze iteration results: trends, plateaus, regressions | N/A |
 | `/autoresearch_regression` | Regression stability gate: baseline vs candidate, verdict STABLE/UNSTABLE | N/A |
+| `/autoresearch_test` | Full QA engagement on existing software (ISO 29119/ISTQB-aligned): risk-based plan → RTM → formal test design → execution + defect ledger → exit-criteria verdict | 20 |
 
 ## Universal Flags
 

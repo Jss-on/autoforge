@@ -512,10 +512,10 @@ for mirror in .claude claude-plugin .agents .opencode plugins/autoresearch; do
   fi
 done
 
-# Canonical skill spec carries a v2.3+ version stamp (exact value checked by
-# the cross-mirror consistency block below — a literal here rots every bump).
-assert_contains "2.3" "$(grep -m1 '^version:' "$REPO_ROOT/.claude/skills/autoresearch/SKILL.md")" \
-  "parity: canonical SKILL.md version is 2.3.x"
+# Canonical skill spec carries a version stamp (exact value is checked by the
+# cross-mirror consistency block below — a version literal here rots every bump).
+assert_contains "version: 2." "$(grep -m1 '^version:' "$REPO_ROOT/.claude/skills/autoresearch/SKILL.md")" \
+  "parity: canonical SKILL.md carries a version stamp"
 
 # No colon-form subcommand may leak into the space/underscore mirrors.
 for mirror in .agents .opencode plugins/autoresearch; do

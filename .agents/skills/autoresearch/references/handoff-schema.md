@@ -11,7 +11,7 @@ not finished until its handoff validates.
 
 | Field | Type | Rule |
 |---|---|---|
-| `version` | string | Schema version. Write `"2.3.1"`. Validator accepts `2.1.0`+ (legacy runs readable) but warns below `2.3.1`. |
+| `version` | string | Schema version. Write `"2.4.0"`. Validator accepts `2.1.0`+ (legacy runs readable) but warns below `2.3.1`. |
 | `source` | string | The emitting subcommand, canonical short name: `build`, `feature`, `requirements`, `regression`, `fix`, `debug`, `security`, `ship`, `plan`, `scenario`, `predict`, `learn`, `reason`, `probe`, `improve`, `evals`, `autoresearch`. Never the colon form. |
 | `status` | enum | `COMPLETE` \| `CONVERGED` \| `BOUNDED` \| `PLATEAU` \| `BLOCKED` \| `USER_INTERRUPT` \| `ERROR` |
 | `timestamp` | string | ISO-8601 with offset. |
@@ -24,6 +24,7 @@ not finished until its handoff validates.
 | `requirements` | `spec` (path to the generated `*.spec.yaml`) or `srs` (path). |
 | `regression` | `verdict` (`STABLE` \| `UNSTABLE`). |
 | `fix` | `results_tsv` or `errors_remaining` (number). |
+| `test` | `results_tsv` (path). SHOULD also carry `verdict` (`RELEASE_RECOMMENDED` \| `RELEASE_BLOCKED`), `defects_tsv`, and `summary` (path to the test summary report). |
 
 Everything else (`status_reason`, `findings`, `verified_live_this_run`, `phases_completed`,
 `bound_extension`, `repo` — the project's private GitHub output-repo URL, `pr` — the feature PR

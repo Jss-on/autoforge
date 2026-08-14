@@ -102,6 +102,9 @@ case "$SOURCE" in
     has_field results_tsv || has_field errors_remaining \
       || err "missing: results_tsv or errors_remaining (required for fix)"
     ;;
+  test)
+    has_field results_tsv || err "missing: results_tsv (required for test)"
+    ;;
 esac
 
 if [[ "$ERRORS" -gt 0 ]]; then
@@ -110,7 +113,7 @@ fi
 
 # Legacy-version warning is stderr-only; the file is still VALID.
 case "$VERSION" in
-  2.1.*|2.2.*) echo "warn: legacy handoff version $VERSION (current schema 2.3.1)" >&2 ;;
+  2.1.*|2.2.*) echo "warn: legacy handoff version $VERSION (current schema 2.4.0)" >&2 ;;
 esac
 
 echo "VALID"; exit 0

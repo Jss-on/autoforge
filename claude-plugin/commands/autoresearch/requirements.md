@@ -176,7 +176,7 @@ Print the ready invocation:
 ```
 /autoresearch:build Spec: evals/fullstack/<name>.spec.yaml Iterations: 40
 ```
-Write handoff.json to the output dir (`autoresearch/requirements-{YYMMDD}-{HHMM}/`): version "2.3.1",
+Write handoff.json to the output dir (`autoresearch/requirements-{YYMMDD}-{HHMM}/`): version "2.4.0",
 source "requirements", status COMPLETE, `spec` = generated spec path, config{name, stack}, traceability
 summary. Schema: `references/handoff-schema.md`; after writing, `scripts/validate-handoff.sh
 <run-dir>/handoff.json requirements` must print VALID.

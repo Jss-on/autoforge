@@ -105,5 +105,5 @@ If --evals present:
 
 ## Chain Handoff
 
-After completion, write handoff.json: version "2.3.1", source "reason", timestamp, status (COMPLETE|CONVERGED|USER_INTERRUPT|BOUNDED|ERROR), results_tsv path, findings = [{id, type: "recommendation", summary: winner description}], config{task, domain, mode}.
+After completion, write handoff.json: version "2.4.0", source "reason", timestamp, status (COMPLETE|CONVERGED|USER_INTERRUPT|BOUNDED|ERROR), results_tsv path, findings = [{id, type: "recommendation", summary: winner description}], config{task, domain, mode}.
 Invoke next target in --chain order. Propagate --evals flag.

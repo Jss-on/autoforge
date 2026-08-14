@@ -48,7 +48,8 @@ Requires access to the private repo [Jss-on/autoforge](https://github.com/Jss-on
 | [/autoresearch:improve](autoresearch-improve.md) | Research ICP challenges, discover improvements, generate PRDs |
 | [/autoresearch:evals](autoresearch-evals.md) | Analyze results TSV — trends, plateaus, checkpoints |
 | [/autoresearch:regression](autoresearch-regression.md) | Stability gate — baseline diff, STABLE/UNSTABLE verdict before you push |
-| [Chains & Combinations](chains-and-combinations.md) | Multi-command pipelines with all 17 commands |
+| [/autoresearch:test](../README.md#commands) | Full QA engagement on existing software — risk-based plan, RTM, formal test design, execution + defect ledger, exit-criteria verdict (ISO 29119/ISTQB-aligned) |
+| [Chains & Combinations](chains-and-combinations.md) | Multi-command pipelines with all 18 commands |
 | [Examples by Domain](examples-by-domain.md) | Real-world examples: software, sales, marketing, DevOps, ML, HR |
 | [Advanced Patterns](advanced-patterns.md) | Guards, MCP, CI/CD, evals checkpoints, transform.sh |
 | [Hooks Reference](hooks.md) | 9 auto-firing hooks: safety gates, context injection, notifications |
@@ -72,6 +73,7 @@ Requires access to the private repo [Jss-on/autoforge](https://github.com/Jss-on
 | Check if something is ready to ship | `/autoresearch:ship --checklist-only` |
 | Explore edge cases for a feature | `/autoresearch:scenario` |
 | Generate test scenarios | `/autoresearch:scenario --format test-scenarios` |
+| Run a full QA engagement on an existing app (plan → RTM → verdict) | `/autoresearch:test` |
 | Get expert opinions before starting | `/autoresearch:predict` |
 | Debate an architecture decision | `/autoresearch:reason --domain software` |
 | Generate docs for a new codebase | `/autoresearch:learn --mode init` |

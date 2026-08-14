@@ -98,7 +98,7 @@ Interval = floor(max_runs / 3), min 1 (fixed 10 if unbounded); override `--evals
 
 ## Chain Handoff
 
-Write `handoff.json` to the output directory: version "2.3.1", source "regression", timestamp,
+Write `handoff.json` to the output directory: version "2.4.0", source "regression", timestamp,
 `status` ∈ family enum {COMPLETE, CONVERGED, SATURATED, BOUNDED, USER_INTERRUPT, ERROR} (backward-compat with evals/ship consumers),
 `verdict` ∈ {STABLE, UNSTABLE, BASELINE_UNAVAILABLE} + `regression_state` ∈ {REGRESSION_FOUND, REGRESSION_FIXED, none} — `ship` reads `verdict` for the deploy-gate,
 `results_tsv` path, `findings` = blocking regressions (dim, severity, file_line, classification), `config`{base, scope, dims, axes, verdict-math}.

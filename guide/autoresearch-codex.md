@@ -1,6 +1,6 @@
 # AutoForge for Codex — v2.3.0
 
-Codex distribution of AutoForge's `autoresearch` engine. Same 17 commands, same flags, same output contracts as the Claude Code version. Entry point: `$autoresearch <command>`.
+Codex distribution of AutoForge's `autoresearch` engine. Same 18 commands, same flags, same output contracts as the Claude Code version. Entry point: `$autoresearch <command>`.
 
 ---
 
@@ -35,11 +35,11 @@ Codex uses `$autoresearch` prefix:
 | `/autoresearch:evals` | `$autoresearch evals` |
 | `/autoresearch:ship` | `$autoresearch ship` |
 
-All 17 commands follow the same pattern: `$autoresearch <command> [flags]`.
+All 18 commands follow the same pattern: `$autoresearch <command> [flags]`.
 
 ---
 
-## All 17 Commands
+## All 18 Commands
 
 | Command | Default Iterations | Purpose |
 |---------|-------------------|---------|
@@ -48,6 +48,7 @@ All 17 commands follow the same pattern: `$autoresearch <command> [flags]`.
 | `$autoresearch requirements` | one-shot | Client brief → validated build spec |
 | `$autoresearch build` | 40 | Greenfield full-stack build via the full SDLC (6 weighted dims, logic-gated) |
 | `$autoresearch feature` | 25 | Feature addition — delta acceptance + non-regression ratchet |
+| `$autoresearch test` | 20 | Full QA engagement on existing software — risk-based plan, RTM, formal test design, execution + defect ledger, exit-criteria verdict (ISO 29119/ISTQB-aligned) |
 | `$autoresearch debug` | 15 | Root cause investigation |
 | `$autoresearch fix` | 20 | Root-cause-first repair |
 | `$autoresearch security` | 15 | STRIDE + OWASP audit |
@@ -131,7 +132,7 @@ plugins/autoresearch/                ← Codex plugin package
 └── skills/autoresearch/
     ├── SKILL.md                     ← thin router
     ├── autoresearch.md              ← core loop
-    ├── <command>.md                 ← 16 subcommand files (17 commands total)
+    ├── <command>.md                 ← 17 subcommand files (18 commands total)
     └── references/                  ← on-demand reference files
 
 .agents/                             ← Codex agent tree (same skill, agent layout)

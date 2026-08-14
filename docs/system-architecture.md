@@ -2,7 +2,7 @@
 
 ## Overview
 
-Autoresearch v2.3.0 is a modular, markdown-driven autonomous iteration framework. The core architectural shift from v2.0.x is the **thin SKILL.md + self-contained command files** pattern: the skill file is a routing table; all protocol is embedded in 16 self-contained command files (plus the root command). Only the invoked command file loads per invocation, reducing token cost by ~95%.
+Autoresearch v2.3.0 is a modular, markdown-driven autonomous iteration framework. The core architectural shift from v2.0.x is the **thin SKILL.md + self-contained command files** pattern: the skill file is a routing table; all protocol is embedded in 17 self-contained command files (plus the root command). Only the invoked command file loads per invocation, reducing token cost by ~95%.
 
 As of v2.2.0, bare `/autoresearch` is overloaded: a `Metric:`/`Verify:` config runs the classic metric loop unchanged, while a free-form natural-language goal dispatches an **autonomous orchestrator** that classifies the goal, derives a success predicate, and loops the right subcommands until it holds. All routing decisions live in one deterministic seam, `scripts/orchestrate.sh` (mirroring the `scripts/score-regression.sh` pattern), bounded by plateau detection and a hard cycle ceiling.
 
@@ -31,7 +31,7 @@ graph TB
     subgraph "Canonical Source"
         SKILL[.claude/skills/autoresearch/SKILL.md\nthin routing table — 41 lines]
         CMD[.claude/commands/autoresearch.md]
-        CMDS[.claude/commands/autoresearch/*.md\n14 self-contained command files]
+        CMDS[.claude/commands/autoresearch/*.md\n17 self-contained command files]
         REF[.claude/skills/autoresearch/references/\n3 focused reference files]
     end
 
