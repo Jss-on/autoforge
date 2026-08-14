@@ -2,6 +2,42 @@
 
 All notable changes to the autoresearch project are documented here.
 
+## v2.4.1 — `/autoresearch:fix` rebuilt: defect remediation aligned with requirements/build/test (2026-08-14)
+
+**Theme:** The old `fix` predated the evidence/seam/output-repo generation and only understood
+compiler-style error counts. Rebuilt as the **builder half of the test↔fix independence loop**,
+speaking the same contracts as `requirements`, `build`, and `test`.
+
+### Changed
+- **`/autoresearch:fix`** — two intake modes on one bounded loop:
+  - **Defect remediation** (`--from-test` / `Defects:`): the work queue is a `score-test.sh
+    defects`-validated ledger; metric = unresolved critical/high **blocking count** → 0, queue
+    ordered unblock-first (build/CI blockers precede all) then severity → priority.
+  - **Error burn-down** (`Target:` cmd) retained: tests, types, lint, build errors → 0.
+  - **Remediation discipline:** reproduce RED first (`evidence/def-<id>-red.txt`), root-cause iron
+    law (no fix without an identified root cause), fix-the-implementation-not-the-test (single
+    exception: the root-caused defect IS the test, stated in the report), reuse-first, one atomic
+    fix per iteration, commit-before-verify, repro-green + targeted regression + guard, auto-revert
+    on regress. Un-reproducible defects are recorded and left `open` — never self-rejected.
+  - **Independence ceiling:** fix may set `in-progress`/`fixed` only — never `verified`, `closed`,
+    `rejected`, or `duplicate`. `fixed` still blocks release in `score-test.sh`; only the chained
+    `test` re-engagement (or a human) lifts the block. A fix run cannot self-certify.
+  - **Seam alignment:** AR_ROOT resolution, `doctor.sh` preflight, `orchestrate.sh screen-cmd`
+    screening, `score-build.sh bound` iteration cap, `validate-handoff.sh <run> fix` gating the
+    summary; ledger copy re-validated every cycle (the tester's original stays frozen).
+  - **GitHub flow (transparency contract):** branch `fix/<stamp>` on the output repo, conventional
+    `fix: <summary> (DEF-n)` commits, PR with per-defect root-cause table + `Fixes #<issue>` lines
+    closing the `qa` issues on merge, green PR CI required, a comment on each issue as its fix
+    lands; merge stays human-gated and `test` can re-engage the branch pre-merge.
+- SKILL.md/README description updated ("Remediate defects to zero: root-cause first,
+  evidence-anchored, defect-ledger driven").
+
+### Added
+- **`tests/test-fix.sh`** (53 asserts): spec invariants (intake, discipline, independence ceiling,
+  GitHub flow), 5-surface mirror parity, manifest count, and seam smokes proving `fixed` rows still
+  block (`blocking=2`) while `verified` lifts (`blocking=0`), plus fix-source handoff validation.
+  Full battery now **633 asserts across 8 suites**.
+
 ## v2.4.0 — `/autoresearch:test`: the QA-Engineer Engagement (2026-08-13)
 
 **Theme:** An 18th command that performs the full software-test-engineer role on existing software,

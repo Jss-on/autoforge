@@ -1,7 +1,7 @@
 ---
 name: autoresearch
 description: "Autonomous iteration loop: modify, verify, keep/discard against any metric"
-version: 2.4.0
+version: 2.4.1
 ---
 
 # Autoresearch — Autonomous Goal-directed Iteration
@@ -36,7 +36,7 @@ Print a banner on every invocation: `[autoresearch] mode: classic | orchestrator
 | `/autoresearch:build` | Build greenfield full-stack apps + harden (DevOps, monitoring, security) to passing acceptance | 40 |
 | `/autoresearch:feature` | Add a feature to existing software — delta acceptance + hard non-regression ratchet, conforms to DESIGN.md | 25 |
 | `/autoresearch:debug` | Hunt bugs: hypothesize → test → falsify → repeat | 15 |
-| `/autoresearch:fix` | Crush errors one-by-one until zero remain | 20 |
+| `/autoresearch:fix` | Remediate defects to zero: root-cause first, evidence-anchored, defect-ledger driven | 20 |
 | `/autoresearch:security` | STRIDE + OWASP audit with red-team personas | 15 |
 | `/autoresearch:ship` | Ship through 8 phases: checklist → dry-run → deploy → verify | N/A |
 | `/autoresearch:scenario` | Generate edge cases across 12 dimensions | 20 |

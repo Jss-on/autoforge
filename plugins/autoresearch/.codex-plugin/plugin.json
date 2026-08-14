@@ -1,6 +1,6 @@
 {
   "name": "autoresearch",
-  "version": "2.4.0-codex.0",
+  "version": "2.4.1-codex.0",
   "description": "Autonomous improvement engine for Codex. 18 commands: iterate, plan, debug, fix, security, ship, scenario, predict, learn, reason, probe, improve, evals, regression, build, requirements, feature, test.",
   "author": {
     "name": "Jss-on",

@@ -181,7 +181,7 @@ See [guide/hooks.md](guide/hooks.md) for full reference.
 | `/autoresearch:feature` | Add a feature to existing software — delta acceptance + hard non-regression ratchet | 25 |
 | `/autoresearch:test` | Full QA engagement on existing software — risk-based plan, RTM, formal test design, execution + defect ledger, exit-criteria verdict (ISO 29119/ISTQB-aligned) | 20 |
 | `/autoresearch:debug` | Hunt bugs via hypothesis iteration | 15 |
-| `/autoresearch:fix` | Crush errors one-by-one to zero | 20 |
+| `/autoresearch:fix` | Remediate defects to zero, root-cause first | 20 |
 | `/autoresearch:security` | STRIDE + OWASP audit with red-team | 15 |
 | `/autoresearch:ship` | Ship through 8 phases | linear |
 | `/autoresearch:scenario` | Generate edge cases across 12 dimensions | 20 |
