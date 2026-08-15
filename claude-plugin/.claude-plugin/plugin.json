@@ -1,7 +1,7 @@
 {
   "name": "autoresearch",
   "description": "Autonomous improvement engine. 18 commands: iterate, plan, debug, fix, security, ship, scenario, predict, learn, reason, probe, improve, evals, regression, build, requirements, feature, test.",
-  "version": "2.4.4",
+  "version": "2.4.5",
   "author": {
     "name": "Jss-on",
     "url": "https://github.com/Jss-on"

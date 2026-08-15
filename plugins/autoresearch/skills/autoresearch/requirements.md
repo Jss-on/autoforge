@@ -91,6 +91,11 @@ assume on a scope-defining question — ask it; the client, not the command, mak
   protocol violation. (This subsumes the anti-demo product-surface confirmation: persistence,
   accounts + onboarding from empty, full CRUD, settings — defaulted IN unless the client scopes a
   throwaway/game/static site.)
+- **Game briefs:** add the facets from `references/game-assets-protocol.md` §5 — reference games
+  (mechanics vs aesthetics separated), art direction + closest CC0 pack, session/scope shape,
+  difficulty model, platforms + input (mobile touch elicited FIRST, never as a port), audio
+  expectations, and the juice bar ("game feel" is a requirement — name it). Asset licensing and the
+  size budget land in the spec's `hardening`/`devops` rows.
 - **Artifact-reaction loop (protocol §5) for design intent:** show 3–5 named design directions and
   collect what they **dislike**; generate 2–3 **throwaway static HTML wireframes** of the 1–2
   highest-traffic screens in the run dir (THROWAWAY banner in-file, never reused by `build`),

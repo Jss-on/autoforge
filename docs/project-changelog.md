@@ -2,6 +2,34 @@
 
 All notable changes to the autoresearch project are documented here.
 
+## v2.4.5 — asset-heavy builds: games get a protocol (2026-08-15)
+
+**Theme:** Games (and any media-heavy target) fail differently — on asset provenance, repo bloat,
+canvas opacity to Playwright, and "game feel" nobody wrote down. New
+`references/game-assets-protocol.md`, wired into `build` and `requirements`.
+
+### Added
+- **Sourcing ladder with a license gate:** CC0 packs (Kenney et al) → procedural/code-generated →
+  CC-BY with attribution actually rendered; ripped/unlicensed assets are a defect. Mandatory
+  `assets/CREDITS.md` license ledger, asserted by a hardening acceptance row (tree ↔ ledger diff).
+- **Size discipline as acceptance:** no file ≥ 50 MB in git (GitHub blocks at 100 — the visionseek
+  lesson), runtime formats only (WebP/OGG/GLB/WOFF2, no `.wav`/`.psd` in the bundle),
+  initial-payload budget as a mechanical `devops` row, LFS declared in `.gitattributes` BEFORE the
+  first large commit, asset manifest as the single source of truth for loading/budget/ledger.
+- **Determinism seams (canvas is opaque to Playwright):** seeded RNG everywhere, a `window.__game`
+  test API (dev/test builds), a **pure headless rules engine carrying the `logic` golden vectors**
+  (damage/scoring/spawn/economy math — the 0.50 cap applies to games unchanged), screenshot
+  checkpoints at fixed seed+tick, fps floor rows with the headless MSAA gotcha documented.
+- **Six-dimension acceptance mapping for games** + **anti-demo, game edition:** no accounts/CRUD,
+  but progress persists across reload, first-run teaches, settings save — a game that resets on
+  refresh is still a demo.
+- **Elicitation extras** for game briefs (requirements Phase 1): reference games with mechanics vs
+  aesthetics separated, art direction + closest CC0 pack, mobile-touch-first input elicitation,
+  session/scope shape, difficulty model, audio expectations, the juice bar ("game feel" is a named
+  requirement).
+- `tests/test-build.sh` 101 → 120 asserts (protocol invariants + 5-surface parity). Battery:
+  **696 asserts across 8 suites**.
+
 ## v2.4.4 — latent-intent elicitation: capture what the client cannot articulate (2026-08-14)
 
 **Theme:** A raw interview captures only *stated* intent. The expensive misses are the must-be needs

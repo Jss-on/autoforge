@@ -146,6 +146,35 @@ spec_has "e2e|end.to.end"                         "spec: e2e testing"
 spec_has "root cause|debugging"                   "spec: debugging phase"
 spec_has "deploy"                                 "spec: deployment phase"
 spec_has "playwright"                             "spec: browser verification tool"
+
+# --- asset-heavy / game targets ---
+spec_has "game-assets-protocol\.md"               "spec: game/asset protocol referenced"
+spec_has "license ledger|CREDITS\.md"             "spec: asset license ledger"
+spec_has "sourcing ladder|CC0"                    "spec: asset sourcing ladder"
+spec_has "50 MB|LFS"                              "spec: size discipline / LFS rule"
+spec_has "seeded RNG|window\.__game"              "spec: determinism seams for canvas"
+spec_has "game edition of"                        "spec: game edition of anti-demo"
+GPROTO="$REPO_ROOT/claude-plugin/skills/autoresearch/references/game-assets-protocol.md"
+[[ -f "$GPROTO" ]] && pass "protocol: game-assets reference exists" || fail "protocol: game-assets reference exists"
+gproto_has() { grep -qiE -- "$1" "$GPROTO" 2>/dev/null && pass "$2" || fail "$2 (protocol missing /$1/)"; }
+gproto_has "Kenney"                               "protocol: CC0 pack sources named"
+gproto_has "NEVER.*ripped|ripped/extracted"       "protocol: ripped assets forbidden"
+gproto_has "blocks at 100"                        "protocol: GitHub 100MB limit"
+gproto_has "gitattributes.*BEFORE|BEFORE the first large commit" "protocol: LFS declared up front"
+gproto_has "pure and headless|logic/render split" "protocol: logic/render split"
+gproto_has "antialias"                            "protocol: headless MSAA fps gotcha"
+gproto_has "manifest"                             "protocol: asset manifest"
+gproto_has "juice|game feel"                      "protocol: game-feel elicitation"
+for m in "$REPO_ROOT/.claude/skills/autoresearch/references/game-assets-protocol.md" \
+         "$REPO_ROOT/.agents/skills/autoresearch/references/game-assets-protocol.md" \
+         "$REPO_ROOT/plugins/autoresearch/skills/autoresearch/references/game-assets-protocol.md" \
+         "$REPO_ROOT/.opencode/skills/autoresearch/references/game-assets-protocol.md"; do
+  if [[ -f "$m" ]] && diff -q "$GPROTO" "$m" >/dev/null 2>&1; then
+    pass "game protocol parity: ${m#$REPO_ROOT/}"
+  else
+    fail "game protocol parity: ${m#$REPO_ROOT/} (missing or diverged)"
+  fi
+done
 spec_has "ux|UI/UX"                               "spec: ux dimension"
 spec_has "DESIGN.md"                              "spec: DESIGN.md design source"
 spec_has "conformance|design-review"              "spec: design conformance / review"

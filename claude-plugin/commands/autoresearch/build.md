@@ -91,6 +91,19 @@ product; primitives are not. A hand-rolled implementation of a solved problem is
 diligence: it adds untested surface that the hardening dimension must then re-verify from zero.
 Record each major library choice with a one-line rationale in the HLD (Phase 4 deliverable).
 
+## Asset-heavy targets (games, media-heavy apps)
+When the spec is a game or the target bundles significant assets (sprites, models, audio, fonts,
+large datasets), follow `references/game-assets-protocol.md` from Phase 1 on. Non-negotiables:
+**sourcing ladder** (CC0 packs → procedural/code-generated → CC-BY with rendered attribution; never
+unlicensed/ripped assets) with a **license ledger** (`assets/CREDITS.md`, one hardening row asserts
+it covers every asset file); **size discipline** (no file ≥ 50 MB in git, runtime formats only —
+WebP/OGG/GLB/WOFF2, initial-payload budget as a mechanical `devops` row, LFS declared BEFORE the
+first large commit when needed); **determinism seams built in from slice one** (seeded RNG, a
+`window.__game` test API, a pure headless rules engine carrying the `logic` golden vectors —
+canvas is opaque to Playwright, so the game must expose its own truth); and the **game edition of
+anti-demo**: progress persists across reload, first-run teaches, settings save — a game that resets
+everything on refresh is still a demo.
+
 ## Parse Arguments
 
 Extract from $ARGUMENTS:
