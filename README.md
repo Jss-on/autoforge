@@ -11,7 +11,7 @@ Based on [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) —
 [![Claude Code Skill](https://img.shields.io/badge/Claude_Code-Skill-blue?logo=anthropic&logoColor=white)](https://docs.anthropic.com/en/docs/claude-code)
 [![OpenCode](https://img.shields.io/badge/OpenCode-Skill-purple)](https://opencode.ai)
 [![Codex](https://img.shields.io/badge/Codex-Skill-green?logo=openai&logoColor=white)](https://developers.openai.com/codex)
-![Version](https://img.shields.io/badge/version-2.3.0-blue.svg)
+![Version](https://img.shields.io/badge/version-2.4.4-blue.svg)
 [![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 
 [![Based on](https://img.shields.io/badge/Based_on-Karpathy's_Autoresearch-orange)](https://github.com/karpathy/autoresearch)
@@ -24,11 +24,13 @@ Based on [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) —
 
 **Supports Claude Code, OpenCode, and OpenAI Codex. 18 commands. 9 safety hooks. Thin-router token architecture — command bodies load only when invoked.**
 
-> **v2.3 — Logic-first acceptance:** the build pipeline now grades **six weighted dimensions** with a **gating `logic` dimension** — golden vectors derived from the SRS must all compute correctly, or the headline score is hard-capped at 0.50. See **[Logic-first (v2.3)](#logic-first-v23)**.
+> **v2.4 — The unattended delivery loop.** `/autoresearch:test` runs a full **QA engagement** (ISO 29119/ISTQB-shaped: risk-based plan, RTM, formal test design, evidence-anchored execution, defect ledger, mechanical `RELEASE_RECOMMENDED | RELEASE_BLOCKED` verdict) and `/autoresearch:fix` is its **builder counterpart** — defect-ledger remediation, root-cause iron law, an independence ceiling (fix may mark `fixed`, only a `test` re-engagement grants `verified`). PRs the loop opens **merge themselves once every CI check is green** (branch protection always wins; deploying stays human-gated). `requirements` now runs a **latent-intent elicitation protocol** — domain recon before the first question, day-in-the-life walkthroughs, the Kano must-be checklist, throwaway-wireframe reaction rounds — so what the client *couldn't articulate* still lands in the SRS. All browser verification runs on **Playwright**, so the same gates pass on a workstation and in CI. You supply requirements and a command; the loop does the rest.
 >
-> **v2.2.0 — Autonomous Orchestrator:** Type a plain-language goal to `/autoresearch` and it classifies your goal, derives a Success predicate, confirms it once, then loops across subcommands until done. No manual chaining required. `Metric:`/`Verify:` invocations run the classic loop unchanged. See [guide/autoresearch-orchestrator.md](guide/autoresearch-orchestrator.md).
+> **v2.3 — Logic-first acceptance:** the build pipeline grades **six weighted dimensions** with a **gating `logic` dimension** — golden vectors derived from the SRS must all compute correctly, or the headline score is hard-capped at 0.50. See **[Logic-first (v2.3)](#logic-first-v23)**.
 >
-> **Build pipeline:** a full **SDLC engine** for building complex software — `/autoresearch:requirements` → `/autoresearch:build` (greenfield) or `/autoresearch:feature` (existing app) → `regression` → `ship`. Builds to **passing acceptance across six weighted dimensions** (logic · functional · UI/UX · devops · monitoring · hardening), conforms to a `DESIGN.md`, and verifies live in a real browser with **Playwright**. See **[Building Complex Software](#building-complex-software)**.
+> **v2.2 — Autonomous Orchestrator:** Type a plain-language goal to `/autoresearch` and it classifies your goal, derives a Success predicate, confirms it once, then loops across subcommands until done. `Metric:`/`Verify:` invocations run the classic loop unchanged. See [guide/autoresearch-orchestrator.md](guide/autoresearch-orchestrator.md).
+>
+> **Build pipeline:** a full **SDLC engine** for building complex software — `/autoresearch:requirements` → `/autoresearch:build` (greenfield) or `/autoresearch:feature` (existing app) → `/autoresearch:test` ↔ `/autoresearch:fix` (independent QA ↔ remediation) → `regression` → `ship`. Builds to **passing acceptance across six weighted dimensions** (logic · functional · UI/UX · devops · monitoring · hardening), conforms to a `DESIGN.md`, and verifies live in a real browser with **Playwright**. See **[Building Complex Software](#building-complex-software)**.
 
 <br>
 
@@ -66,13 +68,14 @@ Based on [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) —
 
    ── Build pipeline (full SDLC) ──────────────────────────────
 
- ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
- │ Require- │     │  Build   │     │ Feature  │     │   Test   │
- │  ments   │────▶│Greenfield│────▶│ Brownfld │     │ QA / RTM │
- │  → spec  │     │full SDLC │     │ +ratchet │     │ Verdict  │
- └──────────┘     └──────────┘     └──────────┘     └──────────┘
- /autoresearch:   /autoresearch:   /autoresearch:   /autoresearch:
-   requirements     build            feature          test
+ ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
+ │ Require- │     │  Build   │     │ Feature  │     │   Test   │     │   Fix    │
+ │  ments   │────▶│Greenfield│────▶│ Brownfld │────▶│ QA / RTM │────▶│  Defect  │
+ │  → spec  │     │full SDLC │     │ +ratchet │  ┌─▶│ Verdict  │     │  Ledger  │──┐
+ └──────────┘     └──────────┘     └──────────┘  │  └──────────┘     └──────────┘  │
+ /autoresearch:   /autoresearch:   /autoresearch:│  /autoresearch:   /autoresearch:│
+   requirements     build            feature     │    test             fix         │
+                                                 └─────── verified ◀───────────────┘
 ```
 
 ---
@@ -218,6 +221,8 @@ See [guide/hooks.md](guide/hooks.md) for full reference.
 | Optimize without breaking existing tests | Add `Guard: npm test` |
 | Hunt all bugs in a codebase | `/autoresearch:debug` |
 | Fix all errors (tests, types, lint) | `/autoresearch:fix` |
+| Remediate a QA engagement's defect ledger | `/autoresearch:fix --from-test` |
+| Run the full QA ↔ remediation loop unattended | `/autoresearch:test Target: <app> --chain fix` |
 | Debug then auto-fix | `/autoresearch:debug --fix` |
 | Check if something is ready to ship | `/autoresearch:ship --checklist-only` |
 | Explore edge cases for a feature | `/autoresearch:scenario` |
@@ -273,7 +278,7 @@ Declared weights sum to 1.30 and are **renormalized over the dimensions present 
 six declared, the effective weights are ≈ 0.231 / 0.231 / 0.154 / 0.115 / 0.115 / 0.154.
 
 A working-but-ugly or insecure app is **capped**, never "done". Acceptance is verified by *running it*
-(build, boot, probe, the test pyramid, `/browse` e2e + axe) — never self-reported.
+(build, boot, probe, the test pyramid, Playwright e2e + axe) — never self-reported.
 
 ### Logic-first (v2.3)
 
@@ -284,15 +289,17 @@ state machines). While **any** `logic` golden-vector row fails, the headline sco
 mask broken domain logic. Convergence additionally requires `REQ_COVERAGE == 1.00` and
 `DESIGN_COVERAGE == 1.00` (`score-build.sh coverage`) and the iteration bound respected.
 
-### Step 1 — Requirements (no assumptions)
+### Step 1 — Requirements (no assumptions — and no reliance on the client knowing everything)
 
 ```
 /autoresearch:requirements Brief: "<what the client wants>"
 ```
-Interviews you back-and-forth until requirements saturate, classifies functional vs non-functional, maps
-NFRs to the six dimensions, prioritizes with MoSCoW, and emits a validated
-`evals/fullstack/<name>.spec.yaml`. A **mechanical gate** releases the spec only when all six
-dimensions are present + weighted.
+Researches the domain first, then interviews you back-and-forth until requirements saturate — via the
+latent-intent elicitation protocol: day-in-the-life walkthroughs, the must-be checklist, throwaway
+wireframes you react to, an ambiguity audit, and a provenance ledger so every derived requirement is
+read back for confirmation. Classifies functional vs non-functional, maps NFRs to the six dimensions,
+prioritizes with MoSCoW, and emits a validated `evals/fullstack/<name>.spec.yaml`. A **mechanical
+gate** releases the spec only when all six dimensions are present + weighted.
 
 ### Step 2 — Build (greenfield)
 
@@ -314,7 +321,18 @@ The same loop, continued on an existing app. Appends only the feature's acceptan
 drives it green, and enforces a **hard non-regression ratchet**: any existing green→red **auto-reverts**.
 On convergence the feature ratchets into the spec — baseline only rises → **compounding gains**.
 
-### Step 4 — Gate + Ship
+### Step 4 — Independent QA ↔ remediation (test / fix)
+
+```
+/autoresearch:test Target: build-output/<app> --chain fix
+```
+`test` runs the full QA engagement (risk-based plan → RTM → formal design → evidence-anchored
+execution → defect ledger → mechanical `RELEASE_RECOMMENDED | RELEASE_BLOCKED` verdict) and **never
+fixes what it finds**. `fix` remediates the ledger root-cause-first, opens the PR, auto-merges on
+green CI, and hands back — only a `test` re-engagement turns `fixed` into `verified`. Tester and
+builder stay separate; that independence is what makes the verdict worth anything.
+
+### Step 5 — Gate + Ship
 
 `/autoresearch:regression` proves no green→red across 8 dimensions (STABLE / UNSTABLE).
 `/autoresearch:ship` runs the 8-phase shipping workflow — **deployment is always human-gated**; nothing
@@ -324,9 +342,9 @@ deploys or pushes autonomously.
 
 The design system is a committed `DESIGN.md` (Google DESIGN.md spec; reference catalog at
 [getdesign.md](https://getdesign.md) / `awesome-design-md`). `build` / `feature` adopt one (catalog ref ·
-file · URL · or generate), derive **all** UI tokens from it, and verify
-**conformance mechanically** via `/browse` (computed styles match the tokens; no off-system "slop").
-a screenshot self-review pass fixes visual issues.
+file · URL · or generate), derive **all** UI tokens from it, and verify **conformance mechanically**
+with Playwright (computed styles match the tokens; no off-system "slop"), then a screenshot
+self-review pass fixes visual issues.
 
 ### Autonomy
 
@@ -345,7 +363,10 @@ A bare goal routes itself: `/autoresearch build me a notes app` → orchestrator
 # 3. Add a feature later, without breaking anything
 /autoresearch:feature Feature: "recurring transactions" Target: build-output/money-tracker
 
-# 4. Gate + ship (human-gated)
+# 4. Independent QA -> remediation -> re-engagement (defects flow as GitHub issues + auto-merged PRs)
+/autoresearch:test Target: build-output/money-tracker --chain fix
+
+# 5. Gate + ship (human-gated)
 /autoresearch:regression --chain ship
 ```
 
@@ -516,17 +537,34 @@ Walks through 5 steps: capture goal → define scope → define metric → defin
 
 ## /autoresearch:requirements — Requirements Engineering
 
-Turn a client brief into a validated build spec — **no assumptions**. Multi-round interview until
-requirements saturate, classify functional vs non-functional, map NFRs to the six build dimensions,
-prioritize with MoSCoW, then emit + mechanically validate `evals/fullstack/<name>.spec.yaml`.
+Turn a client brief into a validated build spec — **no assumptions, and no reliance on the client
+knowing what they want.** A raw interview captures only *stated* intent; the expensive misses are the
+must-be needs clients assume ("obviously it has refunds"), the taste they cannot verbalize, and the
+domain rules neither party said out loud. The command runs `references/elicitation-protocol.md`
+against all three:
+
+- **Domain recon before the first question** — category table-stakes, glossary, the statutory layer
+  with citations; derived items enter the interview as one-click confirmations, not open questions.
+- **Day-in-the-life walkthroughs** per role — the unhappy paths, the end-of-shift/month rituals, the
+  paper trail. Each becomes a numbered scenario → SRS use case → e2e acceptance journey.
+- **Must-be (Kano) checklist** dispositioned item by item — password reset, permissions, correction
+  paths, exports, audit trail, backup, import, offline… silently absent = protocol violation.
+- **Artifact-reaction loop for design** — taste by selection and correction, never adjectives:
+  reference triage plus throwaway HTML wireframes screenshotted via Playwright, reactions per screen.
+- **Ambiguity audit** — adjective→number (with a load model), rule→boundary, workflow→failure path,
+  mutation→correction path, pronoun test.
+- **Provenance ledger + client-language playback** — every requirement tagged `stated` /
+  `derived-domain` / `default-confirmed`; sign-off happens on re-told scenarios, screenshots and
+  worked-example tables, never on the SRS document itself.
 
 ```
 /autoresearch:requirements Brief: "internal expense tracker with SSO" --chain build
 ```
 
-Single-pass dispatch; the **mechanical** `validate` gate (all six dimensions present + weighted)
-releases the spec — never a subjective "looks complete". The full requirements-engineering process is
-self-contained in the command (no separate protocol file).
+Then: classify functional vs non-functional, map NFRs to the six build dimensions, prioritize with
+MoSCoW, emit + mechanically validate `evals/fullstack/<name>.spec.yaml`. The **mechanical** `validate`
+gate (all six dimensions present + weighted, golden `logic` rows for computational domains) releases
+the spec — never a subjective "looks complete".
 
 ---
 
@@ -574,6 +612,39 @@ into the spec — the baseline only rises (**compounding gains**). Greenfield ta
 
 ---
 
+## /autoresearch:test — Independent QA Engagement
+
+The **QA engineer** of the pipeline. Where `build` creates and `feature` extends, `test` **assesses**:
+a complete, standards-aligned engagement on an existing app, run the way a professional test engineer
+runs one — and it **never fixes what it finds** (tester ↔ builder independence is what makes the
+verdict credible).
+
+```
+/autoresearch:test Target: build-output/<app> --chain fix
+```
+
+ISTQB process + ISO/IEC/IEEE 29119-3 document set: static requirements review with an ambiguity list →
+risk register (likelihood × impact drives depth) → test plan with entry/exit criteria → formal test
+design (EP, BVA, decision tables, state transition, pairwise, error guessing; `logic` golden rows
+must-pass) with a **bidirectional RTM gate** → smoke gate → evidence-anchored execution across the
+pyramid → SBTM exploratory sessions → non-functional passes (WCAG 2.2 AA via axe, OWASP-checklist
+security, percentile SLO load) → a machine-validated **defect ledger** (severity/priority decoupled;
+a critical may never be deferred) → the mechanical verdict:
+
+```
+criterion pass-rate: 0.83 < 0.95 (strict evidence)  FAIL
+criterion rtm-coverage: REQ_COVERAGE=0.41           FAIL
+criterion open-defects: blocking=3                  FAIL
+VERDICT: RELEASE_BLOCKED
+```
+
+`RELEASE_RECOMMENDED | RELEASE_BLOCKED` is decided by `score-test.sh exit-criteria`, never by opinion —
+and **what was NOT tested is reported as prominently as what was**. Artifacts ride the transparency
+contract: the QA report lands as a PR on the target's own repo, every unresolved critical/high defect
+becomes a GitHub issue (label `qa`) with full repro anatomy.
+
+---
+
 ## /autoresearch:debug — Autonomous Bug Hunter
 
 Scientific method meets autoresearch loop. Doesn't stop at one bug — iteratively hunts ALL bugs using falsifiable hypotheses, evidence-based investigation, and 7 investigation techniques.
@@ -598,25 +669,44 @@ Every finding requires code evidence (file:line + reproduction steps). Every dis
 
 ---
 
-## /autoresearch:fix — Autonomous Error Crusher
+## /autoresearch:fix — Defect Remediation (the builder half of test ↔ fix)
 
-Takes a broken state and iteratively repairs it until everything passes. ONE fix per iteration. Atomic, committed, verified, auto-reverted on failure.
+Two intake modes, one bounded loop — root-cause first, evidence-anchored, auto-reverting:
 
 ```
-/autoresearch:fix
-Iterations: 20
+/autoresearch:fix --from-test              # remediate a QA engagement's defect ledger
+/autoresearch:fix Target: "npm test"       # classic error burn-down (tests, types, lint, build)
 ```
 
-Auto-detects what's broken (tests, types, lint, build) → Prioritizes (blockers first) → Fixes ONE thing → Commits → Verifies error count decreased → Guard check → Keep/Revert → Repeat. **Stops automatically when error count hits zero.**
+**Defect mode** consumes a validated `defects.tsv`; the metric is the **blocking count** (unresolved
+critical/high) driven to zero, queue ordered **unblock-first** (build/CI blockers before severity →
+priority). Per defect: reproduce RED (evidence file) → root cause (**iron law: no fix without an
+identified root cause** — and fix the implementation, not the test, with one stated exception: the
+defect *is* the test) → one atomic fix → commit before verify → repro GREEN + targeted regression +
+guard → ledger updated. Un-reproducible defects stay `open` with the attempt recorded — never
+self-rejected.
+
+**Independence ceiling:** fix may set `in-progress` and `fixed` — never `verified`/`closed`. A `fixed`
+critical still blocks release until the chained `test` re-engagement confirms it. A fix run cannot
+self-certify.
+
+**GitHub flow, hands-off to the end:** work on `fix/<stamp>`, PR with a per-defect root-cause table
+and `Fixes #<issue>` lines, a comment on each `qa` issue as its fix lands — then the PR **merges
+itself** (`--squash --delete-branch`) once every CI check is green, the branch is `MERGEABLE`, and the
+diff stays in scope. After merging it verifies the **base branch's own CI** (PR-green/main-red
+re-opens the loop) and confirms the linked issues closed. Branch protection and required reviews
+always win; `--no-merge` opts out; merging is never deploying.
 
 | Flag | Purpose |
 |------|---------|
-| `--target <command>` | Explicit verify command |
-| `--guard <command>` | Safety command that must always pass |
-| `--category <type>` | Only fix specific type (test, type, lint, build) |
-| `--from-debug` | Read findings from latest debug session |
+| `Defects: <tsv\|run-dir\|auto>` / `--from-test` | Defect-remediation intake |
+| `--target <command>` / `--guard <command>` | Error burn-down verify + safety commands |
+| `--category <type>` | Only fix a type (test, type, lint, build) |
+| `--from-debug` | Read findings from the latest debug session |
+| `Merge: auto\|manual` / `--no-merge` | Auto-merge policy (default: auto) |
 
-**Chain them:** `/autoresearch:debug` → `/autoresearch:fix --from-debug`
+**The loop:** `/autoresearch:test --chain fix` → fix remediates the ledger → `test` re-engages and
+turns `fixed` into `verified` (or `reopened`).
 
 ---
 
@@ -905,18 +995,22 @@ autoforge/
 ├── tests/                                         ← harness self-tests (parity, hooks, scorers)
 ├── scripts/
 │   ├── install.sh                                 ← guided installer (Claude Code + OpenCode + Codex)
-│   ├── doctor.sh                                  ← environment preflight
+│   ├── doctor.sh                                  ← environment preflight (core / build / optional tiers)
 │   ├── transform.sh                               ← single transform: .claude/ → .opencode/ + .agents/ + plugins/
 │   ├── orchestrate.sh                             ← orchestrator seam (classify / route / units / screen)
-│   ├── score-build.sh                             ← fullstack_pass_rate scorer + logic gate + coverage
+│   ├── score-build.sh                             ← fullstack_pass_rate scorer + logic gate + coverage + strict evidence
+│   ├── score-test.sh                              ← defect-ledger validator + exit-criteria verdict (test)
 │   ├── score-requirements.sh                      ← build-spec validator (requirements)
 │   ├── score-regression.sh                        ← regression stability verdict
-│   └── release.sh                                 ← release automation
+│   ├── validate-handoff.sh                        ← chain-handoff contract validator
+│   ├── run-index.sh · smoke-seam.sh · smoke-model.sh  ← run inventory + seam/model smokes
+│   └── release.sh · publish-autoforge.sh          ← release + test-gated publish automation
 ├── .claude/
 │   ├── skills/autoresearch/
-│   │   ├── SKILL.md                               ← thin routing table (108 lines)
-│   │   └── references/                            ← focused reference files (security, personas,
-│   │                                                orchestrator routing, ux + hardening checklists)
+│   │   ├── SKILL.md                               ← thin routing table
+│   │   └── references/                            ← focused contracts: elicitation-protocol,
+│   │                                                qa-testing-protocol, handoff-schema, security,
+│   │                                                personas, orchestrator routing, ux + hardening
 │   └── commands/
 │       ├── autoresearch.md                        ← core loop (self-contained)
 │       └── autoresearch/                          ← 17 subcommand files (18 commands total)
@@ -940,7 +1034,7 @@ autoforge/
 A: Run `/autoresearch:plan` — it analyzes your codebase, suggests metrics, and dry-runs the verify command before you launch.
 
 **Q: How do I build a whole app, not just optimize one metric?**
-A: Use the build pipeline — `/autoresearch:requirements` (brief → validated spec, no assumptions) → `/autoresearch:build` (greenfield, full SDLC, six weighted acceptance dimensions with the gating `logic` golden vectors, `DESIGN.md`, verified live via `/browse`) → `/autoresearch:feature` to add features under a hard non-regression ratchet → `/autoresearch:regression` → `/autoresearch:ship` (human-gated). See [Building Complex Software](#building-complex-software).
+A: Use the build pipeline — `/autoresearch:requirements` (brief → validated spec via the latent-intent elicitation protocol) → `/autoresearch:build` (greenfield, full SDLC, six weighted acceptance dimensions with the gating `logic` golden vectors, `DESIGN.md`, verified live with Playwright) → `/autoresearch:feature` to add features under a hard non-regression ratchet → `/autoresearch:test --chain fix` (independent QA engagement ↔ defect remediation, PRs auto-merged on green CI) → `/autoresearch:regression` → `/autoresearch:ship` (human-gated). See [Building Complex Software](#building-complex-software).
 
 **Q: What changed in v2.3?**
 A: Logic-first acceptance. The build pipeline now grades **six** weighted dimensions — logic, functional, ux, devops, monitoring, hardening. The new `logic` dimension is **gating**: golden vectors derived from the SRS must all compute correctly, and while any fails the headline score is hard-capped at 0.50. Convergence additionally requires `REQ_COVERAGE == 1.00` and `DESIGN_COVERAGE == 1.00`. The requirements → build → feature chain carries these gates end-to-end: `requirements` emits the golden vectors, `build` drives them green, `feature` ratchets them.
