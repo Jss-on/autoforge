@@ -120,7 +120,7 @@ The build pipeline adds two software-specific properties on top:
 
 ## 4. The command suite at a glance
 
-Autoresearch ships 18 commands. For building software you mostly use the **build pipeline** (bold),
+Autoresearch ships 19 commands. For building software you mostly use the **build pipeline** (bold),
 with the others as supporting tools.
 
 | Command | Role in building software |
@@ -134,6 +134,7 @@ with the others as supporting tools.
 | `/autoresearch:fix` | Crush errors to zero (reused to clear build failures). |
 | `/autoresearch:regression` | Stability gate: prove no green→red across 8 dimensions. The ratchet's engine. |
 | `/autoresearch:test` | Full QA engagement on existing software — risk-based plan, RTM, formal test design, execution + defect ledger, exit-criteria verdict (ISO 29119/ISTQB-aligned). |
+| `/autoresearch:design` | UI/UX designer + design QA — direction protocol → machine-readable `DESIGN.md` (`system`); independent design audit of a running app with the mechanical anti-slop floor, heuristic critique, personas, defect ledger and a `SHIP|FIX|REBUILD` verdict (`audit`); bounded `--fix` remediation. |
 | `/autoresearch:security` | STRIDE + OWASP red-team audit (deepens the hardening dimension). |
 | `/autoresearch:ship` | 8-phase shipping workflow. Human-gated. |
 | `/autoresearch:scenario` | Generate edge cases across 12 dimensions (feeds acceptance). |

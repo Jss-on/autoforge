@@ -22,7 +22,7 @@ Based on [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) —
 
 *You don't need AGI. You need a goal, a metric, and a loop that never quits.*
 
-**Supports Claude Code, OpenCode, and OpenAI Codex. 18 commands. 9 safety hooks. Thin-router token architecture — command bodies load only when invoked.**
+**Supports Claude Code, OpenCode, and OpenAI Codex. 19 commands. 9 safety hooks. Thin-router token architecture — command bodies load only when invoked.**
 
 > **v2.4 — The unattended delivery loop.** `/autoresearch:test` runs a full **QA engagement** (ISO 29119/ISTQB-shaped: risk-based plan, RTM, formal test design, evidence-anchored execution, defect ledger, mechanical `RELEASE_RECOMMENDED | RELEASE_BLOCKED` verdict) and `/autoresearch:fix` is its **builder counterpart** — defect-ledger remediation, root-cause iron law, an independence ceiling (fix may mark `fixed`, only a `test` re-engagement grants `verified`). PRs the loop opens **merge themselves once every CI check is green** (branch protection always wins; deploying stays human-gated). `requirements` now runs a **latent-intent elicitation protocol** — domain recon before the first question, day-in-the-life walkthroughs, the Kano must-be checklist, throwaway-wireframe reaction rounds — so what the client *couldn't articulate* still lands in the SRS. All browser verification runs on **Playwright**, so the same gates pass on a workstation and in CI. You supply requirements and a command; the loop does the rest.
 >
@@ -183,6 +183,7 @@ See [guide/hooks.md](guide/hooks.md) for full reference.
 | `/autoresearch:build` | Build greenfield full-stack software via the full SDLC to passing acceptance (6 weighted dims, logic-gated) | 40 |
 | `/autoresearch:feature` | Add a feature to existing software — delta acceptance + hard non-regression ratchet | 25 |
 | `/autoresearch:test` | Full QA engagement on existing software — risk-based plan, RTM, formal test design, execution + defect ledger, exit-criteria verdict (ISO 29119/ISTQB-aligned) | 20 |
+| `/autoresearch:design` | UI/UX designer + design QA — mode-aware direction protocol → machine-readable `DESIGN.md` (`system`); independent audit of a running app: valid captures, mechanical anti-slop floor (`SLOP_GATE`), heuristic critique, personas, defect ledger, `SHIP|FIX|REBUILD` verdict (`audit`); bounded remediation (`--fix`) | 12 (`--fix`) |
 | `/autoresearch:debug` | Hunt bugs via hypothesis iteration | 15 |
 | `/autoresearch:fix` | Remediate defects to zero, root-cause first | 20 |
 | `/autoresearch:security` | STRIDE + OWASP audit with red-team | 15 |
@@ -200,7 +201,7 @@ See [guide/hooks.md](guide/hooks.md) for full reference.
 
 **All commands use interactive setup when invoked without arguments.** Just type the command — the agent asks for what it needs with smart defaults based on your codebase.
 
-> **OpenCode users:** Commands use underscore naming (`/autoresearch_debug`, `/autoresearch_fix`, etc.). All 18 commands available.
+> **OpenCode users:** Commands use underscore naming (`/autoresearch_debug`, `/autoresearch_fix`, etc.). All 19 commands available.
 >
 > **Codex users:** Invoke via `$autoresearch` mention syntax. Subcommands are keywords: `$autoresearch debug`, `$autoresearch plan`, etc.
 
@@ -338,13 +339,21 @@ builder stay separate; that independence is what makes the verdict worth anythin
 `/autoresearch:ship` runs the 8-phase shipping workflow — **deployment is always human-gated**; nothing
 deploys or pushes autonomously.
 
-### DESIGN.md (UI/UX)
+### DESIGN.md + the design floor (UI/UX)
 
-The design system is a committed `DESIGN.md` (Google DESIGN.md spec; reference catalog at
-[getdesign.md](https://getdesign.md) / `awesome-design-md`). `build` / `feature` adopt one (catalog ref ·
-file · URL · or generate), derive **all** UI tokens from it, and verify **conformance mechanically**
-with Playwright (computed styles match the tokens; no off-system "slop"), then a screenshot
-self-review pass fixes visual issues.
+The design system is a committed, **machine-readable** `DESIGN.md` (DESIGN.md format spec — YAML
+frontmatter tokens + prose; reference catalog at [getdesign.md](https://getdesign.md) /
+`awesome-design-md`). `/autoresearch:design system` produces it through a **mode-aware direction
+protocol** (Persuade · Operate · Read · Experience — a payroll dashboard and a marketing page are
+different jobs; strategy before values; calibrated against the AI palette/type attractors; a
+deterministic **seed roll** picks among 5–7 candidate directions so builds don't converge on the
+category default), and `score-design.sh lint` checks schema + computed contrast pairs. `build` /
+`feature` derive **all** UI tokens from it and verify **conformance mechanically** with Playwright;
+the **craft floor** (`design-scan.cjs` → `SLOP_GATE`: emoji icons, kickers on every heading, nested
+cards, purple gradients, glow halos, side stripes, em-dash copy, placeholder names, tiny/low-contrast
+text, unlabelled inputs, zoom locks, overflow, off-token colors/faces …) is a `ux` acceptance row,
+and `/autoresearch:design audit` closes Phase 6 with valid captures, a heuristic critique, a persona
+walk, a defect ledger and a `SHIP | FIX | REBUILD` verdict.
 
 ### Autonomy
 
@@ -488,7 +497,7 @@ cp -r autoforge/.opencode/skills/autoresearch ~/.config/opencode/skills/autorese
 cp autoforge/.opencode/commands/autoresearch*.md ~/.config/opencode/commands/
 ```
 
-> All 18 commands available as `/autoresearch_debug`, `/autoresearch_fix`, `/autoresearch_improve`, etc.
+> All 19 commands available as `/autoresearch_debug`, `/autoresearch_fix`, `/autoresearch_improve`, etc.
 
 ### Codex Quick Start
 
@@ -642,6 +651,48 @@ VERDICT: RELEASE_BLOCKED
 and **what was NOT tested is reported as prominently as what was**. Artifacts ride the transparency
 contract: the QA report lands as a PR on the target's own repo, every unresolved critical/high defect
 becomes a GitHub issue (label `qa`) with full repro anatomy.
+
+---
+
+## /autoresearch:design — UI/UX Designer + Design QA
+
+The **designer and design reviewer** of the pipeline. Three jobs, one command:
+
+```
+/autoresearch:design system Brief: requirements.md Mode: operate      # → DESIGN.md (build Phase 4)
+/autoresearch:design audit Url: http://localhost:3000 Routes: /,/runs,/settings   # independent review
+/autoresearch:design audit Target: build-output/<app> --fix --chain regression   # audit → bounded remediation
+```
+
+**system** — the direction protocol: read the room (audience, scene, **visitor mode** per surface,
+brand assets, the client's dislikes), declare the Design Read, set the dials, pick the foundation
+honestly (an official design-system package when the brief reads as one), choose color/type
+**strategy** before values (Operate = restrained, one workhorse family, tabular data), calibrate
+against the saturated AI looks (cream+oxblood · navy+blue shadcn · near-black+neon), list 5–7
+directions, roll (`score-design.sh seed`), commit — then write a **machine-readable `DESIGN.md`**
+(frontmatter tokens with every `on-X` contrast pair, prose sections, named rules, Do/Don't) that
+`score-design.sh lint` validates.
+
+**audit** — independent (app source read-only), evidence-first: **valid captures** at every viewport
+(settled motion, full page, every PNG opened — a blank capture is RECAPTURE, never scored) →
+`design-scan.cjs` (the mechanical floor + DESIGN.md conformance; the impeccable detector rides along
+when the project has it) → `SLOP: N` / `SLOP_GATE` → axe + keyboard walk → Nielsen's ten scored 0–4
++ the cognitive-load eight (`DESIGN_HEALTH: 28/40 (Good)`) → persona walk (power user, first-timer,
+screen-reader user, stress tester, one-thumb mobile) → `design-defects.tsv` (same ledger as `test`) →
+
+```
+criterion blocking-defects: 2 open critical/high  FAIL
+criterion slop-gate: SLOP: 7                     FAIL
+criterion design-lint: VALID                     PASS
+criterion design-health: 26/40 (Acceptable)      PASS
+DESIGN_VERDICT: FIX
+```
+
+**--fix** — the builder half: one slice per iteration, commit-before-verify, recapture + rescan,
+keep only if `SLOP` didn't rise, no acceptance row went red and regression is `STABLE`; a fix is
+`fixed`, never `verified` — a re-audit grants that. `REBUILD` means the world failed: re-run
+`system --refresh`, don't patch. Goals like "make the UI look professional" route here from the
+orchestrator (`polish-ui` archetype).
 
 ---
 
@@ -1000,6 +1051,7 @@ autoforge/
 │   ├── orchestrate.sh                             ← orchestrator seam (classify / route / units / screen)
 │   ├── score-build.sh                             ← fullstack_pass_rate scorer + logic gate + coverage + strict evidence
 │   ├── score-test.sh                              ← defect-ledger validator + exit-criteria verdict (test)
+│   ├── score-design.sh · design-scan.cjs           ← DESIGN.md lint · live-DOM design floor (SLOP_GATE) · critique/verdict (design)
 │   ├── score-requirements.sh                      ← build-spec validator (requirements)
 │   ├── score-regression.sh                        ← regression stability verdict
 │   ├── validate-handoff.sh                        ← chain-handoff contract validator
@@ -1009,16 +1061,16 @@ autoforge/
 │   ├── skills/autoresearch/
 │   │   ├── SKILL.md                               ← thin routing table
 │   │   └── references/                            ← focused contracts: elicitation-protocol,
-│   │                                                qa-testing-protocol, handoff-schema, security,
-│   │                                                personas, orchestrator routing, ux + hardening
+│   │                                                qa-testing-protocol, design-protocol, handoff-schema,
+│   │                                                security, personas, orchestrator routing, ux + hardening
 │   └── commands/
 │       ├── autoresearch.md                        ← core loop (self-contained)
-│       └── autoresearch/                          ← 17 subcommand files (18 commands total)
+│       └── autoresearch/                          ← 18 subcommand files (19 commands total)
 ├── .claude-plugin/marketplace.json                ← marketplace manifest (marketplace name: autoforge)
 ├── claude-plugin/                                 ← Claude Code plugin package (skills + commands + hooks)
 ├── .opencode/                                     ← OpenCode port (via transform.sh)
 │   ├── skills/autoresearch/
-│   └── commands/                                  ← 18 command files (autoresearch_*.md)
+│   └── commands/                                  ← 19 command files (autoresearch_*.md)
 ├── .agents/                                       ← Codex port (via transform.sh)
 │   └── skills/autoresearch/
 └── plugins/autoresearch/                          ← Codex plugin package
@@ -1043,7 +1095,7 @@ A: Logic-first acceptance. The build pipeline now grades **six** weighted dimens
 A: The root `/autoresearch` command now supports an autonomous orchestrator mode. Type a plain-language goal (e.g., `/autoresearch help me fix the login bug`) instead of `Metric:`/`Verify:` and the orchestrator classifies your goal, derives a verifiable Success predicate, confirms it once, then loops across subcommands until done. Classic metric-loop behavior is unchanged when `Metric:` or `Verify:` are present.
 
 **Q: What changed in v2.1.0?**
-A: Architecture rebuild. The monolithic SKILL.md was replaced with a thin router that stays resident (~8KB) plus self-contained command files — now 18 commands whose bodies (~3–35KB each) load only when invoked, with reference files pulled on demand. A new `/autoresearch:evals` command analyzes iteration results. Every looping command now has a bounded default instead of running unlimited.
+A: Architecture rebuild. The monolithic SKILL.md was replaced with a thin router that stays resident (~8KB) plus self-contained command files — now 19 commands whose bodies (~3–35KB each) load only when invoked, with reference files pulled on demand. A new `/autoresearch:evals` command analyzes iteration results. Every looping command now has a bounded default instead of running unlimited.
 
 **Q: How do bounded defaults work?**
 A: Every looping command ships with a sensible default (e.g., `/autoresearch` defaults to 25 iterations). Override inline: `Iterations: 50` for more, `Iterations: unlimited` for the old unbounded behavior.
@@ -1055,7 +1107,7 @@ A: Point it at any `*-results.tsv` file from a previous run. It reports trends, 
 A: Yes. Any language, framework, or domain. Install via plugin (Claude Code), installer script, or manual copy.
 
 **Q: Does this work with OpenCode?**
-A: Yes. Run `./scripts/install.sh --opencode --global` or manually copy `.opencode/` files. Commands use underscore naming (`/autoresearch_debug`, `/autoresearch_evals`, etc.). All 18 commands available.
+A: Yes. Run `./scripts/install.sh --opencode --global` or manually copy `.opencode/` files. Commands use underscore naming (`/autoresearch_debug`, `/autoresearch_evals`, etc.). All 19 commands available.
 
 **Q: Does this work with OpenAI Codex?**
 A: Yes. Run `./scripts/install.sh --codex --global` or copy `.agents/skills/autoresearch/` to `~/.codex/skills/autoresearch`. Invoke via `$autoresearch` mention syntax.

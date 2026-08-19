@@ -78,7 +78,7 @@ spec_has "Merge: manual|Merge:./--merge"            "spec: Merge argument"
 spec_has "merge state"                              "spec: summary reports merge state"
 spec_has "ship. stays human-gated"                  "spec: merging is not deploying"
 spec_has "validate-handoff\.sh"                     "spec: handoff validated via seam"
-spec_has "\"2\.4\.0\""                              "spec: handoff version 2.4.0"
+spec_has "\"2\.5\.0\""                              "spec: handoff version 2.5.0"
 spec_has "BOUND: EXCEEDED"                          "spec: mechanical iteration bound"
 spec_has "never deploy|Never deploy"                "spec: deploy human-gated"
 spec_has "localhost/\`_test\`|_test.{0,3}allowlist" "spec: DB allowlist"
@@ -108,7 +108,7 @@ for mf in "$REPO_ROOT/.claude-plugin/marketplace.json" \
           "$REPO_ROOT/claude-plugin/.claude-plugin/plugin.json" \
           "$REPO_ROOT/plugins/autoresearch/.codex-plugin/plugin.json"; do
   name="${mf#$REPO_ROOT/}"
-  grep -q "18 commands" "$mf" && pass "manifest count 18: $name" || fail "manifest count 18: $name"
+  grep -q "19 commands" "$mf" && pass "manifest count 19: $name" || fail "manifest count 19: $name"
   grep -q "fix" "$mf" && pass "manifest lists fix: $name" || fail "manifest lists fix: $name"
 done
 
@@ -139,11 +139,11 @@ echo "$OUT2" | grep -q "blocking=0" && pass "verified (tester's stamp) lifts the
 # handoff: fix source accepts results_tsv OR errors_remaining; rejects neither
 VH="$REPO_ROOT/claude-plugin/skills/autoresearch/scripts/validate-handoff.sh"
 cat > "$TMP/handoff-good.json" <<'EOF'
-{"version":"2.4.0","source":"fix","timestamp":"2026-08-14T00:00:00+08:00","status":"COMPLETE","results_tsv":"iterations.tsv","errors_remaining":0}
+{"version":"2.5.0","source":"fix","timestamp":"2026-08-14T00:00:00+08:00","status":"COMPLETE","results_tsv":"iterations.tsv","errors_remaining":0}
 EOF
 bash "$VH" "$TMP/handoff-good.json" fix >/dev/null 2>&1 && pass "handoff: fix with results_tsv → VALID" || fail "handoff: fix with results_tsv → VALID"
 cat > "$TMP/handoff-bad.json" <<'EOF'
-{"version":"2.4.0","source":"fix","timestamp":"2026-08-14T00:00:00+08:00","status":"COMPLETE"}
+{"version":"2.5.0","source":"fix","timestamp":"2026-08-14T00:00:00+08:00","status":"COMPLETE"}
 EOF
 bash "$VH" "$TMP/handoff-bad.json" fix >/dev/null 2>&1 && fail "handoff: fix without results → INVALID" || pass "handoff: fix without results → INVALID"
 

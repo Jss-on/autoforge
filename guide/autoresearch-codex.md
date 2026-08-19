@@ -1,6 +1,6 @@
 # AutoForge for Codex — v2.3.0
 
-Codex distribution of AutoForge's `autoresearch` engine. Same 18 commands, same flags, same output contracts as the Claude Code version. Entry point: `$autoresearch <command>`.
+Codex distribution of AutoForge's `autoresearch` engine. Same 19 commands, same flags, same output contracts as the Claude Code version. Entry point: `$autoresearch <command>`.
 
 ---
 
@@ -35,7 +35,7 @@ Codex uses `$autoresearch` prefix:
 | `/autoresearch:evals` | `$autoresearch evals` |
 | `/autoresearch:ship` | `$autoresearch ship` |
 
-All 18 commands follow the same pattern: `$autoresearch <command> [flags]`.
+All 19 commands follow the same pattern: `$autoresearch <command> [flags]`.
 
 ---
 
@@ -132,7 +132,7 @@ plugins/autoresearch/                ← Codex plugin package
 └── skills/autoresearch/
     ├── SKILL.md                     ← thin router
     ├── autoresearch.md              ← core loop
-    ├── <command>.md                 ← 17 subcommand files (18 commands total)
+    ├── <command>.md                 ← 18 subcommand files (19 commands total)
     └── references/                  ← on-demand reference files
 
 .agents/                             ← Codex agent tree (same skill, agent layout)

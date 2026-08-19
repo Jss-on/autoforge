@@ -1,7 +1,7 @@
 {
   "name": "autoresearch",
-  "version": "2.4.5-codex.0",
-  "description": "Autonomous improvement engine for Codex. 18 commands: iterate, plan, debug, fix, security, ship, scenario, predict, learn, reason, probe, improve, evals, regression, build, requirements, feature, test.",
+  "version": "2.5.0-codex.0",
+  "description": "Autonomous improvement engine for Codex. 19 commands: iterate, plan, debug, fix, security, ship, scenario, predict, learn, reason, probe, improve, evals, regression, build, requirements, feature, test, design.",
   "author": {
     "name": "Jss-on",
     "url": "https://github.com/Jss-on"
@@ -22,7 +22,7 @@
   "interface": {
     "displayName": "Autoresearch",
     "shortDescription": "Autonomous improvement workflows for Codex.",
-    "longDescription": "17 self-contained commands: core iterate loop, plan, debug, fix, security, ship, scenario, predict, learn, reason, probe, evals, improve, regression, build, requirements, feature. Thin routing SKILL.md + per-command instruction files.",
+    "longDescription": "19 self-contained commands: core iterate loop, plan, debug, fix, security, ship, scenario, predict, learn, reason, probe, evals, improve, regression, build, requirements, feature, test, design. Thin routing SKILL.md + per-command instruction files.",
     "developerName": "Jss-on",
     "category": "Productivity",
     "capabilities": [

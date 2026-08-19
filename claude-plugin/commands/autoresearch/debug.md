@@ -92,6 +92,6 @@ If --evals present:
 
 ## Chain Handoff
 
-After completion, write handoff.json to output directory: version "2.4.0", source "debug", timestamp, status (COMPLETE|USER_INTERRUPT|BOUNDED|ERROR), results_tsv path, findings = confirmed bugs with severity + file:line, config{scope, symptom}.
+After completion, write handoff.json to output directory: version "2.5.0", source "debug", timestamp, status (COMPLETE|USER_INTERRUPT|BOUNDED|ERROR), results_tsv path, findings = confirmed bugs with severity + file:line, config{scope, symptom}.
 If --fix flag → chain to fix automatically.
 Invoke next target in --chain order. Propagate --evals flag.

@@ -32,6 +32,7 @@ satisfy it ("defined but never called"). Before convergence, a **requirement-sat
 re-reads `requirements.md` and confirms every **goal (G-n) + FR + NFR** is genuinely met by such an
 exercise — not merely traced. **Self-contained** — the SDLC phase-gate table + principles are folded in
 at the end of this doc. Companion contracts: `references/uiux-checklist.md`,
+`references/design-protocol.md` (visitor modes, direction protocol, DESIGN.md schema, craft floor, design QA),
 `references/fullstack-hardening-checklist.md`.
 
 ## Seam & reference resolution (read once, applies to every `scripts/…` and `references/…` mention)
@@ -122,7 +123,7 @@ Extract from $ARGUMENTS:
 If neither Spec nor Goal is provided, AskUserQuestion (single batch):
   Q1 (What): "What should I build?" — open text
   Q2 (Stack): node+postgres+react, python+fastapi+postgres, your call, let me choose
-  Q3 (UX bar): full WCAG AA + design system, basic responsive, minimal
+  Q3 (UX bar): full (design system + WCAG AA + the craft floor + design audit), basic responsive, minimal (floor only)
   Q4 (Launch): build until passing acceptance (bounded 40), unlimited, dry-run
 If a spec file is provided → derive everything from it and skip setup.
 
@@ -199,19 +200,35 @@ Design the system **and** the interface before coding:
   case. The engine is implemented and golden-tested before any UI.
 - **Database design** — the concrete schema/ER + a forward-only migration plan derived from the
   domain model.
-- **Adopt a `DESIGN.md`** — the canonical design source (Google DESIGN.md spec). Resolve in order:
-  the `Design:` arg → the spec's `design:` block → else **generate** one (derive tokens + component
-  states from the product's needs and write them straight into `DESIGN.md`). Sources: a **catalog** slug from getdesign.md / `awesome-design-md`
-  (e.g. `linear`, `stripe`), a **file**, a **URL**, or **generate**. Copy the chosen one to the project
-  root as `DESIGN.md`.
+- **Adopt a `DESIGN.md` via the direction protocol** — run `/autoresearch:design system` (inline; same
+  run dir) per `references/design-protocol.md` §3: read the room (audience, scene, **visitor mode**
+  per surface — Operate for app UI, Persuade for the landing page — brand assets, the client's
+  dislikes from `requirements`), declare the Design Read, set the dials, pick the foundation honestly
+  (official design-system package when the brief reads as one; the stack's component library
+  otherwise), choose color/type **strategy** before values (Operate floor = Restrained, one workhorse
+  family, tabular data), calibrate against the saturated AI attractors (cream+oxblood · navy+blue
+  shadcn · near-black+neon — the "could someone guess it from the category?" test), list 5–7
+  directions, roll with `scripts/score-design.sh seed`, commit. Resolve the source in order: the
+  `Design:` arg → the spec's `design:` block (`source`, `ref`, `mode`) → else **generate**. Catalog
+  slugs (getdesign.md / `awesome-design-md`), files and URLs are copied to the project root as
+  `DESIGN.md` and normalized to the same frontmatter schema.
+- **DESIGN.md is machine-readable** (protocol §4): YAML frontmatter (`name`, `mode`, `colors` with
+  every `on-X` pair + a muted text token budgeted for the lightest surface, `typography` roles,
+  `spacing`, `rounded`, optional `components`) + prose sections (Overview · Colors · Typography ·
+  Layout · Elevation & Depth · Shapes · Components · Motion · States · Do's and Don'ts) + the
+  direction-contract comment in the root layout. `scripts/score-design.sh lint DESIGN.md` must print
+  `DESIGN_LINT: VALID` (schema + computed contrast pairs).
 - **Tokens FROM DESIGN.md** — translate its typography scale, color palette (with contrast targets),
   spacing, radius, motion, and component states (loading / empty / error / success) into the app's
   style tokens. The UI is built from these tokens, never improvised. Per `references/uiux-checklist.md`.
-**Gate:** `DESIGN.md` committed + design tokens derived from it; full design traceability —
-`scripts/score-build.sh coverage` reports `DESIGN_COVERAGE: 1.00`, i.e. every DESIGN.md token group
-(`design:type` · `design:color` · `design:spacing` · `design:radius` · `design:motion` ·
-`design:states`) is traced by ≥1 `ux` acceptance row (orphan token = gate FAIL). (Reuse `reason` to
-pick between options.)
+- **Archetype rows** — every screen maps to a surface archetype (dashboard, list+CRUD, record,
+  form/wizard, POS/kiosk, settings, auth, onboarding/empty, landing …; protocol §2) whose required
+  patterns become `ux` acceptance rows now, alongside the seven `design:*` coverage rows.
+**Gate:** `DESIGN.md` committed with `DESIGN_LINT: VALID` + design tokens derived from it; full design
+traceability — `scripts/score-build.sh coverage` reports `DESIGN_COVERAGE: 1.00`, i.e. every DESIGN.md
+token group (`design:type` · `design:color` · `design:spacing` · `design:radius` · `design:motion` ·
+`design:states` · `design:floor`) is traced by ≥1 `ux` acceptance row (orphan token = gate FAIL).
+(Reuse `reason` to pick between options.)
 
 ## Phase 5 — Implementation (TDD)
 Build in a **red → green** TDD ladder, one slice per iteration. Pick the lowest-scoring dimension
@@ -232,8 +249,14 @@ since the pass-rate is capped at 0.50 until every golden case is green. Order wi
 4. **DevOps** — multi-stage **Dockerfile** (non-root, `HEALTHCHECK`), compose/IaC, CI (lint+test+build+dep-scan),
    forward-only migrations, `SIGTERM` graceful shutdown, env config + `.env.example`.
 5. **Monitoring** — `/healthz`, `/readyz`, `/metrics` (Prometheus), structured JSON logs, trace/correlation IDs.
-6. **UX** — implement the design system; responsive layouts; **accessibility** (WCAG 2.1 AA: labels,
-   contrast, keyboard nav, focus order, aria); the four component states.
+6. **UX** — implement the design system under the surface's **visitor-mode rules** (protocol §1:
+   Operate = earned familiarity, restrained color, one family, 150–250 ms state motion only, no
+   modal-first) and archetype patterns (§2); responsive layouts; **accessibility** (WCAG 2.2 AA:
+   labels, contrast, keyboard nav incl. dialogs, focus visible + not obscured, aria, ≥24px targets);
+   every component state (default/hover/focus/active/disabled/loading/empty/error/success); the
+   **craft floor** loaded before editing UI (protocol §5) — no emoji icons, no kicker on every
+   heading, no nested cards, no reflex palette; run `design-scan.cjs` on the touched routes before
+   the slice is measured.
 7. **Hardening (security + performance layers)** —
    - **Security layer** — no hardcoded **secret**s; security headers (CSP/HSTS/X-CTO/X-Frame); input
      validation at the boundary; authN + **per-resource** authZ (no IDOR); CSRF + SSRF guards;
@@ -269,11 +292,18 @@ IEEE-829-style incident report, right-sized to its `iterations.tsv` line.
   Chromium, installed as a project devDependency so CI runs the same suite): the primary user flow
   must actually work click-by-click.
 - **Accessibility** — run **axe** against rendered pages via Playwright; zero serious/critical violations.
-- **Visual** — screenshot the primary views; flag layout/contrast/slop regressions.
-- **DESIGN.md conformance** — Playwright reads computed styles and asserts color / type scale / spacing
-  match the committed `DESIGN.md` tokens; flag off-system ("slop") values. Then run a **screenshot
-  self-review pass** — read the captured views back and fix visual inconsistency, hierarchy and slop,
-  re-verifying with fresh screenshots.
+- **Design QA (the craft floor + conformance + critique)** — run `/autoresearch:design audit` (protocol
+  §7) against the running app: **valid captures** at 1280×800 + 390×844 (settled motion, full-page,
+  every PNG opened and confirmed — a blank/black/wrong-route capture is RECAPTURE, never scored);
+  `node scripts/design-scan.cjs --url <every primary route> --mode <mode> --design DESIGN.md --shots
+  evidence/screens --out evidence/design-scan.json` then `scripts/score-design.sh scan` →
+  **`SLOP_GATE: PASS`** is the `design:floor` `ux` row (zero error/warn findings: no emoji icons,
+  placeholder copy, em-dash UI copy, kickers, nested cards, purple gradients, glow halos, side
+  stripes, tiny/low-contrast text, unlabelled inputs, zoom locks, overflow, console errors, and no
+  `design-*-drift` — the computed styles match the DESIGN.md frontmatter); the heuristic critique
+  (`DESIGN_HEALTH`), the persona walk and the ledger; `scripts/score-design.sh verdict …` →
+  `DESIGN_VERDICT: SHIP`. `FIX` routes the ledger back into the loop (`design --fix` semantics);
+  `REBUILD` means the world failed — re-run `design system --refresh`, don't patch.
 - **Performance** — run a **load test** (k6 / autocannon / locust) asserting the p95 latency SLO and
   **zero N+1** on the primary flows; check frontend bundle budget + Core Web Vitals via Playwright.
 - **Security** — an **OWASP Top 10** pass (reuse `/autoresearch:security`): headers, input validation,
@@ -283,7 +313,8 @@ Deliverables, right-sized per IEEE 829's intent: the **Test Plan** is the accept
 pyramid (scope, approach, item pass/fail criteria); **test cases** are the executable suites;
 **defect reports** are the Defect Loop's records; the **Test Summary Report** is the final
 per-dimension breakdown (written into `evals-summary.md` / the Summary).
-**Gate:** every layer green; coverage ≥ floor; e2e + axe clean; UI conforms to `DESIGN.md`.
+**Gate:** every layer green; coverage ≥ floor; e2e + axe clean; UI conforms to `DESIGN.md`
+(`SLOP_GATE: PASS`, no design drift) and the design audit's verdict is `SHIP`.
 
 ## Phase 7 — Deployment
 Write the release deliverables, then hand to `autoresearch:ship` (8-phase: checklist → dry-run →
@@ -342,7 +373,8 @@ iteration:
      `git revert HEAD --no-edit`. Failures revert instantly; the incumbent is never left worse.
 6. **Log** — append the iteration (change, pass_rate, delta, guard, keep/discard) to `iterations.tsv`.
 7. **Repeat** until (`pass-rate --strict-evidence >= Target-rate` **AND** `logic_gate == PASS` **AND**
-   `REQ_COVERAGE == 1.00` **AND** `DESIGN_COVERAGE == 1.00` **AND** the requirement-satisfaction audit
+   `REQ_COVERAGE == 1.00` **AND** `DESIGN_COVERAGE == 1.00` **AND** `SLOP_GATE == PASS` with
+   `DESIGN_VERDICT: SHIP` **AND** the requirement-satisfaction audit
    passes **AND** `scripts/score-build.sh bound iterations.tsv <N>` prints `BOUND: OK`) or the bound
    (`Iterations: N`, default 40) is reached — **bounded by default**; `Iterations: unlimited` opts out.
    The bound is itself mechanical: `BOUND: EXCEEDED` means the run may NOT report CONVERGED — either
@@ -375,8 +407,9 @@ Two **structural** gates close that gap — both mechanical counts (not judgemen
 `scripts/score-build.sh coverage build-results.tsv requirements.md`:
 - **`REQ_COVERAGE`** = (`FR-`/`NFR-` IDs in `requirements.md` named by ≥1 row's `traces`) ÷ (total
   `FR-`/`NFR-` IDs). Must be `1.00` from the Phase 3 gate onward.
-- **`DESIGN_COVERAGE`** = (DESIGN.md token groups traced by ≥1 `ux` row) ÷ (total groups). Must be
-  `1.00` from the Phase 4 gate onward.
+- **`DESIGN_COVERAGE`** = (DESIGN.md token groups traced by ≥1 `ux` row) ÷ (total groups — seven:
+  type · color · spacing · radius · motion · states · **floor**). Must be `1.00` from the Phase 4 gate
+  onward.
 - **`traces` column** (TSV col 7, comma-separated `FR-n`/`NFR-n`/`design:<group>`; the `detail` col may
   be empty but the tab must be present) — every acceptance row names what it satisfies. The reverse is
   enforced too: a trace pointing to a requirement/token that does not exist is an **invented** assertion
@@ -399,7 +432,8 @@ can re-run the scorer on the stored ledger and check every pass row's evidence f
   the anchored localhost/_test allowlist. No real secrets — throwaway dev creds via env, never committed.
 
 ## Summary
-Print: final pass-rate, **logic_gate (PASS|CAPPED)**, **REQ_COVERAGE + DESIGN_COVERAGE**, per-dimension
+Print: final pass-rate, **logic_gate (PASS|CAPPED)**, **REQ_COVERAGE + DESIGN_COVERAGE**, **`SLOP` +
+`SLOP_GATE` + `DESIGN_VERDICT`** (the design QA line), per-dimension
 scores (incl **logic** + **ux**), assertions green/total, **requirement-satisfaction audit verdict**,
 phases completed (of the 8 SDLC phases), iterations used, kept vs discarded slices, build output
 path, and a **deliverables checklist** (charter · SRS + RTM · HLD/LLD + `DESIGN.md` · test summary ·
@@ -413,10 +447,10 @@ interval, print pass-rate trend + per-dimension breakdown (F/ux/D/M/H). Plateau 
 recommend a spec/stack/design rethink. At loop end → `evals-summary.md` in the output directory.
 
 ## Chain Handoff
-Write handoff.json: version "2.4.0", source "build", timestamp, status
+Write handoff.json: version "2.5.0", source "build", timestamp, status
 (COMPLETE|BOUNDED|CONVERGED|BLOCKED|USER_INTERRUPT|ERROR), results_tsv, metric (fullstack_pass_rate),
-coverage{requirements, design}, phases_completed, findings = remaining red assertions + untraced
-requirements/tokens, config{spec, scope, stack, target_rate}.
+coverage{requirements, design}, design{lint, slop, verdict, design_md}, phases_completed, findings = remaining red
+assertions + untraced requirements/tokens + open design defects, config{spec, scope, stack, target_rate}.
 The handoff shape is the chain contract — `references/handoff-schema.md`. After writing it, run
 `scripts/validate-handoff.sh <run-dir>/handoff.json build`; on `INVALID`, fix the handoff before
 printing the summary — a run with an invalid handoff is NOT finished.
@@ -437,10 +471,10 @@ living — never heavyweight documents for their own sake.
 | 1 | **Planning / Initiation** | `plan`, `predict` | **Project charter** (`charter.md`): vision, in/out scope, stakeholders/ICP, iteration budget, risk register | charter committed with objectives, in/out scope, iteration budget, ≥3 risks + mitigations; build target dir resolved (never the skill repo) |
 | 2 | **Feasibility** | — | **Feasibility verdict** in `charter.md` (spike results: technical, operational, schedule, licensing) | toolchain spike boots (runtime + DB/docker + Playwright); acceptance-size vs iteration budget sane; licenses permissive; verdict **GO** with stack pinned (NO-GO → re-scope with the user) |
 | 3 | **Requirements Analysis** | `probe`, `predict` | **SRS** (`requirements.md`, IEEE 830 / ISO 29148-shaped) + **RTM** (the `traces` column + coverage report) | every requirement carries a stable `FR-`/`NFR-` ID; **for logic-heavy domains, logic diagrams (ER + state machines + sequence + decision flowcharts) with every state transition / decision branch mapped to a golden vector**; every acceptance assertion enumerated + tagged `dimension`+`weight`+`traces`; `REQ_COVERAGE == 1.00` (every ID traced, no orphan assertion); baseline `build-results.tsv` seeded (`fail`) → pass-rate `0.00` |
-| 4 | **Design** | `reason` | **HLD** (architecture) + **LLD** (domain engine + rule matrix, diagrams) + **DB schema** + **UI/UX system** (`DESIGN.md` + tokens + wireframes) | `DESIGN.md` (architecture: modules, data model, API contract; **for logic-heavy domains, a pure calculation engine + the rule matrix with citations**) **and** UI/UX design system (tokens: type, color+contrast, spacing, motion, component states, wireframes) committed; `DESIGN_COVERAGE == 1.00` (every token group traced by ≥1 `ux` assertion) |
+| 4 | **Design** | `design system`, `reason` | **HLD** (architecture) + **LLD** (domain engine + rule matrix, diagrams) + **DB schema** + **UI/UX system** (`DESIGN.md` via the direction protocol + tokens + wireframes) | `DESIGN.md` (architecture: modules, data model, API contract; **for logic-heavy domains, a pure calculation engine + the rule matrix with citations**) **and** UI/UX design system (visitor mode per surface; machine-readable tokens: type, color+contrast pairs, spacing, radius, motion, component states; `DESIGN_LINT: VALID`; wireframes) committed; `DESIGN_COVERAGE == 1.00` (every token group incl. `design:floor` traced by ≥1 `ux` assertion) |
 | 5 | **Implementation** | TDD ladder | **Source code + build artifacts + CI** (lint, tests, container) | domain engine built first and **every `logic` golden case green** (incl one end-to-end case proving it is wired in); each accepted slice turns a red assertion green; guard green; no green→red regression; the app is wired to a **real persisted datastore** (UI→API→DB) with full CRUD + accounts + settings + onboarding (**fresh account starts empty**), not a seed-only/in-memory demo; headline pass-rate stays capped at 0.50 until the `logic` gate clears |
 | ‡ | **Defect loop (debugging — cross-phase, inside 5–6)** | `debug` | **Defect records** (symptom → root cause → fix, in `iterations.tsv`) | every failing assertion traced to a **root cause** before a fix lands (iron law: no symptom patches) |
-| 6 | **Testing** | — | **Test plan** (acceptance TSV + pyramid) + **test cases** (suites) + **Test summary report** (`evals-summary.md`) | test pyramid green: **golden oracle (every rule-matrix vector + edge cases, incl end-to-end)** + unit + integration + e2e (Playwright) + accessibility (axe) + visual + **load/perf (p95 SLO, no N+1)** + **security (OWASP Top 10)** + **real-product (anti-demo): a UI-created record persists across a restart, a fresh account starts empty, CRUD + settings round-trip**; **requirement-satisfaction audit — every goal/FR/NFR exercised end-to-end in the live app, no user-facing FR met by an engine/unit test alone**; coverage ≥ floor (80%) |
+| 6 | **Testing** | — | **Test plan** (acceptance TSV + pyramid) + **test cases** (suites) + **Test summary report** (`evals-summary.md`) | test pyramid green: **golden oracle (every rule-matrix vector + edge cases, incl end-to-end)** + unit + integration + e2e (Playwright) + accessibility (axe) + **design QA (`SLOP_GATE: PASS`, DESIGN.md conformance, heuristic critique, `DESIGN_VERDICT: SHIP`)** + **load/perf (p95 SLO, no N+1)** + **security (OWASP Top 10)** + **real-product (anti-demo): a UI-created record persists across a restart, a fresh account starts empty, CRUD + settings round-trip**; **requirement-satisfaction audit — every goal/FR/NFR exercised end-to-end in the live app, no user-facing FR met by an engine/unit test alone**; coverage ≥ floor (80%) |
 | 7 | **Deployment** | `ship` | **Deployment/release plan** + **Release notes** (`RELEASE_NOTES.md`) + **user manual** (quickstart) | checklist → dry-run → deploy → verify + canary — **human-gated**, never automatic |
 | 8 | **Operations / Maintenance** | `feature`, `fix`, `improve` | **Runbook** (`RUNBOOK.md`) + **change-request path** (handoff to feature/fix/improve) | runbook committed with commands/endpoints **verified against the running app**; maintenance path in handoff — the cycle feeds back into planning |
 
@@ -478,12 +512,14 @@ living — never heavyweight documents for their own sake.
   (`input → exact output`) + boundary/interaction edge cases + one end-to-end case (catching "defined
   but never called"). `logic` is **must-pass**: the headline pass-rate is capped at 0.50 until every
   golden case is green, so a complex domain cannot converge "done" on shallow or disconnected math.
-- **Design precedes UI code.** The design system (tokens + states) is committed before frontend slices,
-  so UX is built to a spec. This makes the `ux` dimension measurable.
+- **Design precedes UI code — and the floor is mechanical.** The design system (mode-aware tokens +
+  states, `DESIGN_LINT: VALID`) is committed before frontend slices, so UX is built to a spec; the
+  craft floor (`design-scan.cjs` → `SLOP_GATE`) and the design audit's verdict make the `ux`
+  dimension measurable beyond axe — a generic, tell-ridden UI is capped exactly like an inaccessible one.
 - **Root cause before fix.** The defect loop forbids symptom patching; a fix references the falsified
   hypothesis.
-- **Comprehensive ≠ "tests pass".** Phase 6 requires the whole pyramid (unit→integration→e2e→a11y→visual),
-  not just unit green. e2e + a11y run against the *running* app via Playwright.
+- **Comprehensive ≠ "tests pass".** Phase 6 requires the whole pyramid (unit→integration→e2e→a11y→design QA),
+  not just unit green. e2e + a11y + the design floor run against the *running* app via Playwright.
 - **Deployment is human-gated.** Phase 7 reuses `ship`; `build` never deploys to production or cuts
   releases on its own — pushes to the private output repo are the standard loop, everything beyond is `ship`'s.
 - **Maintenance closes the cycle.** Phase 8 documents operations (runbook) and routes change requests

@@ -112,5 +112,5 @@ If --evals: write `evals-summary.md` to output directory with full analysis.
 
 ## Handoff
 
-Write `handoff.json`: version "2.4.0", source "improve", timestamp, status (COMPLETE|SATURATED|USER_INTERRUPT|BOUNDED|ERROR), results_tsv path, findings = improvements with tier + confidence + prd_path, config{goal, icp, depth, categories_explored, insights_total, prds_generated}.
+Write `handoff.json`: version "2.5.0", source "improve", timestamp, status (COMPLETE|SATURATED|USER_INTERRUPT|BOUNDED|ERROR), results_tsv path, findings = improvements with tier + confidence + prd_path, config{goal, icp, depth, categories_explored, insights_total, prds_generated}.
 Improve is a terminal emitter — no downstream chain invocation.

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # validate-handoff.sh — mechanical gate for the chain contract (handoff.json).
-# Schema: skills/autoresearch/references/handoff-schema.md (v2.3.1).
+# Schema: skills/autoresearch/references/handoff-schema.md (v2.5.0).
 #
 #   validate-handoff.sh <handoff.json> [expected-source]
 #
@@ -32,7 +32,7 @@ PARSED="$(node -e '
   const h = (k) => (k in j ? "1" : "0");
   console.log([s("version"), s("source"), s("status"), s("timestamp"), s("verdict"),
                h("results_tsv"), h("metric"), h("config"), h("coverage"),
-               h("spec"), h("srs"), h("generated_spec"), h("errors_remaining")]
+               h("spec"), h("srs"), h("generated_spec"), h("errors_remaining"), h("design")]
               .join(String.fromCharCode(31)));
 ' "$FILE" 2>/dev/null)"
 
@@ -40,7 +40,7 @@ if [[ "$PARSED" == "__PARSE_ERROR__" || -z "$PARSED" ]]; then
   echo "INVALID"; echo "not valid JSON: $FILE" >&2; exit 1
 fi
 IFS=$'\x1f' read -r VERSION SOURCE STATUS TS VERDICT \
-  H_RESULTS H_METRIC H_CONFIG H_COVERAGE H_SPEC H_SRS H_GENSPEC H_ERRREM <<< "$PARSED"
+  H_RESULTS H_METRIC H_CONFIG H_COVERAGE H_SPEC H_SRS H_GENSPEC H_ERRREM H_DESIGN <<< "$PARSED"
 
 has_field() { # reads the pre-parsed presence flags
   case "$1" in
@@ -52,6 +52,7 @@ has_field() { # reads the pre-parsed presence flags
     srs)              [[ "$H_SRS"      == "1" ]] ;;
     generated_spec)   [[ "$H_GENSPEC"  == "1" ]] ;;
     errors_remaining) [[ "$H_ERRREM"   == "1" ]] ;;
+    design)           [[ "$H_DESIGN"   == "1" ]] ;;
     *) return 1 ;;
   esac
 }
@@ -105,6 +106,17 @@ case "$SOURCE" in
   test)
     has_field results_tsv || err "missing: results_tsv (required for test)"
     ;;
+  design)
+    # an audit carries the disposition; a `system` run carries the DESIGN.md it wrote
+    if [[ -n "$VERDICT" ]]; then
+      case "$VERDICT" in
+        SHIP|FIX|REBUILD) ;;
+        *) err "verdict not in enum for design: $VERDICT (SHIP|FIX|REBUILD)" ;;
+      esac
+    else
+      has_field design || err "missing: verdict (SHIP|FIX|REBUILD) or design (object) — required for design"
+    fi
+    ;;
 esac
 
 if [[ "$ERRORS" -gt 0 ]]; then
@@ -113,7 +125,7 @@ fi
 
 # Legacy-version warning is stderr-only; the file is still VALID.
 case "$VERSION" in
-  2.1.*|2.2.*) echo "warn: legacy handoff version $VERSION (current schema 2.4.0)" >&2 ;;
+  2.1.*|2.2.*) echo "warn: legacy handoff version $VERSION (current schema 2.5.0)" >&2 ;;
 esac
 
 echo "VALID"; exit 0

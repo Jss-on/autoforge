@@ -112,5 +112,5 @@ If --evals present:
 
 ## Chain Handoff
 
-Write handoff.json: version "2.4.0", source "probe", timestamp, status (COMPLETE|SATURATED|USER_INTERRUPT|BOUNDED|ERROR), findings = constraints, config = derived autoresearch config.
+Write handoff.json: version "2.5.0", source "probe", timestamp, status (COMPLETE|SATURATED|USER_INTERRUPT|BOUNDED|ERROR), findings = constraints, config = derived autoresearch config.
 Invoke next target in --chain order. Propagate --evals flag.

@@ -1,7 +1,7 @@
 ---
 name: autoresearch
 description: "Autonomous iteration loop: modify, verify, keep/discard against any metric"
-version: 2.4.5
+version: 2.5.0
 ---
 
 # Autoresearch — Autonomous Goal-directed Iteration
@@ -48,6 +48,7 @@ Print a banner on every invocation: `[autoresearch] mode: classic | orchestrator
 | `$autoresearch evals` | Analyze iteration results: trends, plateaus, regressions | N/A |
 | `$autoresearch regression` | Regression stability gate: baseline vs candidate, verdict STABLE/UNSTABLE | N/A |
 | `$autoresearch test` | Full QA engagement on existing software (ISO 29119/ISTQB-aligned): risk-based plan → RTM → formal test design → execution + defect ledger → exit-criteria verdict | 20 |
+| `$autoresearch design` | UI/UX designer + design QA: mode-aware direction protocol → machine-readable `DESIGN.md` (`system`); independent audit of a running app — valid captures, mechanical anti-slop floor (`SLOP_GATE`), heuristic critique, personas, defect ledger, `SHIP|FIX|REBUILD` verdict (`audit`); bounded remediation (`--fix`) | 12 (`--fix`) |
 
 ## Universal Flags
 
@@ -69,7 +70,7 @@ Print a banner on every invocation: `[autoresearch] mode: classic | orchestrator
 Activated when a plain-language goal is given without `Metric:`/`Verify:`. Classifies the goal into a **Goal archetype** — see `references/orchestrator-routing.md` for the archetype table and router decision table.
 
 **Two modes based on archetype:**
-- **Orchestration loop** — predicate-bearing archetypes (ship-ready, optimize-metric, fix-broken, harden, build-feature, explore). Goal has a mechanical Success predicate; the loop runs until that predicate is met.
+- **Orchestration loop** — predicate-bearing archetypes (ship-ready, optimize-metric, fix-broken, harden, build-feature, explore, polish-ui). Goal has a mechanical Success predicate; the loop runs until that predicate is met (polish-ui: `score-design.sh verdict` → `SHIP`).
 - **Single-pass dispatch** — subjective/terminal archetypes (document, what-to-build, decide-design). Routes once to the fitting subcommand (learn / improve / reason), lets it self-terminate, then reports. No loop, no Plateau, no ship gate.
 
 ### Orchestration Loop Steps

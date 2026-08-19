@@ -136,8 +136,11 @@ Interleave, per the plan:
   scripted cases miss: sad paths, hostile-user moves (other users' IDs in URLs, tampered client
   prices), confused-user moves (back button, refresh mid-transaction, two tabs), concurrency and
   idempotency races (double-submit, simultaneous edits — verify who wins and what the loser sees).
-- **Non-functional passes** mapped to 25010: **accessibility** (axe scan + keyboard-only navigation +
-  focus management against WCAG 2.2 AA — one bad token can be ~20 nodes/page), **security-functional**
+- **Non-functional passes** mapped to 25010: **accessibility + usability** (axe scan + keyboard-only
+  navigation + focus management against WCAG 2.2 AA — one bad token can be ~20 nodes/page; plus the
+  design QA floor via `/autoresearch:design audit` semantics: `scripts/design-scan.cjs` →
+  `scripts/score-design.sh scan` (`SLOP_GATE`), DESIGN.md conformance, heuristic critique — its
+  `design-defects.tsv` rows join this ledger, same schema), **security-functional**
   (OWASP Top 10 checklist at QA depth: authz matrix per role, IDOR probes, input validation, header +
   session checks — deep audit remains `/autoresearch:security`), **performance** (k6/autocannon load
   at a realistic concurrency model against declared p95 SLOs — a physically impossible load model
@@ -199,7 +202,7 @@ Interval: floor(max_iterations / 3), min 1. Print pass-rate trend, execution pro
 A rising arrival curve at the bound → recommend extension or RELEASE_BLOCKED, never silent exit.
 
 ## Chain Handoff
-Write handoff.json: version "2.4.0", source "test", timestamp, status
+Write handoff.json: version "2.5.0", source "test", timestamp, status
 (COMPLETE|BOUNDED|BLOCKED|USER_INTERRUPT|ERROR), results_tsv, defects_tsv, verdict
 (RELEASE_RECOMMENDED|RELEASE_BLOCKED), summary (path), metric (fullstack_pass_rate), coverage,
 findings = unresolved defects + not-tested list, config{target, requirements, types, iterations}.

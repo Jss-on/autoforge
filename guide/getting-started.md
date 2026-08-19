@@ -23,7 +23,7 @@ Inside Claude Code:
 /plugin install autoresearch@autoforge
 ```
 
-All 18 commands are available after restarting Claude Code. Update later with `/plugin marketplace update autoforge`.
+All 19 commands are available after restarting Claude Code. Update later with `/plugin marketplace update autoforge`.
 
 Local-clone alternative: `git clone https://github.com/Jss-on/autoforge && cd autoforge`, then `/plugin marketplace add .` and the same install command.
 
@@ -78,7 +78,7 @@ The root `/autoresearch` command has two modes:
 - **Classic loop** — supply `Metric:` / `Verify:` inline and it iterates against that metric (25 iterations by default). This is the original behavior, unchanged.
 - **Autonomous orchestrator** — type a plain-language goal instead (e.g., `/autoresearch help me fix the login bug`) and the system classifies your goal, derives a Success predicate, confirms it once, then loops across subcommands until done. No manual chaining required. See [/autoresearch — Orchestrator](autoresearch-orchestrator.md) for the full guide.
 
-The 17 subcommands below are unchanged. The orchestrator is a mode of the root command, not an additional subcommand.
+The 18 subcommands below are unchanged. The orchestrator is a mode of the root command, not an additional subcommand.
 
 | Command | Does | Default Iterations |
 |---------|------|--------------------|
@@ -88,6 +88,7 @@ The 17 subcommands below are unchanged. The orchestrator is a mode of the root c
 | `/autoresearch:build` | Greenfield full-stack build via the full SDLC (6 weighted dims, logic-gated) | 40 |
 | `/autoresearch:feature` | Add a feature to an existing app — delta acceptance + non-regression ratchet | 25 |
 | `/autoresearch:test` | Full QA engagement on existing software — risk-based plan, RTM, formal test design, execution + defect ledger, exit-criteria verdict (ISO 29119/ISTQB-aligned) | 20 |
+| `/autoresearch:design` | UI/UX designer + design QA — mode-aware direction protocol → machine-readable `DESIGN.md` (`system`); independent audit of a running app: valid captures, mechanical anti-slop floor (`SLOP_GATE`), heuristic critique, personas, defect ledger, `SHIP|FIX|REBUILD` verdict (`audit`); bounded remediation (`--fix`) | 12 (`--fix`) |
 | `/autoresearch:debug` | Hunt bugs scientifically | 15 |
 | `/autoresearch:fix` | Crush errors to zero | 20 |
 | `/autoresearch:security` | STRIDE + OWASP audit | 15 |

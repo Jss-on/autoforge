@@ -23,7 +23,7 @@ AutoForge is the product; `autoresearch` is the engine and plugin it ships — a
 /plugin install autoresearch@autoforge
 ```
 
-Restart session after install. All 18 commands become available as `/autoresearch` and `/autoresearch:<subcommand>`. Update later with `/plugin marketplace update autoforge`.
+Restart session after install. All 19 commands become available as `/autoresearch` and `/autoresearch:<subcommand>`. Update later with `/plugin marketplace update autoforge`.
 
 ### Codex (plugin)
 
@@ -75,6 +75,7 @@ cp -r autoforge/plugins/autoresearch ~/.agents/plugins/autoresearch
 | `autoresearch:build` | Build greenfield full-stack software via the full SDLC to passing acceptance (6 weighted dims, logic-gated) |
 | `autoresearch:feature` | Add a feature to an existing app — delta acceptance + hard non-regression ratchet |
 | `autoresearch:test` | Full QA engagement on existing software — risk-based plan, RTM, formal test design, execution + defect ledger, exit-criteria verdict (ISO 29119/ISTQB-aligned) |
+| `autoresearch:design` | UI/UX designer + design QA — direction protocol → machine-readable `DESIGN.md`; independent design audit (anti-slop floor `SLOP_GATE`, heuristic critique, personas, defect ledger, `SHIP|FIX|REBUILD` verdict); bounded `--fix` remediation |
 
 ---
 

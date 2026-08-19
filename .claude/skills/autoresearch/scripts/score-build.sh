@@ -40,7 +40,7 @@ BUILD_W_HARDENING="${BUILD_W_HARDENING:-0.20}"
 LOGIC_GATE_CAP="${LOGIC_GATE_CAP:-0.50}"
 
 # Canonical DESIGN.md token groups every `ux` row must collectively trace (drives DESIGN_COVERAGE).
-BUILD_DESIGN_TAGS="${BUILD_DESIGN_TAGS:-design:type design:color design:spacing design:radius design:motion design:states}"
+BUILD_DESIGN_TAGS="${BUILD_DESIGN_TAGS:-design:type design:color design:spacing design:radius design:motion design:states design:floor}"
 
 # ---------------------------------------------------------------------------
 # rubric: grep the build spec for required capability tokens. Each matched
@@ -91,6 +91,9 @@ rubric() {
     "playwright|headless browser|e2e"
     "loading state|empty state|error state|states"
     "contrast|keyboard|focus|aria"
+    "visitor mode|persuade|operate"
+    "slop|craft floor|SLOP_GATE|design-scan"
+    "score-design|DESIGN_LINT|design audit"
     # --- devops ---
     "Dockerfile|docker"
     "multi.?stage"

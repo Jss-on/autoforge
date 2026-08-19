@@ -42,8 +42,16 @@ floor**. Re-baseline: `scripts/score-build.sh pass-rate` dips (new fails); that 
 recover.
 
 ## Phase 2 — Design delta
-Extend **within the existing `DESIGN.md`** — reuse its tokens (color, type, spacing, components/states).
-Do NOT introduce a new design system; new UI must pass `design-conformance` against the same DESIGN.md.
+Extend **within the existing `DESIGN.md`** — reuse its tokens (color, type, spacing, components/states);
+a feature inside an established surface inherits that surface’s visitor mode and world, never a new
+identity (`references/design-protocol.md` §1/§3). Do NOT introduce a new design system; new UI must pass
+`design-conformance` against the same DESIGN.md **and the craft floor**: run
+`node scripts/design-scan.cjs --url <touched routes> --mode <mode> --design DESIGN.md` on every touched
+route and keep `SLOP` at zero (a `design:floor` `ux` row in the delta) — no emoji icons, kickers, nested
+cards, placeholder copy, off-token colors/faces. Missing tokens the feature genuinely needs are added to
+`DESIGN.md` (re-lint: `scripts/score-design.sh lint`), never improvised inline. When the feature adds a
+whole new surface archetype (a dashboard to a CRUD app), its required patterns (§2) join the delta rows,
+and `design audit` runs on it before the ratchet.
 
 ## Phase 3 — Implement (the autoresearch loop)
 Per iteration, exactly as `build`:
@@ -92,7 +100,7 @@ Print: feature, baseline→final pass-rate (over the union), new assertions gree
 (must be STABLE), iterations, kept vs reverted slices, and confirmation the delta was ratcheted into the spec.
 
 ## Chain Handoff
-Write handoff.json: version "2.4.0", source "feature", status
+Write handoff.json: version "2.5.0", source "feature", status
 (COMPLETE|CONVERGED|BOUNDED|BLOCKED|USER_INTERRUPT|ERROR), results_tsv, metric (fullstack_pass_rate),
 regression_verdict, findings = remaining red, config{feature, target, spec}. Schema:
 `references/handoff-schema.md`; after writing, `scripts/validate-handoff.sh <run-dir>/handoff.json

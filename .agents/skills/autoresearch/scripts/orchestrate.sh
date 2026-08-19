@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # orchestrate.sh — deterministic seam for the autoresearch orchestrator loop.
 #
-#   classify   <goal-string>   → Goal archetype label (keyword heuristics)
+#   classify   <goal-string>   → Goal archetype label (keyword heuristics; 10 archetypes)
 #   next-hop   <state.json>    → Next subcommand from router decision table
 #   units      <results.json>  → Units-remaining scalar (lower_is_better)
 #   plateau    <history.txt>   → Exit 0 if last N computed values are flat-or-worse
@@ -12,7 +12,7 @@
 set -uo pipefail
 
 # ---------------------------------------------------------------------------
-# classify: map a goal string to one of the 9 Goal archetype labels.
+# classify: map a goal string to one of the 10 Goal archetype labels.
 # Priority order matters: higher-stakes archetypes checked first so that
 # "fix and add the broken feature" → fix-broken, not build-feature.
 # ---------------------------------------------------------------------------
@@ -48,6 +48,14 @@ classify() {
   # Build/implement/add — "feature" alone is insufficient; any of these words qualify
   if printf '%s' "$g" | grep -qE '(build|implement|add)'; then
     echo "build-feature"; return 0
+  fi
+
+  # UI/UX quality — polish/redesign/usability goals route to the design command
+  # (audit → --fix loop; predicate = score-design.sh verdict SHIP). Checked AFTER build so
+  # "build the UI for X" stays greenfield work; bare "design" is NOT enough ("design
+  # decision" is decide-design below) — the surface words are.
+  if printf '%s' "$g" | grep -qE '(redesign|ui/ux|\bui\b|\bux\b|user interface|look and feel|looks? (bad|ugly|generic|dated|amateur)|ugly|polish the|slop|usability|accessib)'; then
+    echo "polish-ui"; return 0
   fi
 
   # Metric optimization

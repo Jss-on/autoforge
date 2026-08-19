@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clean fixture</title>
+<style>
+  :root { --bg:#f5f7fa; --fg:#14181f; --muted:#4b5563; --accent:#0b5fff; --line:#d5dbe3; }
+  body { margin:0; font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif; background:var(--bg); color:var(--fg); font-size:16px; line-height:1.55; }
+  a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset:2px; }
+  header { display:flex; align-items:center; justify-content:space-between; padding:16px 32px; border-bottom:1px solid var(--line); background:#fff; }
+  nav a { color:var(--fg); text-decoration:none; padding:8px 12px; display:inline-block; }
+  main { max-width:960px; margin:0 auto; padding:32px 24px; }
+  h1 { font-size:28px; margin:0 0 8px; }
+  p { max-width:65ch; color:var(--muted); }
+  .row { display:flex; gap:12px; align-items:end; margin-top:24px; }
+  label { display:block; font-weight:600; margin-bottom:6px; }
+  input { padding:10px 12px; border:1px solid var(--line); border-radius:6px; font:inherit; min-width:260px; min-height:44px; box-sizing:border-box; }
+  button { background:var(--accent); color:#fff; border:0; padding:12px 18px; border-radius:6px; font:inherit; min-height:44px; cursor:pointer; }
+  table { width:100%; border-collapse:collapse; margin-top:24px; background:#fff; }
+  th, td { text-align:left; padding:12px; border-bottom:1px solid var(--line); }
+  th { font-weight:600; }
+</style>
+</head>
+<body>
+<header><strong>Ledger</strong><nav><a href="#">Runs</a><a href="#">People</a><a href="#">Settings</a></nav></header>
+<main>
+  <h1>Payroll runs</h1>
+  <p>Create a run for a pay period, review the computed totals, then approve. Approved runs generate payslips you can download.</p>
+  <form class="row">
+    <div><label for="q">Find an employee</label><input id="q" type="search" placeholder="Name or ID"></div>
+    <button type="submit">Search</button>
+  </form>
+  <table>
+    <thead><tr><th>Period</th><th>Employees</th><th>Status</th></tr></thead>
+    <tbody><tr><td>2026-08-01 to 2026-08-15</td><td>12</td><td>Approved</td></tr></tbody>
+  </table>
+</main>
+</body>
+</html>

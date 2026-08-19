@@ -2,6 +2,54 @@
 
 All notable changes to the autoresearch project are documented here.
 
+## v2.5.0 — `/autoresearch:design`: the UI/UX designer + design QA (2026-08-19)
+
+**Theme:** every mechanical `ux` gate was green while builds shipped the AI-generated dashboard
+template — emoji nav icons, cream + oxblood, three identical stat tiles, kicker labels above every
+heading, nested cards, em-dash copy, "Acme". A comprehensive assessment of three UI/UX skills
+(taste-skill, impeccable, ui-ux-pro-max — `docs/uiux-skills-assessment.md`) distilled into the 19th
+command, a protocol reference, and two seams that make **taste-adjacent quality mechanical**.
+
+### Added
+- **`/autoresearch:design`** — `system` (mode-aware direction protocol → machine-readable
+  `DESIGN.md`; deterministic seed roll over 5–7 candidate directions; `score-design.sh lint` checks
+  schema + computed contrast pairs), `audit` (independent, app-source read-only: valid captures at
+  every viewport, the mechanical floor, axe + keyboard walk, Nielsen 0–4 + cognitive-load critique,
+  persona walk, `design-defects.tsv` in the QA ledger schema, `DESIGN_VERDICT: SHIP|FIX|REBUILD`),
+  and `--fix` (bounded remediation: one slice, commit-before-verify, recapture + rescan, keep only if
+  SLOP did not rise / no row went red / regression STABLE; `fixed` never `verified`).
+- **`scripts/design-scan.cjs`** — the live-DOM floor probe (project Playwright): ~40 deterministic
+  rules — emoji icons, kickers, nested/identical/stat cards, side stripes, gradient text, glow halos,
+  purple gradients, spotlight haze, cream/pure-black grounds, bounce easing, layout-property
+  transitions, marquee/pulsing dots, tiny text, approx. contrast, line length, clipped labels,
+  unlabelled inputs, missing focus styles, tap targets (24/44), zoom lock, overflow, heading order,
+  generic copy tells (Acme/John Doe/buzzwords/"Oops"), em-dash UI copy, aphoristic cadence,
+  Persuade hero/section rules, **DESIGN.md token drift** (fonts/colors/radii vs the frontmatter),
+  content-hidden-at-rest, console errors — plus the impeccable browser detector as a superset when the
+  project has it. Screenshots per route × viewport as evidence; `error|warn` count, `advisory` does not.
+- **`scripts/score-design.sh`** — `lint` · `scan` (`SLOP: N` / `SLOP_GATE`) · `critique`
+  (`DESIGN_HEALTH: N/M (Band)`) · `defects` (delegates to score-test) · `verdict` · `seed` · `rubric`.
+- **`references/design-protocol.md`** — visitor modes (Persuade/Operate/Read/Experience) with rule
+  deltas, surface archetypes → required patterns/acceptance rows, the direction protocol, the DESIGN.md
+  schema (frontmatter tokens + sections + named rules), the craft floor (verify/refuse lists + the rule
+  table), states/hardening/onboarding/copy, the design QA protocol, remediation rules, provenance.
+- **Orchestrator `polish-ui` archetype** (10th): "make the UI look professional / redesign / usability /
+  accessibility" → design audit → `--fix` → regression, predicate `DESIGN_VERDICT: SHIP`.
+- **Seventh design coverage group `design:floor`** (`SLOP_GATE: PASS` row) in `score-build.sh`.
+- `tests/test-design.sh` (new suite) + fixtures (`tests/fixtures/design/`).
+
+### Changed
+- `build`: Phase 4 adopts DESIGN.md via the direction protocol (+ `DESIGN_LINT: VALID` gate, archetype
+  rows); Phase 5.6 builds under the mode rules + craft floor; Phase 6 runs the design audit
+  (`SLOP_GATE`, conformance, critique, verdict) instead of a self-review pass; convergence requires
+  `SLOP_GATE == PASS` + `DESIGN_VERDICT: SHIP`; summary/handoff carry the design line.
+- `feature`: design delta inherits the surface's mode/world and keeps SLOP at zero on touched routes.
+- `requirements`: spec `design:` block gains `mode` + `dislikes`; `ux` block requires a
+  `design-floor` assertion + archetype rows. `test`: the a11y pass folds in the design floor.
+- `references/uiux-checklist.md` v2 (mode + archetype first, floor section, design QA gate).
+- Handoff schema 2.5.0 (`design` source: verdict enum or `design` object; pins bumped in every command);
+  manifests/routers/docs at 19 commands; `doctor.sh` header; `transform.sh` ships the two new seams.
+
 ## v2.4.5 — asset-heavy builds: games get a protocol (2026-08-15)
 
 **Theme:** Games (and any media-heavy target) fail differently — on asset provenance, repo bloat,

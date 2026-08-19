@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Slop fixture</title>
+<style>
+  body { margin:0; font-family: Inter, sans-serif; background:#f7f3ea; color:#1a1714; }
+  nav { display:flex; gap:24px; padding:16px 32px; background:#fff; }
+  nav a { color:#333; text-decoration:none; }
+  .wrap { padding: 32px; }
+  .eyebrow { font-size:11px; letter-spacing:0.18em; text-transform:uppercase; color:#8a7a5a; }
+  .stats { display:grid; grid-template-columns: repeat(3, 1fr); gap:24px; margin:24px 0; }
+  .card { background:#fff; border:1px solid #eee; border-radius:16px; padding:24px; box-shadow: 0 20px 40px -15px rgba(0,0,0,.08); }
+  .stat .num { font-size:44px; font-weight:800; color:#9a2436; }
+  .stat h3 { margin:0 0 4px; font-size:14px; }
+  .inner { background:#fafafa; border:1px solid #ddd; border-radius:12px; padding:16px; margin-top:12px; }
+  .callout { border-left:4px solid #b6553a; background:#fff; padding:12px 16px; margin:16px 0; }
+  .grad { background: linear-gradient(90deg, #7c3aed, #06b6d4); -webkit-background-clip:text; background-clip:text; color:transparent; font-size:32px; font-weight:700; }
+  .glow { box-shadow: 0 0 24px rgba(124,58,237,.6); background:#111; color:#fff; padding:16px; border-radius:12px; margin:16px 0; }
+  .hero { background: linear-gradient(135deg, #6d28d9 0%, #a855f7 60%, #22d3ee 100%); color:#fff; padding:40px; border-radius:16px; }
+  .tiny { font-size:9px; }
+  .btn { background:#9a2436; color:#fff; border:0; padding:6px 10px; border-radius:6px; transition: width .3s cubic-bezier(.68,-.55,.27,1.55); }
+  .muted { color:#b7b7b7; }
+</style>
+</head>
+<body>
+<nav>
+  <a href="#">🏠 Home</a><a href="#">👥 Employees</a><a href="#">📋 Payroll Runs</a><a href="#">⚙️ Settings</a>
+</nav>
+<div class="wrap">
+  <div class="eyebrow">Overview</div>
+  <h3>Dashboard — Acme Manufacturing Inc.</h3>
+  <p class="muted">Welcome back — Acme Manufacturing Inc. Seamless payroll to elevate your team.</p>
+  <div class="stats">
+    <div class="card stat"><div class="eyebrow">Total employees</div><div class="num">5</div><h3>Team</h3><p>Acme Manufacturing Inc.</p></div>
+    <div class="card stat"><div class="eyebrow">Last run net</div><div class="num">₱185,026.75</div><h3>Net</h3><p>2025-06-01 – 2025-06-15</p></div>
+    <div class="card stat"><div class="eyebrow">Pending approvals</div><div class="num">0</div><h3>Approvals</h3><p>Runs awaiting approval</p></div>
+  </div>
+  <div class="card">
+    <h3>Recent runs</h3>
+    <div class="inner">Nested card content here — see the pattern.</div>
+  </div>
+  <div class="callout">Something went wrong</div>
+  <div class="grad">Gradient headline</div>
+  <div class="glow">Glowing panel</div>
+  <div class="hero"><h2>Next-gen payroll. No spreadsheets.</h2><p class="tiny">v1.4.2 · build 0048</p></div>
+  <form><input placeholder="Search employees" type="text"><button class="btn">Go</button></form>
+  <p>Contact John Doe at Acme. Oops! something went wrong.</p>
+</div>
+</body>
+</html>

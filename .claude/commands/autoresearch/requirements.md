@@ -186,7 +186,8 @@ checked by `scripts/score-requirements.sh validate`):
 name: <slug>
 summary: <one line>
 stack: { language: <…>, framework: <…>, datastore: <…> }
-design: { source: catalog|file|url|generate, ref: <slug/path/url> }   # build adopts as DESIGN.md
+design: { source: catalog|file|url|generate, ref: <slug/path/url>, mode: operate|persuade|read|experience,
+          dislikes: [ <reactions the client rejected> ] }   # build adopts as DESIGN.md via the direction protocol
 acceptance:
   logic:      [ { id, assert, weight, traces, gate } … ]  # golden cases: input→exact output; gate:true = must-pass
   functional: [ { id, assert, weight, traces } … ]        # incl anti-demo: persist-across-restart, fresh-empty, CRUD, settings
@@ -197,7 +198,11 @@ acceptance:
 ```
 - `name`, `summary`, `stack` (chosen in analysis)
 - `design:` — the chosen design reference from elicitation: `{ source: catalog|file|url|generate,
-  ref: <slug/path/url> }`. `build` adopts this as the project's `DESIGN.md`. Omit/`generate` if none chosen.
+  ref: <slug/path/url>, mode, dislikes }`. `mode` is the app's default **visitor mode** (Operate for
+  task UI, Persuade for a marketing surface — decided per surface, protocol §1 of
+  `references/design-protocol.md`); `dislikes` are the directions/patterns the client rejected in the
+  artifact-reaction loop (the direction protocol keeps them out). `build` adopts this as the project's
+  `DESIGN.md` via `/autoresearch:design system`. Omit/`generate` if none chosen.
 - `acceptance:` block with **all six dimensions** — `logic`, `functional`, `ux`, `devops`,
   `monitoring`, `hardening` — each a list of `{id, assert, weight, traces}` derived directly from the
   acceptance criteria (Given/When/Then → a mechanical `assert`). Weight by MoSCoW (Must=2, Should=1).
@@ -215,7 +220,10 @@ acceptance:
   isolated function, since a generator/engine the UI never calls leaves the FR unbuilt. This is what
   lets `build`'s **requirement-satisfaction audit** confirm each goal/FR is *wired in*, not merely
   traced. The `ux` block MUST
-  include a `design-conformance` assertion (the live UI matches the chosen `DESIGN.md` tokens). The
+  include a `design-conformance` assertion (the live UI matches the chosen `DESIGN.md` tokens) **and a
+  `design-floor` assertion** (`scripts/score-design.sh scan` → `SLOP_GATE: PASS` on every primary route,
+  tracing `design:floor`), plus the surface-archetype rows the product's screens require (dashboard,
+  list+CRUD, form/wizard, POS, settings, auth, onboarding/empty — protocol §2). The
   **`hardening` block spans two layers** — **security** (secrets, headers, input validation,
   per-resource authZ, OWASP Top 10) and **performance** (p95 latency SLO, no N+1, pagination, caching,
   Core Web Vitals) — so a build is "safe to expose" only when it is also fast under load.
@@ -234,7 +242,7 @@ Print the ready invocation:
 ```
 /autoresearch:build Spec: evals/fullstack/<name>.spec.yaml Iterations: 40
 ```
-Write handoff.json to the output dir (`autoresearch/requirements-{YYMMDD}-{HHMM}/`): version "2.4.0",
+Write handoff.json to the output dir (`autoresearch/requirements-{YYMMDD}-{HHMM}/`): version "2.5.0",
 source "requirements", status COMPLETE, `spec` = generated spec path, config{name, stack}, traceability
 summary. Schema: `references/handoff-schema.md`; after writing, `scripts/validate-handoff.sh
 <run-dir>/handoff.json requirements` must print VALID.

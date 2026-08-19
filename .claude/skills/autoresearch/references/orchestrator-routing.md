@@ -13,6 +13,7 @@
 | `document` | document, wiki, generate docs, explain codebase, write guide | dispatch | learn |
 | `what-to-build` | what should I build, ideas, improvements, PRD, roadmap | dispatch | improve |
 | `decide-design` | which approach, compare options, design decision, architecture choice | dispatch | reason |
+| `polish-ui` | redesign, UI/UX, user interface, look and feel, looks ugly/generic/dated, polish the UI, slop, usability, accessibility | loop | design (audit), design --fix, regression — predicate: `score-design.sh verdict … → DESIGN_VERDICT: SHIP` (SLOP 0, no blocking design defects); units = SLOP + blocking defects |
 
 Keyword matching is fuzzy — partial matches and synonyms qualify. When a goal matches multiple archetypes, prefer the more specific one (fix-broken over explore; ship-ready over fix-broken if "ship" is explicit). When ambiguous, show the top two candidates in the upfront confirm and let the user choose.
 
@@ -47,7 +48,7 @@ advisory input to convergence — it never auto-approves ship, which stays human
 
 ## Two-Mode Split
 
-**Orchestration loop** — used when the goal has an external, mechanical Success predicate: a shell command that returns a value the orchestrator can compare across cycles. Progress is objective (Units remaining falls), plateau is well-defined, and the loop terminates on convergence or a safety backstop. Archetypes: ship-ready, optimize-metric, fix-broken, harden, build-feature, explore.
+**Orchestration loop** — used when the goal has an external, mechanical Success predicate: a shell command that returns a value the orchestrator can compare across cycles. Progress is objective (Units remaining falls), plateau is well-defined, and the loop terminates on convergence or a safety backstop. Archetypes: ship-ready, optimize-metric, fix-broken, harden, build-feature, explore, polish-ui.
 
 **Single-pass dispatch** — used when no mechanical predicate exists. The goal is subjective or the subcommand is internally-converging (reason runs its own adversarial loop) or a one-shot terminal emitter (learn, improve produce a document and stop). The orchestrator routes once, the subcommand self-terminates, and the orchestrator reports the result. No Units remaining, no Plateau counter, no ship gate. Archetypes: document, what-to-build, decide-design.
 
