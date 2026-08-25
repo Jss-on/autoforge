@@ -1,7 +1,7 @@
 ---
 name: forge
 description: "Autonomous iteration loop: modify, verify, keep/discard against any metric"
-version: 3.1.0
+version: 3.2.0
 ---
 
 # AutoForge — Autonomous Goal-directed Iteration

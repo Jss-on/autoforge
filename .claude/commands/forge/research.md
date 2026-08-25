@@ -1,7 +1,7 @@
 ---
 name: forge:research
-description: "Deep research engagement — decompose questions, sweep scholarly + web sources, read the primary literature, build a source-anchored claims ledger with graded confidence, synthesize a cited dossier gated by a mechanical citation verdict"
-argument-hint: "[Topic: <question|file>] [Recency: <window>] [Audience: <who/purpose>] [Iterations: N] [--depth standard|exhaustive] [--chain reason|requirements]"
+description: "Deep research engagement — decompose questions, sweep scholarly + web sources, read the primary literature, build a source-anchored claims ledger with graded confidence, synthesize a cited dossier gated by a mechanical citation verdict; optionally typeset as an arXiv preprint or IEEE paper"
+argument-hint: "[Topic: <question|file>] [Recency: <window>] [Audience: <who/purpose>] [Format: md|arxiv|ieee] [Iterations: N] [--depth standard|exhaustive] [--chain reason|requirements]"
 ---
 
 EXECUTE IMMEDIATELY.
@@ -38,6 +38,9 @@ engagement without live sources is fiction.
   queue", "general reader", "counsel preparing to brief a biomechanics expert"). Calibrates register
   and depth; triggers the **sensitive-domain register** (below) when the use is medical, legal,
   financial, or safety-critical.
+- `Format:` — output format(s) for the final report: `md` (default, always written) plus `arxiv`
+  and/or `ieee` (comma-separable, e.g. `Format: arxiv,ieee`). Paper formats typeset the SAME ledger
+  per `references/paper-templates.md` — never new claims.
 - `Iterations:` — bound on the claims/synthesis loop (default 15). `--depth standard|exhaustive` —
   exhaustive widens the sweep (more modalities, 1-hop citation snowball on every anchor, per-claim
   disconfirmation) and raises the tier floor.
@@ -68,6 +71,12 @@ engagement without live sources is fiction.
   confidence; per-RQ synthesis with inline `[S-nn]` on every factual sentence; consensus-vs-contested
   table; magnitudes table (value · units · conditions · source); limitations and open unknowns;
   scope-of-use note; methodology appendix; full bibliography with accessed dates.
+- `paper/arxiv/main.tex` + `references.bib` and/or `paper/ieee/main.tex` + `references.bib` — when
+  `Format:` requests them: the dossier typeset per `references/paper-templates.md` (arXiv `article`
+  preprint · `IEEEtran`), bibliography generated from the **cited** `sources.tsv` rows (key =
+  source id, accessed dates kept), validated by `scripts/score-research.sh paper`; compiled to
+  `main.pdf` when a LaTeX toolchain (`tectonic`|`latexmk`|`pdflatex`) resolves, otherwise shipped
+  as sources with a compile note — never a faked PDF.
 - `iterations.tsv`, `score-log.tsv`, `handoff.json`.
 
 ## Phase 1 — Scoping & question decomposition
@@ -149,6 +158,15 @@ title, venue, locator, accessed date — every entry resolvable). Then the mecha
 support floor met, default `RESEARCH_T12_FLOOR=0.60` · zero orphan or unverified citations) and the
 verdict: **`DOSSIER_READY` or `DOSSIER_BLOCKED`**. A blocked dossier ships to the user only labeled
 as blocked, with the failing criteria and the scarcity map — never silently as done.
+**Paper emission (when `Format:` includes `arxiv`/`ieee`):** project the dossier into the requested
+skeleton(s) per `references/paper-templates.md` — section mapping §1, BibTeX rules §2, every
+`[S-nn]` becomes `\cite{S-nn}`, the Limitations section survives as its own `\section`, the
+scope-of-use note becomes the mandatory Scope of Use subsection for sensitive domains, and every
+`<placeholder>` is filled. Each emitted format must pass
+`scripts/score-research.sh paper paper/<fmt>/main.tex paper/<fmt>/references.bib sources.tsv`
+(`PAPER: VALID` — orphan `\cite` keys, uncitable bib entries, or a missing Limitations/abstract/
+bibliography block it). A paper is a typeset projection of the ledger: it may not introduce one
+claim, number, or citation the dossier does not carry.
 
 ## GitHub flow (transparency contract)
 Research artifacts are evidence — commit the run directory (plan, ledgers, notes, dossier) to the
@@ -181,8 +199,9 @@ Print: verdict (**DOSSIER_READY | DOSSIER_BLOCKED**) with each criterion's measu
 with per-RQ answer confidence; claims by confidence (high/moderate/low/contested); sources by tier
 and depth (full/abstract/secondary split); disconfirmation passes run and what they changed;
 evidence-scarcity notes; deliverables checklist (plan · queries · sources · notes · claims ·
-dossier — each present/missing); the dossier path; the scope-of-use reminder when the sensitive
-register is active.
+dossier · papers when requested, each with its `PAPER:` line and PDF-or-compile-note — each
+present/missing); the dossier path; the scope-of-use reminder when the sensitive register is
+active.
 
 ## Eval Checkpoint (--evals)
 Interval: floor(max_iterations / 3), min 1. Print claims-per-RQ coverage, confidence mix trend

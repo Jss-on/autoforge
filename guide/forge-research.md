@@ -19,6 +19,7 @@ conditions, no verdict without the seam.**
 | `Topic:` | The research question or a file with background (brief, incident description, draft to fact-check). Required. |
 | `Recency:` | The window that matters (`5y`, `10y`, `any`). Defaults by field pace. |
 | `Audience:` | Who consumes the dossier, for what decision. Triggers the sensitive-domain register (medical/legal/financial/safety). |
+| `Format:` | `md` (default) plus `arxiv` and/or `ieee` — typeset the dossier as an arXiv preprint (`article`) or IEEE paper (`IEEEtran`), bibliography generated from cited sources, validated by `score-research.sh paper`, compiled to PDF when a LaTeX toolchain resolves. |
 | `Iterations:` | Bound on the claims/synthesis loop (default 15). |
 | `--depth standard\|exhaustive` | Exhaustive widens the sweep, snowballs every anchor, disconfirms per-claim. |
 | `--chain reason\|requirements` | Debate the contested claims, or feed the dossier into an SRS as domain recon. |
@@ -64,6 +65,15 @@ VERDICT: DOSSIER_READY
 scarcity-noted), both ledgers valid, and at least `RESEARCH_T12_FLOOR` (default 0.60) of claims
 resting on T1/T2 sources. A blocked dossier ships only labeled as blocked, with the failing
 criteria and the scarcity map.
+
+## Paper formats
+
+`Format: arxiv,ieee` emits `paper/arxiv/main.tex` and/or `paper/ieee/main.tex` with a generated
+`references.bib` (key = source id, accessed dates kept). The paper is a typeset projection of the
+claims ledger — it may not introduce a claim, number, or citation the dossier does not carry —
+and `scripts/score-research.sh paper` gates it: every `\cite` must resolve, every bib key must map
+to a citable ledger row, and abstract/Limitations/bibliography must be present. See
+`references/paper-templates.md` for the skeletons and the dossier-to-section mapping.
 
 ## Sensitive domains
 

@@ -737,6 +737,12 @@ safety) trigger a mandatory scope-of-use register: the dossier is literature bac
 supports qualified professionals, never advice or case-specific expert opinion. Chain
 `--chain reason` to debate the contested claims or `--chain requirements` to feed an SRS.
 
+`Format: arxiv,ieee` additionally typesets the dossier as an **arXiv preprint** (`article` class)
+and/or an **IEEE paper** (`IEEEtran`) — same ledger, `[S-nn]` becomes `\cite{S-nn}`, bibliography
+generated from the cited `sources.tsv` rows, Limitations kept as its own section — validated by
+`score-research.sh paper` (orphan cite keys and uncitable bib entries block) and compiled to PDF
+when a LaTeX toolchain resolves.
+
 ---
 
 ## /forge:debug — Autonomous Bug Hunter

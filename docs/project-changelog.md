@@ -2,6 +2,18 @@
 
 All notable changes to the forge project are documented here.
 
+## v3.2.0 — Paper formats for /forge:research (2026-08-26)
+
+**Added:** `Format: md|arxiv|ieee` on `/forge:research`. Phase 5 can typeset the dossier as an
+arXiv `article` preprint and/or an `IEEEtran` paper: section mapping + BibTeX generation per the
+new `references/paper-templates.md` (key = source id, entry type from the `type` column, accessed
+dates kept, `[S-nn]` -> `\cite{S-nn}`, Scope of Use subsection mandatory for sensitive domains).
+New seam subcommand `score-research.sh paper <main.tex> <references.bib> [sources.tsv]` — orphan
+`\cite` keys, bib keys mapping to rejected/unverified sources, or missing abstract/Limitations/
+bibliography make it `PAPER: INVALID`; unused bib keys are notes. Compile to PDF when
+`tectonic|latexmk|pdflatex` resolves, else ship sources with a compile note. Product 3.2.0
+(manifests + routers); handoff schema stays 3.1.0. Suite grown to 144 asserts.
+
 ## v3.1.0 — /forge:research: the research analyst (2026-08-26)
 
 **Theme:** the pipeline could build, test, and design software but could not rigorously answer a

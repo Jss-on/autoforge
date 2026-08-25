@@ -260,9 +260,86 @@ verdict() {
   [[ "$blocked" -eq 0 ]]
 }
 
+# ---------------------------------------------------------------------------
+# paper: validate an emitted LaTeX paper against its bibliography (and, when
+# given, the source ledger). The typeset projection may not drift from the
+# ledger: every \cite resolves, every bib key is a citable source, and the
+# structure keeps abstract + Limitations + bibliography.
+#   stdout: PAPER: VALID|INVALID cites=N bibkeys=N orphans=N unused=N
+#   stderr: each validation error (orphan keys, uncitable bib entries, missing sections)
+#   exit:   0 valid · 1 invalid · 2 unreadable
+# ---------------------------------------------------------------------------
+paper() {
+  local tex="${1:?usage: paper <main.tex> <references.bib> [sources.tsv]}"
+  local bib="${2:?usage: paper <main.tex> <references.bib> [sources.tsv]}"
+  local src="${3:-}"
+  [[ -f "$tex" ]] || { echo "PAPER: INVALID cites=0 bibkeys=0 orphans=0 unused=0"; echo "file not found: $tex" >&2; return 2; }
+  [[ -f "$bib" ]] || { echo "PAPER: INVALID cites=0 bibkeys=0 orphans=0 unused=0"; echo "file not found: $bib" >&2; return 2; }
+
+  local errs=0
+
+  grep -q '\\begin{abstract}' "$tex" \
+    || { echo "missing section: \\begin{abstract}" >&2; errs=$((errs + 1)); }
+  grep -Eiq '\\(sub)?section\*?\{[^}]*limitations' "$tex" \
+    || { echo "missing section: Limitations (own \\section, never folded away)" >&2; errs=$((errs + 1)); }
+  grep -Eq '\\bibliography\{|\\printbibliography|\\begin\{thebibliography\}' "$tex" \
+    || { echo "missing: bibliography (\\bibliography{...} or equivalent)" >&2; errs=$((errs + 1)); }
+
+  local cites_f bibkeys_f
+  cites_f="$(mktemp)"; bibkeys_f="$(mktemp)"
+  grep -oE '\\[Cc]ite[a-zA-Z]*(\[[^]]*\])?\{[^}]*\}' "$tex" 2>/dev/null \
+    | sed -E 's/.*\{([^}]*)\}/\1/' | tr ',' '\n' \
+    | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' | grep -v '^$' | sort -u > "$cites_f"
+  grep -oE '^[[:space:]]*@[A-Za-z]+\{[^,]+,' "$bib" 2>/dev/null \
+    | sed -E 's/.*\{([^,]+),/\1/' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' | sort -u > "$bibkeys_f"
+
+  local ncites nbib norph nunused
+  ncites="$(grep -c . "$cites_f" || true)"
+  nbib="$(grep -c . "$bibkeys_f" || true)"
+  norph="$(comm -23 "$cites_f" "$bibkeys_f" | grep -c . || true)"
+  nunused="$(comm -13 "$cites_f" "$bibkeys_f" | grep -c . || true)"
+
+  if [[ "$ncites" -eq 0 ]]; then
+    echo "no \\cite commands found — a paper with zero citations cannot come from the ledger" >&2
+    errs=$((errs + 1))
+  fi
+  if [[ "$norph" -gt 0 ]]; then
+    comm -23 "$cites_f" "$bibkeys_f" | sed 's/^/orphan cite key (not in .bib): /' >&2
+    errs=$((errs + 1))
+  fi
+  if [[ "$nunused" -gt 0 ]]; then
+    comm -13 "$cites_f" "$bibkeys_f" | sed 's/^/note: unused bib key (never cited): /' >&2
+  fi
+
+  if [[ -n "$src" ]]; then
+    if [[ ! -f "$src" ]]; then
+      echo "sources file not found: $src" >&2; errs=$((errs + 1))
+    else
+      local k st
+      while IFS= read -r k; do
+        [[ -n "$k" ]] || continue
+        st="$(awk -v FS='\t' -v id="$k" '$1 == id { print $9; found = 1 } END { if (!found) print "__MISSING__" }' "$src" | head -1)"
+        if [[ "$st" == "__MISSING__" ]]; then
+          echo "bib key $k has no row in sources.tsv" >&2; errs=$((errs + 1))
+        elif [[ "$st" == "rejected" || "$st" == "unverified" ]]; then
+          echo "bib key $k maps to an uncitable source (status=$st)" >&2; errs=$((errs + 1))
+        fi
+      done < "$bibkeys_f"
+    fi
+  fi
+
+  rm -f "$cites_f" "$bibkeys_f"
+
+  local out="PAPER: $([[ "$errs" -eq 0 ]] && echo VALID || echo INVALID) cites=$ncites bibkeys=$nbib orphans=$norph unused=$nunused"
+  echo "$out"
+  log_invocation "paper" "$tex" "$out"
+  [[ "$errs" -eq 0 ]]
+}
+
 case "${1:-}" in
   sources) shift; sources "$@" ;;
   claims)  shift; claims  "$@" ;;
   verdict) shift; verdict "$@" ;;
-  *) echo "usage: $0 {sources <sources.tsv> | claims <claims.tsv> <sources.tsv> | verdict <claims.tsv> <sources.tsv> [research-plan.md]}" >&2; exit 64 ;;
+  paper)   shift; paper   "$@" ;;
+  *) echo "usage: $0 {sources <sources.tsv> | claims <claims.tsv> <sources.tsv> | verdict <claims.tsv> <sources.tsv> [research-plan.md] | paper <main.tex> <references.bib> [sources.tsv]}" >&2; exit 64 ;;
 esac

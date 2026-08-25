@@ -158,6 +158,66 @@ bash "$SR" verdict "$T/missing.tsv" "$T/s.tsv" >/dev/null 2>&1; V_RC=$?
 assert_eq 2 "$V_RC" "verdict: missing claims file → exit 2"
 
 # ============================================================================
+printf '\n--- score-research: paper (LaTeX projection stays ledger-anchored) ---\n'
+# ============================================================================
+
+cat > "$T/main.tex" <<'TEX'
+\documentclass[11pt]{article}
+\begin{document}
+\begin{abstract}
+Answers per RQ.
+\end{abstract}
+\section{Results}
+Peak accelerations reach X g \cite{S-01,S-02}. Outcomes vary \citep{S-03}.
+\section{Limitations}
+Scarce evidence for RQ-2.
+\bibliographystyle{unsrtnat}
+\bibliography{references}
+\end{document}
+TEX
+cat > "$T/references.bib" <<'BIB'
+@article{S-01, title={A}, year={2023}}
+@techreport{S-02, title={B}, year={2024}}
+@misc{S-03, title={C}, year={2024}}
+BIB
+P_OUT=$(bash "$SR" paper "$T/main.tex" "$T/references.bib" 2>/dev/null); P_RC=$?
+assert_contains "$P_OUT" "PAPER: VALID cites=3 bibkeys=3 orphans=0 unused=0" "paper: cites resolve, sections present → VALID"
+assert_eq 0 "$P_RC" "paper: valid → exit 0"
+
+P_OUT=$(bash "$SR" paper "$T/main.tex" "$T/references.bib" "$T/s.tsv" 2>/dev/null); P_RC=$?
+assert_eq 0 "$P_RC" "paper: bib keys map to citable ledger rows → valid"
+
+printf '@book{S-06, title={Rejected}, year={2019}}\n' >> "$T/references.bib"
+P_ERR=$(bash "$SR" paper "$T/main.tex" "$T/references.bib" "$T/s.tsv" 2>&1 >/dev/null); P_RC=$?
+assert_eq 1 "$P_RC" "paper: bib key mapping to rejected source → INVALID"
+assert_contains "$P_ERR" "uncitable source" "paper: uncitable bib entry named"
+
+cat > "$T/references.bib" <<'BIB'
+@article{S-01, title={A}, year={2023}}
+@techreport{S-02, title={B}, year={2024}}
+BIB
+P_ERR=$(bash "$SR" paper "$T/main.tex" "$T/references.bib" 2>&1 >/dev/null); P_RC=$?
+assert_eq 1 "$P_RC" "paper: orphan \\cite key → INVALID"
+assert_contains "$P_ERR" "orphan cite key" "paper: orphan key named"
+
+printf '@article{S-01, title={A}, year={2023}}\n@techreport{S-02, title={B}, year={2024}}\n@misc{S-03, title={C}, year={2024}}\n@book{S-04, title={Extra}, year={2020}}\n' > "$T/references.bib"
+P_OUT=$(bash "$SR" paper "$T/main.tex" "$T/references.bib" 2>/dev/null); P_RC=$?
+assert_contains "$P_OUT" "unused=1" "paper: unused bib key counted"
+assert_eq 0 "$P_RC" "paper: unused bib key is a note, not a failure"
+
+sed 's/\\section{Limitations}/\\section{Extras}/' "$T/main.tex" > "$T/nolim.tex"
+P_ERR=$(bash "$SR" paper "$T/nolim.tex" "$T/references.bib" 2>&1 >/dev/null); P_RC=$?
+assert_eq 1 "$P_RC" "paper: missing Limitations section → INVALID"
+assert_contains "$P_ERR" "Limitations" "paper: missing-section error names Limitations"
+
+printf '\\documentclass{article}\\begin{document}\\begin{abstract}x\\end{abstract}\\section{Limitations}y\\bibliography{references}\\end{document}\n' > "$T/nocite.tex"
+bash "$SR" paper "$T/nocite.tex" "$T/references.bib" >/dev/null 2>&1; P_RC=$?
+assert_eq 1 "$P_RC" "paper: zero \\cite commands → INVALID"
+
+bash "$SR" paper "$T/ghost.tex" "$T/references.bib" >/dev/null 2>&1; P_RC=$?
+assert_eq 2 "$P_RC" "paper: missing tex file → exit 2"
+
+# ============================================================================
 printf '\n--- research.md engagement spec ---\n'
 # ============================================================================
 
@@ -185,6 +245,12 @@ spec_has "score-build\.sh bound"                      "iteration bound reuses bu
 spec_has "version \"3\.1\.0\""                        "handoff pins 3.1.0"
 spec_has "validate-handoff\.sh.*research"             "handoff validated with research source"
 spec_has "chain.*reason|reason.*requirements"         "chains to reason/requirements"
+spec_has "Format:.*arxiv"                             "Format argument offers arxiv"
+spec_has "paper-templates\.md"                        "paper-templates reference wired"
+spec_has "IEEEtran|ieee"                              "IEEE format supported"
+spec_has "score-research\.sh paper"                   "paper seam wired into Phase 5"
+spec_has "typeset projection"                         "paper may not drift from the ledger"
+spec_has "tectonic.*latexmk.*pdflatex|latexmk"        "compile toolchain order stated"
 
 # ============================================================================
 printf '\n--- research protocol (the contract) ---\n'
@@ -252,11 +318,22 @@ for m in "${MIRRORS[@]}"; do
   fi
 done
 
+TMPL="$REPO_ROOT/claude-plugin/skills/forge/references/paper-templates.md"
+grep -q 'IEEEtran' "$TMPL" && pass "templates: IEEE skeleton present" || fail "templates: IEEE skeleton missing"
+grep -q 'documentclass\[11pt\]{article}' "$TMPL" && pass "templates: arXiv article skeleton present" || fail "templates: arXiv skeleton missing"
+grep -q 'Scope of Use' "$TMPL" && pass "templates: scope-of-use subsection mandated" || fail "templates: scope-of-use missing"
+grep -qi 'bibtex\|references\.bib' "$TMPL" && pass "templates: BibTeX generation rules present" || fail "templates: BibTeX rules missing"
+
 for d in .claude/skills/forge claude-plugin/skills/forge .agents/skills/forge plugins/forge/skills/forge .opencode/skills/forge; do
   if diff -q "$PROTO" "$REPO_ROOT/$d/references/research-protocol.md" >/dev/null 2>&1; then
     pass "protocol parity: $d"
   else
     fail "protocol parity: $d (missing or diverged)"
+  fi
+  if diff -q "$TMPL" "$REPO_ROOT/$d/references/paper-templates.md" >/dev/null 2>&1; then
+    pass "templates parity: $d"
+  else
+    fail "templates parity: $d (missing or diverged)"
   fi
   if diff -q "$SR" "$REPO_ROOT/$d/scripts/score-research.sh" >/dev/null 2>&1; then
     pass "seam parity: $d"
@@ -284,7 +361,7 @@ for sk in .claude/skills/forge/SKILL.md claude-plugin/skills/forge/SKILL.md \
           .agents/skills/forge/SKILL.md plugins/forge/skills/forge/SKILL.md \
           .opencode/skills/forge/SKILL.md; do
   grep -q 'research' "$REPO_ROOT/$sk" && pass "router lists research: $sk" || fail "router lists research: $sk"
-  grep -q 'version: 3\.1\.0' "$REPO_ROOT/$sk" && pass "router at 3.1.0: $sk" || fail "router at 3.1.0: $sk"
+  grep -q 'version: 3\.2\.0' "$REPO_ROOT/$sk" && pass "router at 3.2.0: $sk" || fail "router at 3.2.0: $sk"
 done
 
 grep -q 'forge_research' "$REPO_ROOT/.opencode/skills/forge/SKILL.md" \
