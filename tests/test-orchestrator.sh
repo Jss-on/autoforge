@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Test harness for orchestrate.sh — deterministic seam for the autoresearch orchestrator.
+# Test harness for orchestrate.sh — deterministic seam for the forge orchestrator.
 # Covers: classify, next-hop, units, plateau, screen-cmd, verdict subcommands.
 set -uo pipefail
 
@@ -503,8 +503,8 @@ printf '\n--- distribution parity: orchestrator artifacts across mirrors ---\n'
 # ============================================================================
 
 # The orchestrator-routing.md reference must exist in every skill mirror.
-for mirror in .claude claude-plugin .agents .opencode plugins/autoresearch; do
-  ref="$REPO_ROOT/$mirror/skills/autoresearch/references/orchestrator-routing.md"
+for mirror in .claude claude-plugin .agents .opencode plugins/forge; do
+  ref="$REPO_ROOT/$mirror/skills/forge/references/orchestrator-routing.md"
   if [[ -f "$ref" ]]; then
     pass "parity: orchestrator-routing.md present in $mirror"
   else
@@ -514,13 +514,13 @@ done
 
 # Canonical skill spec carries a version stamp (exact value is checked by the
 # cross-mirror consistency block below — a version literal here rots every bump).
-assert_contains "version: 2." "$(grep -m1 '^version:' "$REPO_ROOT/.claude/skills/autoresearch/SKILL.md")" \
+assert_contains "version: 3." "$(grep -m1 '^version:' "$REPO_ROOT/.claude/skills/forge/SKILL.md")" \
   "parity: canonical SKILL.md carries a version stamp"
 
 # No colon-form subcommand may leak into the space/underscore mirrors.
-for mirror in .agents .opencode plugins/autoresearch; do
-  if grep -qE 'autoresearch:[a-z]' "$REPO_ROOT/$mirror/skills/autoresearch/SKILL.md"; then
-    fail "parity: $mirror SKILL.md has a stray 'autoresearch:' colon form"
+for mirror in .agents .opencode plugins/forge; do
+  if grep -qE 'forge:[a-z]' "$REPO_ROOT/$mirror/skills/forge/SKILL.md"; then
+    fail "parity: $mirror SKILL.md has a stray 'forge:' colon form"
   else
     pass "parity: $mirror SKILL.md uses non-colon subcommand syntax"
   fi
@@ -597,9 +597,9 @@ assert_eq "ok"     "$SC_OUT" "screen-cmd: remote mysql _test db → ok"
 # Version stamp must agree across ALL mirrors — drift here shipped a 2.2.1 router
 # missing three commands while the manifest advertised 2.3.0. Compare against the
 # canonical stamp, not a literal, so version bumps can't silently rot this test.
-CANON_SKILL_VER="$(grep -m1 '^version:' "$REPO_ROOT/.claude/skills/autoresearch/SKILL.md" | sed 's/version:[[:space:]]*//')"
-for mirror in claude-plugin .agents .opencode plugins/autoresearch; do
-  mv_line="$(grep -m1 '^version:' "$REPO_ROOT/$mirror/skills/autoresearch/SKILL.md" 2>/dev/null)"
+CANON_SKILL_VER="$(grep -m1 '^version:' "$REPO_ROOT/.claude/skills/forge/SKILL.md" | sed 's/version:[[:space:]]*//')"
+for mirror in claude-plugin .agents .opencode plugins/forge; do
+  mv_line="$(grep -m1 '^version:' "$REPO_ROOT/$mirror/skills/forge/SKILL.md" 2>/dev/null)"
   if printf '%s' "$mv_line" | grep -qF "$CANON_SKILL_VER"; then
     pass "parity: $mirror SKILL.md version matches canonical ($CANON_SKILL_VER)"
   else
@@ -608,8 +608,8 @@ for mirror in claude-plugin .agents .opencode plugins/autoresearch; do
 done
 
 # The three v2.3 pipeline commands must be routable from every mirror's SKILL.md.
-for mirror in .claude claude-plugin .agents .opencode plugins/autoresearch; do
-  sk="$REPO_ROOT/$mirror/skills/autoresearch/SKILL.md"
+for mirror in .claude claude-plugin .agents .opencode plugins/forge; do
+  sk="$REPO_ROOT/$mirror/skills/forge/SKILL.md"
   if grep -q 'requirements' "$sk" && grep -qE '(:|_| )build' "$sk" && grep -qE '(:|_| )feature' "$sk"; then
     pass "parity: $mirror SKILL.md routes requirements/build/feature"
   else

@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-HOOKS_DIR="$REPO_ROOT/.claude/hooks/autoresearch"
+HOOKS_DIR="$REPO_ROOT/.claude/hooks/forge"
 
 # Cross-platform temp base. bash's /tmp and native-node's '/tmp' diverge on Windows
 # (node resolves '/tmp' → C:\tmp), so the test must inspect the SAME dir the hooks write
@@ -292,9 +292,9 @@ run_hook "iteration-context.cjs" '{"session_id":"test1"}'
 assert_exit 0 "iteration-context: no TSV found returns 0"
 assert_not_contains "Active iteration state" "iteration-context: no TSV returns empty context"
 
-# Create autoresearch dir with TSV
-mkdir -p autoresearch/run001
-cat > autoresearch/run001/results.tsv << 'EOF'
+# Create forge dir with TSV
+mkdir -p forge/run001
+cat > forge/run001/results.tsv << 'EOF'
 iteration	status	metric
 1	pass	0.85
 2	pass	0.87
@@ -326,7 +326,7 @@ fi
 for i in 6 7 8 9; do
   run_hook "iteration-context.cjs" '{"session_id":"test-iter-sequence"}'
 done
-run_hook "iteration-context.cjs" "{\"session_id\":\"test-iter-sequence\",\"prompt\":\"autoresearch: loop over scenarios\"}"
+run_hook "iteration-context.cjs" "{\"session_id\":\"test-iter-sequence\",\"prompt\":\"forge: loop over scenarios\"}"
 
 # Check for loop state in output
 TOTAL=$((TOTAL + 1))
@@ -353,17 +353,17 @@ printf '\n--- Testing subagent-context.cjs ---\n'
 
 run_hook "subagent-context.cjs" '{"session_id":"subagent-test"}'
 assert_exit 0 "subagent-context: with active TSV injects"
-assert_contains "Autoresearch context" "subagent-context: contains header"
+assert_contains "AutoForge context" "subagent-context: contains header"
 assert_contains "Active TSV:" "subagent-context: contains TSV path"
 
 # Test: No TSV
-rm -rf autoresearch/
+rm -rf forge/
 run_hook "subagent-context.cjs" '{"session_id":"no-tsv"}'
 assert_exit 0 "subagent-context: no TSV returns 0"
 
 # Test: Disabled via env var
-mkdir -p autoresearch/run002
-echo -e "iteration\tstatus\n1\tpass" > autoresearch/run002/results.tsv
+mkdir -p forge/run002
+echo -e "iteration\tstatus\n1\tpass" > forge/run002/results.tsv
 AR_DISABLE_SUBAGENT_CONTEXT=1 run_hook "subagent-context.cjs" '{"session_id":"test-disabled"}'
 assert_exit 0 "subagent-context: disabled via env var"
 
@@ -374,7 +374,7 @@ assert_exit 0 "subagent-context: disabled via env var"
 printf '\n--- Testing dev-rules-reminder.cjs ---\n'
 
 # Clean up from previous tests
-rm -rf autoresearch/
+rm -rf forge/
 
 # Test: Skip on non-5th iteration
 run_hook "dev-rules-reminder.cjs" '{"session_id":"dev-iter-1"}'
@@ -516,7 +516,7 @@ rm "$SESSION_STATE"
 run_hook "stop-notify.cjs" '{"session_id":"test-session"}'
 assert_exit 0 "stop-notify: returns 0"
 assert_contains "terminalSequence" "stop-notify: contains terminal notification"
-assert_contains "autoresearch" "stop-notify: notification mentions autoresearch"
+assert_contains "forge" "stop-notify: notification mentions forge"
 assert_contains "Session completed" "stop-notify: notification indicates session completion"
 
 # Note: Session cleanup behavior is implementation-dependent and happens async

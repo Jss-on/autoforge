@@ -6,16 +6,16 @@ Generated from git history. Grouped by type using conventional commit parsing.
 
 ### Features
 - `feat:` modular rebuild — thin SKILL.md routing table (41 lines) + 12 self-contained command files
-- `feat:` add `/autoresearch:evals` subcommand — one-shot TSV trend and plateau analysis
+- `feat:` add `/forge:evals` subcommand — one-shot TSV trend and plateau analysis
 - `feat:` `--evals` and `--evals-interval` flags on all looping commands
 - `feat:` TSV `# metric_direction` comment for auto-detection by evals
 - `feat:` 8 TSV status values — added `keep (reworked)`, `hook-blocked`, `metric-error`
 - `feat:` `scripts/transform.sh` single multi-platform transform script
 
 ### Removed
-- `chore:` remove `autoresearch-command-spec.json` — contracts live in command files
+- `chore:` remove `forge-command-spec.json` — contracts live in command files
 - `chore:` remove `scripts/sync-opencode.sh` and `scripts/sync-codex.sh` — replaced by transform.sh
-- `chore:` remove Python wrapper CLI (`autoresearch_cli.py`)
+- `chore:` remove Python wrapper CLI (`forge_cli.py`)
 - `chore:` collapse 13 reference files down to 3 focused references
 
 ### Release
@@ -47,7 +47,7 @@ Generated from git history. Grouped by type using conventional commit parsing.
 ## v1.10.0
 
 ### Features
-- `feat:` add `/autoresearch:probe` — adversarial multi-persona requirement interrogation engine
+- `feat:` add `/forge:probe` — adversarial multi-persona requirement interrogation engine
 - `feat:` 8 personas, mechanical saturation termination, constraint extraction
 
 ### Release
@@ -56,7 +56,7 @@ Generated from git history. Grouped by type using conventional commit parsing.
 ## v1.8.0
 
 ### Features
-- `feat:` add `/autoresearch:learn` — autonomous codebase documentation engine
+- `feat:` add `/forge:learn` — autonomous codebase documentation engine
 - `feat:` 4 modes: init, update, check, summarize; diff-based targeting for update mode
 
 ### Release
@@ -65,7 +65,7 @@ Generated from git history. Grouped by type using conventional commit parsing.
 ## v1.7.6
 
 ### Documentation
-- `docs:` add COMPARISON.md — Karpathy vs Claude Autoresearch
+- `docs:` add COMPARISON.md — Karpathy vs Claude AutoForge
 - `docs:` add 10 scenario-based guide examples in guide/scenario/
 
 ### Release
@@ -74,7 +74,7 @@ Generated from git history. Grouped by type using conventional commit parsing.
 ## v1.7.0 — v1.7.5
 
 ### Features
-- `feat:` add `/autoresearch:predict` — multi-persona swarm prediction (v1.7.0)
+- `feat:` add `/forge:predict` — multi-persona swarm prediction (v1.7.0)
 
 ### Fixed
 - `fix:` resolve ENAMETOOLONG recursive plugin caching
@@ -87,7 +87,7 @@ Generated from git history. Grouped by type using conventional commit parsing.
 ## v1.6.0 — v1.6.2
 
 ### Features
-- `feat:` add `/autoresearch:scenario` subcommand
+- `feat:` add `/forge:scenario` subcommand
 - `feat:` release workflow with PR-first flow and doc review gate
 
 ### Fixed
@@ -101,7 +101,7 @@ Generated from git history. Grouped by type using conventional commit parsing.
 ### Features
 - `feat:` enforce mandatory AskUserQuestion gate for all commands
 - `feat:` batched AskUserQuestion setup — ask 3-4 questions at once
-- `feat:` add `/autoresearch:reason` adversarial refinement loop
+- `feat:` add `/forge:reason` adversarial refinement loop
 
 ### Fixed
 - `fix:` replace /loop N with native Iterations: N config

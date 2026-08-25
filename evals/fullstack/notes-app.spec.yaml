@@ -1,4 +1,4 @@
-# autoresearch:build eval spec — declares what to build + per-dimension acceptance.
+# forge:build eval spec — declares what to build + per-dimension acceptance.
 name: notes-app
 summary: Authenticated notes app — user signup/login, per-user notes, web UI.
 stack:

@@ -1,8 +1,8 @@
-# Project Overview — Claude Autoresearch
+# Project Overview — Claude AutoForge
 
 ## Summary
 
-Claude Autoresearch is a Claude Code skill/plugin that turns Claude Code into an autonomous improvement engine. Inspired by [Karpathy's autoresearch](https://github.com/karpathy/autoresearch), it generalizes the constraint-driven autonomous iteration pattern to any domain — code, content, marketing, sales, security, and more.
+Claude AutoForge is a Claude Code skill/plugin that turns Claude Code into an autonomous improvement engine. Inspired by [Karpathy's autoresearch](https://github.com/karpathy/autoresearch), it generalizes the constraint-driven autonomous iteration pattern to any domain — code, content, marketing, sales, security, and more.
 
 **Core idea:** Set a goal with a mechanical metric, define scope, and let Claude autonomously iterate — modify, verify, keep/discard, repeat — until the goal is achieved or the iteration limit is reached.
 
@@ -10,19 +10,19 @@ Claude Autoresearch is a Claude Code skill/plugin that turns Claude Code into an
 
 | Field | Value |
 |-------|-------|
-| **Name** | Claude Autoresearch |
+| **Name** | Claude AutoForge |
 | **Type** | Claude Code Skill/Plugin |
 | **Version** | 2.1.0 |
 | **License** | MIT |
-| **Author** | [Udit Goenka](https://github.com/uditgoenka) |
-| **Repository** | [github.com/uditgoenka/autoresearch](https://github.com/uditgoenka/autoresearch) |
+| **Author** | [Jss-on](https://github.com/Jss-on) — built on [Udit Goenka](https://github.com/uditgoenka)'s autoresearch engine |
+| **Repository** | [github.com/Jss-on/autoforge](https://github.com/Jss-on/autoforge) |
 | **Platforms** | Claude Code, OpenCode, Codex |
 
 ## Problem Statement
 
 Developers and knowledge workers spend significant time on repetitive improvement cycles — fixing errors, increasing coverage, optimizing performance, writing docs. Each cycle requires: understand state, make change, verify, decide keep/revert, repeat.
 
-Autoresearch automates this entire loop with mechanical verification, automatic rollback, and git-based memory.
+AutoForge automates this entire loop with mechanical verification, automatic rollback, and git-based memory.
 
 ## Key Features
 
@@ -41,19 +41,19 @@ Autoresearch automates this entire loop with mechanical verification, automatic 
 
 | Command | Purpose | Default Iterations |
 |---------|---------|-------------------|
-| `/autoresearch` | Core loop: modify → verify → keep/discard | 25 |
-| `/autoresearch:plan` | Convert goal into validated Scope, Metric, Verify config | N/A |
-| `/autoresearch:debug` | Scientific method bug hunting | 15 |
-| `/autoresearch:fix` | Iterative error-count reduction | 20 |
-| `/autoresearch:security` | STRIDE + OWASP red-team audit | 15 |
-| `/autoresearch:ship` | Universal 8-phase shipping workflow | N/A |
-| `/autoresearch:scenario` | 12-dimension edge case generation | 20 |
-| `/autoresearch:predict` | 5-persona expert debate before implementation | N/A |
-| `/autoresearch:learn` | Autonomous codebase documentation engine | 10 |
-| `/autoresearch:reason` | Adversarial refinement with blind judges | 8 |
-| `/autoresearch:probe` | Requirement interrogation until saturation | 15 |
-| `/autoresearch:improve` | Research ICP challenges, discover improvements, generate PRDs | 15 |
-| `/autoresearch:evals` | Analyze `*-results.tsv`: trends, plateaus, regressions | N/A |
+| `/forge` | Core loop: modify → verify → keep/discard | 25 |
+| `/forge:plan` | Convert goal into validated Scope, Metric, Verify config | N/A |
+| `/forge:debug` | Scientific method bug hunting | 15 |
+| `/forge:fix` | Iterative error-count reduction | 20 |
+| `/forge:security` | STRIDE + OWASP red-team audit | 15 |
+| `/forge:ship` | Universal 8-phase shipping workflow | N/A |
+| `/forge:scenario` | 12-dimension edge case generation | 20 |
+| `/forge:predict` | 5-persona expert debate before implementation | N/A |
+| `/forge:learn` | Autonomous codebase documentation engine | 10 |
+| `/forge:reason` | Adversarial refinement with blind judges | 8 |
+| `/forge:probe` | Requirement interrogation until saturation | 15 |
+| `/forge:improve` | Research ICP challenges, discover improvements, generate PRDs | 15 |
+| `/forge:evals` | Analyze `*-results.tsv`: trends, plateaus, regressions | N/A |
 
 ## Target Users
 

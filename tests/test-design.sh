@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Test harness for /autoresearch:design — score-design.sh (lint / scan / critique / defects /
+# Test harness for /forge:design — score-design.sh (lint / scan / critique / defects /
 # verdict / seed / rubric), design-scan.cjs (syntax + parser + optional live fixture scan),
 # the design.md command spec, the design-protocol reference, mirror parity, routers, manifests,
 # handoff contract, orchestrator polish-ui archetype, and the seventh design coverage group.
@@ -14,9 +14,9 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SD="$REPO_ROOT/scripts/score-design.sh"
 SCAN="$REPO_ROOT/scripts/design-scan.cjs"
 SB="$REPO_ROOT/scripts/score-build.sh"
-SPEC="$REPO_ROOT/claude-plugin/commands/autoresearch/design.md"
-PROTO="$REPO_ROOT/claude-plugin/skills/autoresearch/references/design-protocol.md"
-CHECK="$REPO_ROOT/claude-plugin/skills/autoresearch/references/uiux-checklist.md"
+SPEC="$REPO_ROOT/claude-plugin/commands/forge/design.md"
+PROTO="$REPO_ROOT/claude-plugin/skills/forge/references/design-protocol.md"
+CHECK="$REPO_ROOT/claude-plugin/skills/forge/references/uiux-checklist.md"
 FIX="$REPO_ROOT/tests/fixtures/design"
 
 PASS=0; FAIL=0; TOTAL=0
@@ -329,16 +329,16 @@ grep -q "design:floor" "$CHECK" && pass "uiux-checklist: floor group present" ||
 printf '\n--- integration: build/feature/requirements/test wiring, coverage tag, orchestrator ---\n'
 # ============================================================================
 
-BUILD="$REPO_ROOT/claude-plugin/commands/autoresearch/build.md"
+BUILD="$REPO_ROOT/claude-plugin/commands/forge/build.md"
 grep -q "design-protocol.md" "$BUILD" && pass "build: references design-protocol" || fail "build: no design-protocol reference"
 grep -q "DESIGN_LINT: VALID" "$BUILD" && pass "build: Phase 4 lint gate" || fail "build: missing lint gate"
 grep -q "SLOP_GATE" "$BUILD" && pass "build: Phase 6 floor gate" || fail "build: missing SLOP_GATE"
 grep -q "DESIGN_VERDICT" "$BUILD" && pass "build: design verdict in convergence" || fail "build: missing DESIGN_VERDICT"
 grep -q "design:floor" "$BUILD" && pass "build: seventh coverage group" || fail "build: missing design:floor"
-grep -q "design-scan.cjs" "$REPO_ROOT/claude-plugin/commands/autoresearch/feature.md" && pass "feature: floor on touched routes" || fail "feature: no floor scan"
-grep -q "mode: operate|persuade" "$REPO_ROOT/claude-plugin/commands/autoresearch/requirements.md" && pass "requirements: spec design.mode" || fail "requirements: no design.mode"
-grep -q "design-floor" "$REPO_ROOT/claude-plugin/commands/autoresearch/requirements.md" && pass "requirements: design-floor ux assertion" || fail "requirements: no design-floor row"
-grep -q "score-design.sh scan" "$REPO_ROOT/claude-plugin/commands/autoresearch/test.md" && pass "test: a11y pass folds in the design floor" || fail "test: no design floor"
+grep -q "design-scan.cjs" "$REPO_ROOT/claude-plugin/commands/forge/feature.md" && pass "feature: floor on touched routes" || fail "feature: no floor scan"
+grep -q "mode: operate|persuade" "$REPO_ROOT/claude-plugin/commands/forge/requirements.md" && pass "requirements: spec design.mode" || fail "requirements: no design.mode"
+grep -q "design-floor" "$REPO_ROOT/claude-plugin/commands/forge/requirements.md" && pass "requirements: design-floor ux assertion" || fail "requirements: no design-floor row"
+grep -q "score-design.sh scan" "$REPO_ROOT/claude-plugin/commands/forge/test.md" && pass "test: a11y pass folds in the design floor" || fail "test: no design floor"
 
 # coverage: the seventh group is required by default, and a spec that traces all seven closes
 printf 'spec\tdimension\tassertion\tweight\tstatus\tdetail\ttraces\n' > "$T/r.tsv"
@@ -357,18 +357,18 @@ assert_eq "polish-ui"     "$(bash "$ORCH" classify "redesign the dashboard" 2>/d
 assert_eq "polish-ui"     "$(bash "$ORCH" classify "improve accessibility of forms" 2>/dev/null)" "classify: accessibility → polish-ui"
 assert_eq "build-feature" "$(bash "$ORCH" classify "build the ui for settings" 2>/dev/null)"     "classify: build the UI stays build-feature"
 assert_eq "decide-design" "$(bash "$ORCH" classify "decide which approach to take for caching" 2>/dev/null)" "classify: design decision unaffected"
-grep -q "polish-ui" "$REPO_ROOT/claude-plugin/skills/autoresearch/references/orchestrator-routing.md" && pass "routing reference: polish-ui archetype documented" || fail "routing reference: polish-ui missing"
+grep -q "polish-ui" "$REPO_ROOT/claude-plugin/skills/forge/references/orchestrator-routing.md" && pass "routing reference: polish-ui archetype documented" || fail "routing reference: polish-ui missing"
 
 # handoff contract accepts the new source
 _h="$T/h.json"
-printf '{"version":"2.5.0","source":"design","timestamp":"2026-01-01T00:00:00+00:00","status":"COMPLETE","verdict":"SHIP","results_tsv":"design-results.tsv"}' > "$_h"
+printf '{"version":"3.0.0","source":"design","timestamp":"2026-01-01T00:00:00+00:00","status":"COMPLETE","verdict":"SHIP","results_tsv":"design-results.tsv"}' > "$_h"
 assert_eq "VALID" "$(bash "$REPO_ROOT/scripts/validate-handoff.sh" "$_h" design 2>/dev/null)" "handoff: design audit with verdict VALID"
-printf '{"version":"2.5.0","source":"design","timestamp":"t","status":"COMPLETE","design":{"design_md":"DESIGN.md","lint":"VALID"}}' > "$_h"
+printf '{"version":"3.0.0","source":"design","timestamp":"t","status":"COMPLETE","design":{"design_md":"DESIGN.md","lint":"VALID"}}' > "$_h"
 assert_eq "VALID" "$(bash "$REPO_ROOT/scripts/validate-handoff.sh" "$_h" design 2>/dev/null)" "handoff: design system run with design object VALID"
-printf '{"version":"2.5.0","source":"design","timestamp":"t","status":"COMPLETE"}' > "$_h"
+printf '{"version":"3.0.0","source":"design","timestamp":"t","status":"COMPLETE"}' > "$_h"
 bash "$REPO_ROOT/scripts/validate-handoff.sh" "$_h" >/dev/null 2>&1; VH_RC=$?
 assert_eq 1 "$VH_RC" "handoff: design without verdict/design → INVALID"
-printf '{"version":"2.5.0","source":"design","timestamp":"t","status":"COMPLETE","verdict":"MAYBE"}' > "$_h"
+printf '{"version":"3.0.0","source":"design","timestamp":"t","status":"COMPLETE","verdict":"MAYBE"}' > "$_h"
 bash "$REPO_ROOT/scripts/validate-handoff.sh" "$_h" >/dev/null 2>&1; VH_RC=$?
 assert_eq 1 "$VH_RC" "handoff: design verdict outside SHIP|FIX|REBUILD → INVALID"
 
@@ -376,10 +376,10 @@ assert_eq 1 "$VH_RC" "handoff: design verdict outside SHIP|FIX|REBUILD → INVAL
 printf '\n--- distribution: parity, shipped seams, routers, manifests ---\n'
 # ============================================================================
 
-for m in "$REPO_ROOT/.claude/commands/autoresearch/design.md" \
-         "$REPO_ROOT/.agents/skills/autoresearch/design.md" \
-         "$REPO_ROOT/plugins/autoresearch/skills/autoresearch/design.md" \
-         "$REPO_ROOT/.opencode/commands/autoresearch_design.md"; do
+for m in "$REPO_ROOT/.claude/commands/forge/design.md" \
+         "$REPO_ROOT/.agents/skills/forge/design.md" \
+         "$REPO_ROOT/plugins/forge/skills/forge/design.md" \
+         "$REPO_ROOT/.opencode/commands/forge_design.md"; do
   if [[ -f "$m" ]] && diff -q "$SPEC" "$m" >/dev/null 2>&1; then
     pass "mirror parity: ${m#$REPO_ROOT/}"
   else
@@ -387,31 +387,31 @@ for m in "$REPO_ROOT/.claude/commands/autoresearch/design.md" \
   fi
 done
 
-for tree in .claude claude-plugin .opencode .agents plugins/autoresearch; do
+for tree in .claude claude-plugin .opencode .agents plugins/forge; do
   for f in scripts/score-design.sh scripts/design-scan.cjs references/design-protocol.md references/uiux-checklist.md; do
-    [[ -f "$REPO_ROOT/$tree/skills/autoresearch/$f" ]] \
+    [[ -f "$REPO_ROOT/$tree/skills/forge/$f" ]] \
       && pass "shipped: $tree $f" || fail "shipped: $tree missing $f"
   done
-  diff -q "$REPO_ROOT/scripts/design-scan.cjs" "$REPO_ROOT/$tree/skills/autoresearch/scripts/design-scan.cjs" >/dev/null 2>&1 \
+  diff -q "$REPO_ROOT/scripts/design-scan.cjs" "$REPO_ROOT/$tree/skills/forge/scripts/design-scan.cjs" >/dev/null 2>&1 \
     && pass "seam parity: $tree design-scan.cjs" || fail "seam parity: $tree design-scan.cjs diverged"
-  diff -q "$REPO_ROOT/scripts/score-design.sh" "$REPO_ROOT/$tree/skills/autoresearch/scripts/score-design.sh" >/dev/null 2>&1 \
+  diff -q "$REPO_ROOT/scripts/score-design.sh" "$REPO_ROOT/$tree/skills/forge/scripts/score-design.sh" >/dev/null 2>&1 \
     && pass "seam parity: $tree score-design.sh" || fail "seam parity: $tree score-design.sh diverged"
 done
 
-grep -q 'autoresearch:design' "$REPO_ROOT/.claude/skills/autoresearch/SKILL.md" \
-  && pass "router: canonical SKILL.md routes /autoresearch:design" || fail "router: canonical missing design row"
-grep -q 'autoresearch:design' "$REPO_ROOT/claude-plugin/skills/autoresearch/SKILL.md" \
-  && pass "router: claude-plugin routes /autoresearch:design" || fail "router: claude-plugin missing design row"
-grep -q 'autoresearch_design' "$REPO_ROOT/.opencode/skills/autoresearch/SKILL.md" \
-  && pass "router: opencode routes /autoresearch_design" || fail "router: opencode missing design row"
-grep -qE '\$autoresearch design' "$REPO_ROOT/.agents/skills/autoresearch/SKILL.md" \
-  && pass "router: codex routes \$autoresearch design" || fail "router: codex missing design row"
-grep -qE '\$autoresearch design' "$REPO_ROOT/plugins/autoresearch/skills/autoresearch/SKILL.md" \
-  && pass "router: codex plugin routes \$autoresearch design" || fail "router: codex plugin missing design row"
+grep -q 'forge:design' "$REPO_ROOT/.claude/skills/forge/SKILL.md" \
+  && pass "router: canonical SKILL.md routes /forge:design" || fail "router: canonical missing design row"
+grep -q 'forge:design' "$REPO_ROOT/claude-plugin/skills/forge/SKILL.md" \
+  && pass "router: claude-plugin routes /forge:design" || fail "router: claude-plugin missing design row"
+grep -q 'forge_design' "$REPO_ROOT/.opencode/skills/forge/SKILL.md" \
+  && pass "router: opencode routes /forge_design" || fail "router: opencode missing design row"
+grep -qE '\$forge design' "$REPO_ROOT/.agents/skills/forge/SKILL.md" \
+  && pass "router: codex routes \$forge design" || fail "router: codex missing design row"
+grep -qE '\$forge design' "$REPO_ROOT/plugins/forge/skills/forge/SKILL.md" \
+  && pass "router: codex plugin routes \$forge design" || fail "router: codex plugin missing design row"
 
 for mf in "$REPO_ROOT/.claude-plugin/marketplace.json" \
           "$REPO_ROOT/claude-plugin/.claude-plugin/plugin.json" \
-          "$REPO_ROOT/plugins/autoresearch/.codex-plugin/plugin.json"; do
+          "$REPO_ROOT/plugins/forge/.codex-plugin/plugin.json"; do
   name="${mf#$REPO_ROOT/}"
   grep -q "19 commands" "$mf" && pass "manifest count 19: $name" || fail "manifest count 19: $name"
   grep -q "test, design" "$mf" && pass "manifest lists design: $name" || fail "manifest lists design: $name"

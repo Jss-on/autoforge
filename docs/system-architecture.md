@@ -2,9 +2,9 @@
 
 ## Overview
 
-Autoresearch v2.3.0 is a modular, markdown-driven autonomous iteration framework. The core architectural shift from v2.0.x is the **thin SKILL.md + self-contained command files** pattern: the skill file is a routing table; all protocol is embedded in 17 self-contained command files (plus the root command). Only the invoked command file loads per invocation, reducing token cost by ~95%.
+AutoForge v2.3.0 is a modular, markdown-driven autonomous iteration framework. The core architectural shift from v2.0.x is the **thin SKILL.md + self-contained command files** pattern: the skill file is a routing table; all protocol is embedded in 17 self-contained command files (plus the root command). Only the invoked command file loads per invocation, reducing token cost by ~95%.
 
-As of v2.2.0, bare `/autoresearch` is overloaded: a `Metric:`/`Verify:` config runs the classic metric loop unchanged, while a free-form natural-language goal dispatches an **autonomous orchestrator** that classifies the goal, derives a success predicate, and loops the right subcommands until it holds. All routing decisions live in one deterministic seam, `scripts/orchestrate.sh` (mirroring the `scripts/score-regression.sh` pattern), bounded by plateau detection and a hard cycle ceiling.
+As of v2.2.0, bare `/forge` is overloaded: a `Metric:`/`Verify:` config runs the classic metric loop unchanged, while a free-form natural-language goal dispatches an **autonomous orchestrator** that classifies the goal, derives a success predicate, and loops the right subcommands until it holds. All routing decisions live in one deterministic seam, `scripts/orchestrate.sh` (mirroring the `scripts/score-regression.sh` pattern), bounded by plateau detection and a hard cycle ceiling.
 
 v2.3.0 hardens that seam with four orchestrator-safety additions: `screen-cmd` gains destructive-command coverage (netcat exfiltration, raw block-device writes across SD/eMMC·RAID·device-mapper families, `mkfs`, `find -delete`, `shred`, zero-`truncate`, recursive zero-mode `chmod`, curl/wget-into-interpreter via xargs) — including path-qualified invocations like `/sbin/mkfs.ext4`; the derived Success predicate is **pinned** verbatim into `orchestrator-state.json` and re-screened on resume via the new `screen-state-predicate` subcommand (extraction honors escaped quotes so a poisoned predicate cannot truncate the screen); a new `validate-state` subcommand gates the ledger (required fields + coarse types) before routing; and `next-hop` routes a high-impact accepted change through an independent **verify** hop (`pending_verify`) before declaring `DONE` or shipping. The seam now exposes eight subcommands: `classify`, `next-hop`, `units`, `plateau`, `screen-cmd`, `verdict`, `validate-state`, `screen-state-predicate`.
 
@@ -29,15 +29,15 @@ graph TB
     end
 
     subgraph "Canonical Source"
-        SKILL[.claude/skills/autoresearch/SKILL.md\nthin routing table — 41 lines]
-        CMD[.claude/commands/autoresearch.md]
-        CMDS[.claude/commands/autoresearch/*.md\n17 self-contained command files]
-        REF[.claude/skills/autoresearch/references/\n3 focused reference files]
+        SKILL[.claude/skills/forge/SKILL.md\nthin routing table — 41 lines]
+        CMD[.claude/commands/forge.md]
+        CMDS[.claude/commands/forge/*.md\n17 self-contained command files]
+        REF[.claude/skills/forge/references/\n3 focused reference files]
     end
 
     subgraph "Platform Distributions"
         OCD[.opencode/commands/ + .opencode/skills/]
-        CXD[plugins/autoresearch/ + .agents/skills/]
+        CXD[plugins/forge/ + .agents/skills/]
     end
 
     CC --> PS --> SKILL
@@ -50,11 +50,11 @@ graph TB
     CX --> CXD
 ```
 
-## Data Flow — Core Autoresearch Loop
+## Data Flow — Core AutoForge Loop
 
 ```mermaid
 flowchart TD
-    A[User invokes /autoresearch] --> B{Config complete?}
+    A[User invokes /forge] --> B{Config complete?}
     B -- No --> C[AskUserQuestion batched setup]
     C --> D[Establish Baseline — Iteration 0]
     B -- Yes --> D
@@ -90,8 +90,8 @@ flowchart TD
 ```
 .claude/
 ├── commands/
-│   ├── autoresearch.md                    # Core loop command — self-contained, 110 lines
-│   └── autoresearch/
+│   ├── forge.md                    # Core loop command — self-contained, 110 lines
+│   └── forge/
 │       ├── debug.md                       # Hypothesis iteration loop
 │       ├── evals.md                       # One-shot TSV analysis (NEW in v2.1.0)
 │       ├── fix.md                         # Error-count reduction loop
@@ -104,13 +104,13 @@ flowchart TD
 │       ├── scenario.md                    # 12-dimension edge case loop
 │       ├── security.md                    # STRIDE + OWASP loop
 │       └── ship.md                        # 8-phase ship pipeline
-└── skills/autoresearch/
+└── skills/forge/
     ├── SKILL.md                           # Routing table only — 41 lines
     └── references/
         ├── predict-personas.md            # 5 default expert personas
         ├── reason-judge-protocol.md       # Blind judge scoring protocol
         └── security-checklist.md          # STRIDE + OWASP checklist
-├── hooks/autoresearch/                    # Hook system (NEW in v2.1.1)
+├── hooks/forge/                    # Hook system (NEW in v2.1.1)
 │   ├── hooks.json                         # Auto-registration
 │   ├── node-hook-runner.sh                # Shell wrapper
 │   ├── .ckignore                          # Baseline blocked patterns
@@ -118,8 +118,8 @@ flowchart TD
 │   └── [9 hook .cjs files]
 
 .opencode/                                 # OpenCode distribution (underscore naming)
-plugins/autoresearch/                      # Codex distribution
-.agents/skills/autoresearch/              # Codex agents distribution
+plugins/forge/                      # Codex distribution
+.agents/skills/forge/              # Codex agents distribution
 scripts/
 ├── transform.sh                          # Single multi-platform transform script
 ├── orchestrate.sh                        # Orchestrator routing seam (NEW in v2.2.0)
@@ -129,7 +129,7 @@ scripts/
 claude-plugin/
 ├── .claude-plugin/plugin.json            # Claude Code metadata — v2.3.0
 └── hooks/                                # Hook system (NEW in v2.1.1)
-plugins/autoresearch/
+plugins/forge/
 └── .codex-plugin/plugin.json             # Codex metadata — v2.3.0-codex.0
 ```
 
@@ -193,21 +193,21 @@ claude-plugin/
 | Thin SKILL.md routing table (41 lines) | ~95% token reduction vs monolith v2.0.x SKILL.md (813 lines) |
 | Self-contained command files | Each file embeds full protocol — no reference file loading unless needed |
 | 3 focused reference files (not 13) | Only truly shared content warrants a reference: personas, judge protocol, security checklist |
-| No autoresearch-command-spec.json | JSON spec removed; command contracts live in individual command files |
+| No forge-command-spec.json | JSON spec removed; command contracts live in individual command files |
 | scripts/transform.sh replaces sync-opencode.sh + sync-codex.sh | Single script generates all platform distributions |
 | TSV with `# metric_direction` comment | Enables evals command to auto-detect direction without user prompt |
 | 8 TSV status values | baseline, keep, discard, crash, no-op, hook-blocked, metric-error, keep (reworked) |
 | handoff.json for chain integration | Structured handoff between subcommands; evals reads `*-results.tsv` directly |
 | Hook system with fail-open design | Hooks never block Claude due to crashes; safety without fragility |
 | Session state via temp file | Hooks are subprocesses — can't share env vars. `/tmp/ar-session-{hash}.json` persists across hook calls |
-| Iteration-based throttling (every 5th) | Autoresearch is loop-driven; time-based throttling doesn't match iteration cadence |
+| Iteration-based throttling (every 5th) | AutoForge is loop-driven; time-based throttling doesn't match iteration cadence |
 
 ## Integration Points
 
 - **Claude Code Plugin System** — commands in `.claude/commands/`, skill in `.claude/skills/`
 - **Claude Code Hook System** — 9 hooks auto-registered via `hooks/hooks.json` in plugin
 - **OpenCode** — `.opencode/commands/` + `.opencode/skills/` (underscore naming convention)
-- **Codex** — `plugins/autoresearch/` + `.agents/skills/autoresearch/`
+- **Codex** — `plugins/forge/` + `.agents/skills/forge/`
 - **Git** — memory, rollback, staleness detection, changelog generation
 - **Shell** — verify and guard commands are user-defined shell expressions
 - **MCP servers** — any MCP server configured in the host environment is available during loops

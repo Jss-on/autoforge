@@ -6,7 +6,7 @@
 
 Autonomous goal-directed iteration based on [Karpathy's autoresearch](https://github.com/karpathy/autoresearch). One metric, constrained scope, fast verification, automatic rollback, git as memory. Works on ANY domain — code, content, marketing, sales, DevOps — anything with a measurable metric.
 
-AutoForge is the product; `autoresearch` is the engine and plugin it ships — all commands are invoked under the `autoresearch` name.
+AutoForge is the product; `forge` is the engine and plugin it ships — all commands are invoked under the `forge` name.
 
 **Core loop:** Modify → Verify → Keep/Discard → Repeat.
 
@@ -20,10 +20,10 @@ AutoForge is the product; `autoresearch` is the engine and plugin it ships — a
 
 ```
 /plugin marketplace add Jss-on/autoforge
-/plugin install autoresearch@autoforge
+/plugin install forge@autoforge
 ```
 
-Restart session after install. All 19 commands become available as `/autoresearch` and `/autoresearch:<subcommand>`. Update later with `/plugin marketplace update autoforge`.
+Restart session after install. All 19 commands become available as `/forge` and `/forge:<subcommand>`. Update later with `/plugin marketplace update autoforge`.
 
 ### Codex (plugin)
 
@@ -33,7 +33,7 @@ cd autoforge
 ./scripts/install.sh --codex --global
 ```
 
-Invoke via the `$autoresearch` mention syntax: `$autoresearch <subcommand> [flags]`.
+Invoke via the `$forge` mention syntax: `$forge <subcommand> [flags]`.
 
 ### Manual (any agent)
 
@@ -43,12 +43,12 @@ Copy the skill files into your agent's skill directory:
 git clone https://github.com/Jss-on/autoforge
 
 # Claude Code
-cp -r autoforge/claude-plugin/skills/autoresearch .claude/skills/autoresearch
-cp -r autoforge/claude-plugin/commands/autoresearch .claude/commands/autoresearch
-cp autoforge/claude-plugin/commands/autoresearch.md .claude/commands/autoresearch.md
+cp -r autoforge/claude-plugin/skills/forge .claude/skills/forge
+cp -r autoforge/claude-plugin/commands/forge .claude/commands/forge
+cp autoforge/claude-plugin/commands/forge.md .claude/commands/forge.md
 
 # Codex
-cp -r autoforge/plugins/autoresearch ~/.agents/plugins/autoresearch
+cp -r autoforge/plugins/forge ~/.agents/plugins/forge
 ```
 
 ---
@@ -57,25 +57,25 @@ cp -r autoforge/plugins/autoresearch ~/.agents/plugins/autoresearch
 
 | Command | Purpose |
 |---------|---------|
-| `autoresearch` | Autonomous iteration loop (unlimited or bounded with `Iterations: N`) |
-| `autoresearch:plan` | Interactive wizard: Goal → Scope, Metric, Direction, Verify config |
-| `autoresearch:debug` | Autonomous bug-hunting — scientific method + iterative investigation |
-| `autoresearch:fix` | Autonomous error repair — one fix per iteration until zero errors |
-| `autoresearch:security` | STRIDE + OWASP + red-team security audit (read-only unless `--fix`) |
-| `autoresearch:ship` | Universal shipping workflow — 8 phases, 9 shipment types |
-| `autoresearch:scenario` | Scenario exploration — 12 dimensions, edge cases, derivative scenarios |
-| `autoresearch:predict` | Multi-persona swarm — 5 expert perspectives before acting |
-| `autoresearch:learn` | Autonomous documentation engine — scout, generate, validate, fix |
-| `autoresearch:reason` | Adversarial refinement — blind judge panel for subjective domains |
-| `autoresearch:probe` | Adversarial requirement / assumption interrogation — 8 personas probe to mechanical saturation, emits ready-to-run autoresearch config |
-| `autoresearch:improve` | Research ICP challenges, discover improvements, generate per-feature PRDs |
-| `autoresearch:evals` | Analyze iteration results — trends, plateaus, convergence, recommendations |
-| `autoresearch:regression` | Stability gate — baseline vs candidate diff, STABLE/UNSTABLE verdict before you push |
-| `autoresearch:requirements` | Turn a client brief into a validated build spec — interview to saturation, mechanical validate gate |
-| `autoresearch:build` | Build greenfield full-stack software via the full SDLC to passing acceptance (6 weighted dims, logic-gated) |
-| `autoresearch:feature` | Add a feature to an existing app — delta acceptance + hard non-regression ratchet |
-| `autoresearch:test` | Full QA engagement on existing software — risk-based plan, RTM, formal test design, execution + defect ledger, exit-criteria verdict (ISO 29119/ISTQB-aligned) |
-| `autoresearch:design` | UI/UX designer + design QA — direction protocol → machine-readable `DESIGN.md`; independent design audit (anti-slop floor `SLOP_GATE`, heuristic critique, personas, defect ledger, `SHIP|FIX|REBUILD` verdict); bounded `--fix` remediation |
+| `forge` | Autonomous iteration loop (unlimited or bounded with `Iterations: N`) |
+| `forge:plan` | Interactive wizard: Goal → Scope, Metric, Direction, Verify config |
+| `forge:debug` | Autonomous bug-hunting — scientific method + iterative investigation |
+| `forge:fix` | Autonomous error repair — one fix per iteration until zero errors |
+| `forge:security` | STRIDE + OWASP + red-team security audit (read-only unless `--fix`) |
+| `forge:ship` | Universal shipping workflow — 8 phases, 9 shipment types |
+| `forge:scenario` | Scenario exploration — 12 dimensions, edge cases, derivative scenarios |
+| `forge:predict` | Multi-persona swarm — 5 expert perspectives before acting |
+| `forge:learn` | Autonomous documentation engine — scout, generate, validate, fix |
+| `forge:reason` | Adversarial refinement — blind judge panel for subjective domains |
+| `forge:probe` | Adversarial requirement / assumption interrogation — 8 personas probe to mechanical saturation, emits ready-to-run forge config |
+| `forge:improve` | Research ICP challenges, discover improvements, generate per-feature PRDs |
+| `forge:evals` | Analyze iteration results — trends, plateaus, convergence, recommendations |
+| `forge:regression` | Stability gate — baseline vs candidate diff, STABLE/UNSTABLE verdict before you push |
+| `forge:requirements` | Turn a client brief into a validated build spec — interview to saturation, mechanical validate gate |
+| `forge:build` | Build greenfield full-stack software via the full SDLC to passing acceptance (6 weighted dims, logic-gated) |
+| `forge:feature` | Add a feature to an existing app — delta acceptance + hard non-regression ratchet |
+| `forge:test` | Full QA engagement on existing software — risk-based plan, RTM, formal test design, execution + defect ledger, exit-criteria verdict (ISO 29119/ISTQB-aligned) |
+| `forge:design` | UI/UX designer + design QA — direction protocol → machine-readable `DESIGN.md`; independent design audit (anti-slop floor `SLOP_GATE`, heuristic critique, personas, defect ledger, `SHIP|FIX|REBUILD` verdict); bounded `--fix` remediation |
 
 ---
 
@@ -84,7 +84,7 @@ cp -r autoforge/plugins/autoresearch ~/.agents/plugins/autoresearch
 ### Basic autonomous loop
 
 ```
-autoresearch
+forge
 Goal: Increase test coverage from 72% to 90%
 Scope: src/**/*.test.ts, src/**/*.ts
 Metric: coverage % (higher is better)
@@ -95,7 +95,7 @@ Iterations: 50
 ### Don't know what metric to use?
 
 ```
-autoresearch:plan
+forge:plan
 Goal: Make the API respond faster
 ```
 
@@ -104,7 +104,7 @@ The wizard walks you through scope, metric, direction, and verify — with dry-r
 ### Hunt all bugs
 
 ```
-autoresearch:debug
+forge:debug
 Scope: src/api/**/*.ts
 Symptom: API returns 500 on POST /users
 Iterations: 20
@@ -113,7 +113,7 @@ Iterations: 20
 ### Fix all errors
 
 ```
-autoresearch:fix
+forge:fix
 ```
 
 Auto-detects broken tests/types/lint/build, fixes one at a time, stops at zero errors.
@@ -121,7 +121,7 @@ Auto-detects broken tests/types/lint/build, fixes one at a time, stops at zero e
 ### Security audit
 
 ```
-autoresearch:security
+forge:security
 Scope: src/**/*.ts
 Iterations: 10
 ```
@@ -129,13 +129,13 @@ Iterations: 10
 ### Ship a PR
 
 ```
-autoresearch:ship --auto
+forge:ship --auto
 ```
 
 ### Explore edge cases
 
 ```
-autoresearch:scenario
+forge:scenario
 Scenario: User attempts checkout with expired card
 Iterations: 25
 ```
@@ -143,14 +143,14 @@ Iterations: 25
 ### Get expert opinions before acting
 
 ```
-autoresearch:predict --chain debug
+forge:predict --chain debug
 Scope: src/auth/**/*.ts
 ```
 
 ### Refine a subjective decision
 
 ```
-autoresearch:reason
+forge:reason
 Task: Should we use event sourcing for order management?
 Domain: software
 Iterations: 8
@@ -174,14 +174,14 @@ Iterations: 8
 
 ## Flags
 
-### Core loop (`autoresearch`)
+### Core loop (`forge`)
 
 | Flag | Purpose |
 |------|---------|
 | `--scope <glob>` | Override scope |
 | `--iterations <N>` | Bounded iteration count |
 
-### Security (`autoresearch:security`)
+### Security (`forge:security`)
 
 | Flag | Purpose |
 |------|---------|
@@ -189,7 +189,7 @@ Iterations: 8
 | `--fix` | Auto-fix Critical/High findings |
 | `--fail-on <severity>` | Non-zero exit for CI/CD gating |
 
-### Ship (`autoresearch:ship`)
+### Ship (`forge:ship`)
 
 | Flag | Purpose |
 |------|---------|
@@ -199,7 +199,7 @@ Iterations: 8
 | `--rollback` | Undo last ship |
 | `--monitor <N>` | Post-ship monitoring (minutes) |
 
-### Debug (`autoresearch:debug`)
+### Debug (`forge:debug`)
 
 | Flag | Purpose |
 |------|---------|
@@ -207,7 +207,7 @@ Iterations: 8
 | `--scope <glob>` | Limit investigation scope |
 | `--symptom "<text>"` | Pre-fill symptom |
 
-### Fix (`autoresearch:fix`)
+### Fix (`forge:fix`)
 
 | Flag | Purpose |
 |------|---------|
@@ -216,13 +216,13 @@ Iterations: 8
 | `--category <type>` | Only fix: test, type, lint, or build |
 | `--from-debug` | Read findings from latest debug session |
 
-### Predict (`autoresearch:predict`)
+### Predict (`forge:predict`)
 
 | Flag | Purpose |
 |------|---------|
 | `--chain <commands>` | Chain output to other commands |
 
-### Reason (`autoresearch:reason`)
+### Reason (`forge:reason`)
 
 | Flag | Purpose |
 |------|---------|
@@ -233,7 +233,7 @@ Iterations: 8
 | `--domain <type>` | software, product, business, security, research, content |
 | `--chain <targets>` | Chain converged output to other commands |
 
-### Learn (`autoresearch:learn`)
+### Learn (`forge:learn`)
 
 | Flag | Purpose |
 |------|---------|
@@ -241,7 +241,7 @@ Iterations: 8
 | `--depth <level>` | shallow, standard, deep |
 | `--file <path>` | Update single doc |
 
-### Scenario (`autoresearch:scenario`)
+### Scenario (`forge:scenario`)
 
 | Flag | Purpose |
 |------|---------|
@@ -257,13 +257,13 @@ Iterations: 8
 Commands can be chained with `--chain`:
 
 ```
-autoresearch:debug --fix                      # debug → auto-fix
-autoresearch:predict --chain debug            # predict → debug
-autoresearch:predict --chain scenario,debug,fix  # full quality pipeline
-autoresearch:reason --chain predict           # converge → stress-test
-autoresearch:reason --chain plan,fix          # converge → implement
-autoresearch:probe --chain plan,autoresearch  # interrogate → config → loop
-autoresearch:probe --chain reason             # interrogate → debate → converge
+forge:debug --fix                      # debug → auto-fix
+forge:predict --chain debug            # predict → debug
+forge:predict --chain scenario,debug,fix  # full quality pipeline
+forge:reason --chain predict           # converge → stress-test
+forge:reason --chain plan,fix          # converge → implement
+forge:probe --chain plan,forge  # interrogate → config → loop
+forge:probe --chain reason             # interrogate → debate → converge
 ```
 
 ---
@@ -299,16 +299,16 @@ iteration  commit   metric  delta   status    description
 
 ### Claude Code
 
-- Commands are invoked as `/autoresearch` and `/autoresearch:<subcommand>`
+- Commands are invoked as `/forge` and `/forge:<subcommand>`
 - Interactive setup uses `AskUserQuestion` when context is missing
-- Skill files: `.claude/skills/autoresearch/SKILL.md` + `references/*.md`
+- Skill files: `.claude/skills/forge/SKILL.md` + `references/*.md`
 
 ### Codex
 
-- Commands are invoked as plain text: `autoresearch` and `autoresearch:<subcommand>`
+- Commands are invoked as plain text: `forge` and `forge:<subcommand>`
 - Interactive setup uses `request_user_input` or direct question batches
-- Plugin files: `plugins/autoresearch/` with `skills/`
-- Command contracts live in each command file under `plugins/autoresearch/skills/autoresearch/`
+- Plugin files: `plugins/forge/` with `skills/`
+- Command contracts live in each command file under `plugins/forge/skills/forge/`
 
 ### Other Agents (OpenCode, Gemini CLI, etc.)
 
@@ -316,7 +316,7 @@ iteration  commit   metric  delta   status    description
 - Use the core loop protocol: review → change → commit → verify → keep/revert → log
 - Git is required — the loop uses `git commit`, `git revert`, `git log`, `git diff`
 - Each iteration must be atomic (one change, one commit, one verification)
-- For detailed workflow references, see: `claude-plugin/skills/autoresearch/references/*.md`
+- For detailed workflow references, see: `claude-plugin/skills/forge/references/*.md`
 
 ---
 
@@ -330,17 +330,17 @@ autoforge/
 ├── NOTICE                             ← Upstream MIT attribution
 ├── guide/                             ← Comprehensive guides per command
 ├── claude-plugin/                     ← Claude Code distribution package
-│   ├── skills/autoresearch/SKILL.md   ← Main skill + references/
-│   └── commands/autoresearch/         ← Subcommand registrations
-└── plugins/autoresearch/              ← Codex distribution package
-    └── skills/autoresearch/SKILL.md   ← Codex skill router + references/
+│   ├── skills/forge/SKILL.md   ← Main skill + references/
+│   └── commands/forge/         ← Subcommand registrations
+└── plugins/forge/              ← Codex distribution package
+    └── skills/forge/SKILL.md   ← Codex skill router + references/
 ```
 
 ---
 
 ## License
 
-Proprietary — see [LICENSE](LICENSE). Portions derived from the autoresearch engine by Udit Goenka (MIT) — see [NOTICE](NOTICE).
+Proprietary — see [LICENSE](LICENSE). Portions derived from the forge engine by Udit Goenka (MIT) — see [NOTICE](NOTICE).
 
 ## Credits
 

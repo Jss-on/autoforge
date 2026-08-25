@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Test harness for /autoresearch:test — score-test.sh (defects + exit-criteria),
+# Test harness for /forge:test — score-test.sh (defects + exit-criteria),
 # the test.md QA-engagement spec, standards coverage, mirror parity, manifests.
 set -uo pipefail
 
@@ -11,8 +11,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 ST="$REPO_ROOT/scripts/score-test.sh"
-SPEC="$REPO_ROOT/claude-plugin/commands/autoresearch/test.md"
-PROTO="$REPO_ROOT/claude-plugin/skills/autoresearch/references/qa-testing-protocol.md"
+SPEC="$REPO_ROOT/claude-plugin/commands/forge/test.md"
+PROTO="$REPO_ROOT/claude-plugin/skills/forge/references/qa-testing-protocol.md"
 
 PASS=0; FAIL=0; TOTAL=0
 pass() { printf '  PASS: %s\n' "$1"; PASS=$((PASS + 1)); TOTAL=$((TOTAL + 1)); }
@@ -151,10 +151,10 @@ spec_has "fix|feature"                             "spec: chains to remediation 
 printf '\n--- distribution: parity, shipped seam, router, manifests ---\n'
 # ============================================================================
 
-for m in "$REPO_ROOT/.claude/commands/autoresearch/test.md" \
-         "$REPO_ROOT/.agents/skills/autoresearch/test.md" \
-         "$REPO_ROOT/plugins/autoresearch/skills/autoresearch/test.md" \
-         "$REPO_ROOT/.opencode/commands/autoresearch_test.md"; do
+for m in "$REPO_ROOT/.claude/commands/forge/test.md" \
+         "$REPO_ROOT/.agents/skills/forge/test.md" \
+         "$REPO_ROOT/plugins/forge/skills/forge/test.md" \
+         "$REPO_ROOT/.opencode/commands/forge_test.md"; do
   if [[ -f "$m" ]] && diff -q "$SPEC" "$m" >/dev/null 2>&1; then
     pass "mirror parity: ${m#$REPO_ROOT/}"
   else
@@ -162,25 +162,25 @@ for m in "$REPO_ROOT/.claude/commands/autoresearch/test.md" \
   fi
 done
 
-for tree in .claude claude-plugin .opencode .agents plugins/autoresearch; do
-  [[ -f "$REPO_ROOT/$tree/skills/autoresearch/scripts/score-test.sh" ]] \
+for tree in .claude claude-plugin .opencode .agents plugins/forge; do
+  [[ -f "$REPO_ROOT/$tree/skills/forge/scripts/score-test.sh" ]] \
     && pass "seam shipped: $tree score-test.sh" || fail "seam shipped: $tree missing score-test.sh"
-  [[ -f "$REPO_ROOT/$tree/skills/autoresearch/references/qa-testing-protocol.md" ]] \
+  [[ -f "$REPO_ROOT/$tree/skills/forge/references/qa-testing-protocol.md" ]] \
     && pass "reference shipped: $tree qa-testing-protocol.md" || fail "reference shipped: $tree missing protocol"
 done
 
-grep -q 'autoresearch:test' "$REPO_ROOT/.claude/skills/autoresearch/SKILL.md" \
-  && pass "router: canonical SKILL.md routes /autoresearch:test" || fail "router: canonical missing test row"
-grep -q 'autoresearch:test' "$REPO_ROOT/claude-plugin/skills/autoresearch/SKILL.md" \
-  && pass "router: claude-plugin routes /autoresearch:test" || fail "router: claude-plugin missing test row"
-grep -q 'autoresearch_test' "$REPO_ROOT/.opencode/skills/autoresearch/SKILL.md" \
-  && pass "router: opencode routes /autoresearch_test" || fail "router: opencode missing test row"
-grep -qE '\$autoresearch test' "$REPO_ROOT/.agents/skills/autoresearch/SKILL.md" \
-  && pass "router: codex routes \$autoresearch test" || fail "router: codex missing test row"
+grep -q 'forge:test' "$REPO_ROOT/.claude/skills/forge/SKILL.md" \
+  && pass "router: canonical SKILL.md routes /forge:test" || fail "router: canonical missing test row"
+grep -q 'forge:test' "$REPO_ROOT/claude-plugin/skills/forge/SKILL.md" \
+  && pass "router: claude-plugin routes /forge:test" || fail "router: claude-plugin missing test row"
+grep -q 'forge_test' "$REPO_ROOT/.opencode/skills/forge/SKILL.md" \
+  && pass "router: opencode routes /forge_test" || fail "router: opencode missing test row"
+grep -qE '\$forge test' "$REPO_ROOT/.agents/skills/forge/SKILL.md" \
+  && pass "router: codex routes \$forge test" || fail "router: codex missing test row"
 
 for mf in "$REPO_ROOT/.claude-plugin/marketplace.json" \
           "$REPO_ROOT/claude-plugin/.claude-plugin/plugin.json" \
-          "$REPO_ROOT/plugins/autoresearch/.codex-plugin/plugin.json"; do
+          "$REPO_ROOT/plugins/forge/.codex-plugin/plugin.json"; do
   name="${mf#$REPO_ROOT/}"
   grep -q "19 commands" "$mf" && pass "manifest count 19: $name" || fail "manifest count 19: $name"
   grep -q "feature, test" "$mf" && pass "manifest lists test: $name" || fail "manifest lists test: $name"

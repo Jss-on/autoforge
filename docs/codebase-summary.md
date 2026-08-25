@@ -2,18 +2,18 @@
 
 ## Overview
 
-Autoresearch v2.1.0 ships as a modular, multi-platform autonomous iteration framework. The canonical source lives in `.claude/`; `scripts/transform.sh` produces OpenCode and Codex distributions. There is no compiled code and near-zero runtime dependencies.
+AutoForge v2.1.0 ships as a modular, multi-platform autonomous iteration framework. The canonical source lives in `.claude/`; `scripts/transform.sh` produces OpenCode and Codex distributions. There is no compiled code and near-zero runtime dependencies.
 
 ## File Inventory
 
 | Directory | Purpose | Primary Types |
 |-----------|---------|---------------|
 | `.claude/commands/` | Core loop + 13 subcommand files (self-contained) | `.md` |
-| `.claude/skills/autoresearch/` | Thin routing SKILL.md + 3 reference files | `.md` |
+| `.claude/skills/forge/` | Thin routing SKILL.md + 3 reference files | `.md` |
 | `.opencode/commands/` | OpenCode distribution (underscore naming) | `.md` |
-| `.opencode/skills/autoresearch/` | OpenCode skill + reference copies | `.md` |
-| `plugins/autoresearch/` | Codex plugin: skill, references, command files, plugin.json | `.md`, `.json` |
-| `.agents/skills/autoresearch/` | Codex agents: skill, references, commands | `.md` |
+| `.opencode/skills/forge/` | OpenCode skill + reference copies | `.md` |
+| `plugins/forge/` | Codex plugin: skill, references, command files, plugin.json | `.md`, `.json` |
+| `.agents/skills/forge/` | Codex agents: skill, references, commands | `.md` |
 | `guide/` | User-facing documentation and tutorials | `.md` |
 | `guide/scenario/` | Real-world scenario walkthroughs (10 domains) | `.md` |
 | `docs/` | Project documentation | `.md` |
@@ -24,37 +24,37 @@ Autoresearch v2.1.0 ships as a modular, multi-platform autonomous iteration fram
 
 | File | Purpose |
 |------|---------|
-| `.claude/skills/autoresearch/SKILL.md` | Thin routing table (41 lines) — loaded by Claude Code per invocation |
-| `.claude/commands/autoresearch.md` | Core loop command — self-contained protocol, ~110 lines |
-| `.claude/commands/autoresearch/evals.md` | NEW: one-shot TSV analysis — trends, plateaus, regressions |
-| `.claude/skills/autoresearch/references/predict-personas.md` | 5 default expert personas used by predict subcommand |
-| `.claude/skills/autoresearch/references/reason-judge-protocol.md` | Blind judge scoring protocol for reason subcommand |
-| `.claude/skills/autoresearch/references/security-checklist.md` | STRIDE + OWASP checklist used by security subcommand |
+| `.claude/skills/forge/SKILL.md` | Thin routing table (41 lines) — loaded by Claude Code per invocation |
+| `.claude/commands/forge.md` | Core loop command — self-contained protocol, ~110 lines |
+| `.claude/commands/forge/evals.md` | NEW: one-shot TSV analysis — trends, plateaus, regressions |
+| `.claude/skills/forge/references/predict-personas.md` | 5 default expert personas used by predict subcommand |
+| `.claude/skills/forge/references/reason-judge-protocol.md` | Blind judge scoring protocol for reason subcommand |
+| `.claude/skills/forge/references/security-checklist.md` | STRIDE + OWASP checklist used by security subcommand |
 | `claude-plugin/.claude-plugin/plugin.json` | Claude Code plugin metadata — version 2.1.0 |
-| `plugins/autoresearch/.codex-plugin/plugin.json` | Codex plugin metadata — version 2.1.0-codex.0 |
+| `plugins/forge/.codex-plugin/plugin.json` | Codex plugin metadata — version 2.1.0-codex.0 |
 | `scripts/transform.sh` | Single script that generates all platform distributions from `.claude/` source |
 | `scripts/install.sh` | Guided interactive installer |
 | `README.md` | Project README with installation, usage, FAQ |
-| `COMPARISON.md` | Karpathy's autoresearch vs Claude Autoresearch |
+| `COMPARISON.md` | Karpathy's autoresearch vs Claude AutoForge |
 | `CONTRIBUTING.md` | Contribution guidelines |
 
 ## Subcommand Registry
 
 | Command | Loop Shape | Default Iterations |
 |---------|-----------|-------------------|
-| `/autoresearch` | commit → verify → keep/discard | 25 |
-| `/autoresearch:plan` | one-shot wizard | N/A |
-| `/autoresearch:debug` | hypothesis iteration | 15 |
-| `/autoresearch:fix` | commit → verify → revert (error count) | 20 |
-| `/autoresearch:security` | attack vector iteration | 15 |
-| `/autoresearch:ship` | linear 8-phase pipeline | N/A |
-| `/autoresearch:scenario` | 12-dimension exploration | 20 |
-| `/autoresearch:predict` | one-shot 5-persona debate | N/A |
-| `/autoresearch:learn` | doc → validate → fix loop | 10 |
-| `/autoresearch:reason` | adversarial refinement | 8 |
-| `/autoresearch:probe` | round-based interrogation | 15 |
-| `/autoresearch:improve` | saturation research + PRD generation | 15 |
-| `/autoresearch:evals` | one-shot TSV analysis | N/A |
+| `/forge` | commit → verify → keep/discard | 25 |
+| `/forge:plan` | one-shot wizard | N/A |
+| `/forge:debug` | hypothesis iteration | 15 |
+| `/forge:fix` | commit → verify → revert (error count) | 20 |
+| `/forge:security` | attack vector iteration | 15 |
+| `/forge:ship` | linear 8-phase pipeline | N/A |
+| `/forge:scenario` | 12-dimension exploration | 20 |
+| `/forge:predict` | one-shot 5-persona debate | N/A |
+| `/forge:learn` | doc → validate → fix loop | 10 |
+| `/forge:reason` | adversarial refinement | 8 |
+| `/forge:probe` | round-based interrogation | 15 |
+| `/forge:improve` | saturation research + PRD generation | 15 |
+| `/forge:evals` | one-shot TSV analysis | N/A |
 
 ## Key Dependencies
 
@@ -67,11 +67,11 @@ Autoresearch v2.1.0 ships as a modular, multi-platform autonomous iteration fram
 | Bash/Zsh | Runtime (system) | Shell scripts, verify/guard commands |
 | GitHub CLI (`gh`) | Optional | PR creation and release management in ship workflow |
 
-No `package.json`, `requirements.txt`, `Cargo.toml`, or Python wrapper CLI. The v2.0.x Python wrapper (`autoresearch_cli.py`) was removed in v2.1.0.
+No `package.json`, `requirements.txt`, `Cargo.toml`, or Python wrapper CLI. The v2.0.x Python wrapper (`forge_cli.py`) was removed in v2.1.0.
 
 ## Output Directories
 
-All subcommands write to `autoresearch/{subcommand}-{YYMMDD}-{HHMM}/`:
+All subcommands write to `forge/{subcommand}-{YYMMDD}-{HHMM}/`:
 
 | Output File | Written By |
 |-------------|-----------|

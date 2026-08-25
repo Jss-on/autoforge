@@ -7,7 +7,7 @@
 ## The Command
 
 ```
-/autoresearch:scenario --domain security --depth deep
+/forge:scenario --domain security --depth deep
 Scenario: Customer initiates a cross-border wire transfer — compliance screening, currency conversion, routing through correspondent banks, and reconciliation with recipient confirmation
 Iterations: 35
 ```
@@ -173,7 +173,7 @@ Customer believes transfer was sent Friday. It sits unapproved over the weekend.
 ### scenario → security (adversarial)
 ```bash
 # Red-team the wire transfer system for fraud and compliance gaps
-/autoresearch:security
+/forge:security
 Scope: src/transfers/**, src/compliance/**, src/fraud/**
 Focus: Sanctions evasion, structuring detection, SWIFT message tampering, approval bypass
 Iterations: 20
@@ -181,19 +181,19 @@ Iterations: 20
 
 ### scenario → debug → fix
 ```bash
-/autoresearch:debug
+/forge:debug
 Scope: src/transfers/**, src/fx/**, src/reconciliation/**
 Symptom: Temporal issues — FX rate expiry, holiday calendar mismatches, value date rejections
 Iterations: 15
 
-/autoresearch:fix --from-debug
+/forge:fix --from-debug
 Guard: python -m pytest tests/transfers/
 Iterations: 20
 ```
 
 ### predict → scenario (full pipeline)
 ```bash
-/autoresearch:predict --adversarial --chain scenario,security,fix,ship
+/forge:predict --adversarial --chain scenario,security,fix,ship
 Scope: src/transfers/**
 Goal: Ensure wire transfer system is compliant, fraud-resistant, and operationally resilient
 ```
@@ -204,14 +204,14 @@ Goal: Ensure wire transfer system is compliant, fraud-resistant, and operational
 
 **Always use `--domain security` for financial scenarios.** Wire transfers are adversarial by nature — bad actors actively probe for compliance gaps. The security domain weights abuse and permission dimensions higher, surfacing structuring patterns, sanctions evasion, and approval bypasses that product-domain runs miss.
 
-**Compliance is temporal.** Sanctions lists update daily, FX rates change by the second, and holiday calendars vary by country. Run a dedicated temporal scenario: `/autoresearch:scenario --depth deep --focus temporal` with `Scenario: Wire transfer value date calculation across multiple timezones and holiday calendars`.
+**Compliance is temporal.** Sanctions lists update daily, FX rates change by the second, and holiday calendars vary by country. Run a dedicated temporal scenario: `/forge:scenario --depth deep --focus temporal` with `Scenario: Wire transfer value date calculation across multiple timezones and holiday calendars`.
 
-**Reconciliation is where bugs hide.** The outgoing transfer may succeed, but reconciling the confirmation from the correspondent bank is a separate failure domain. Run: `/autoresearch:scenario --depth standard` with `Scenario: End-of-day reconciliation of 500 wire transfers with mismatches from correspondent bank confirmations`.
+**Reconciliation is where bugs hide.** The outgoing transfer may succeed, but reconciling the confirmation from the correspondent bank is a separate failure domain. Run: `/forge:scenario --depth standard` with `Scenario: End-of-day reconciliation of 500 wire transfers with mismatches from correspondent bank confirmations`.
 
 ---
 
 <div align="center">
 
-**[Scenario Guides](README.md)** | **[Scenario Command Reference](../autoresearch-scenario.md)** | **[Chains & Combinations](../chains-and-combinations.md)**
+**[Scenario Guides](README.md)** | **[Scenario Command Reference](../forge-scenario.md)** | **[Chains & Combinations](../chains-and-combinations.md)**
 
 </div>

@@ -1,14 +1,14 @@
 {
-  "name": "autoresearch-local",
+  "name": "forge-local",
   "interface": {
-    "displayName": "Autoresearch Local Plugins"
+    "displayName": "AutoForge Local Plugins"
   },
   "plugins": [
     {
-      "name": "autoresearch",
+      "name": "forge",
       "source": {
         "source": "local",
-        "path": "./plugins/autoresearch"
+        "path": "./plugins/forge"
       },
       "policy": {
         "installation": "AVAILABLE",

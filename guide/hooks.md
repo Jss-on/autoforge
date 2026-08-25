@@ -1,6 +1,6 @@
 # Hooks Reference
 
-Autoresearch v2.1.1 ships 9 hooks that fire automatically on every Claude Code session. Three categories: safety gates, context injection, and quality + notifications.
+AutoForge v2.1.1 ships 9 hooks that fire automatically on every Claude Code session. Three categories: safety gates, context injection, and quality + notifications.
 
 ## How Hooks Work
 
@@ -82,7 +82,7 @@ These inject helpful context to maintain awareness across long sessions.
 
 Injects recent TSV iteration data every 5th prompt.
 
-**What it injects:** Last 3 rows from the most recently modified TSV file in `autoresearch/*/`. Includes header, iteration count, and metric values.
+**What it injects:** Last 3 rows from the most recently modified TSV file in `forge/*/`. Includes header, iteration count, and metric values.
 
 **Throttle:** Every 5th prompt only. Skips silently on other prompts.
 
@@ -96,7 +96,7 @@ Injects ~150 tokens of loop context when subagents spawn.
 
 **What it injects:** Project root, git branch, plans path, reports path, active TSV path, iteration count, and latest metric value.
 
-**When:** Only when an active TSV exists (autoresearch loop running). Silent otherwise.
+**When:** Only when an active TSV exists (forge loop running). Silent otherwise.
 
 **Disable:** `export AR_DISABLE_SUBAGENT_CONTEXT=1`
 
@@ -149,7 +149,7 @@ Sends a notification when a session ends.
 
 ```json
 {
-  "text": "autoresearch session completed",
+  "text": "forge session completed",
   "project": "my-project",
   "branch": "main",
   "duration": "47m 12s",
@@ -190,14 +190,14 @@ Hooks append one diagnostic JSON line per event (block / inject / skip decisions
 ~/.claude/hooks/.logs/{project-name}-{hash}/hook-log.jsonl
 ```
 
-The directory is keyed by the project's working directory, so logs from every repo stay separated yet out of the repos themselves — nothing lands in a project's `.claude/` and nothing can be accidentally committed. Logging is fail-open (a write error never blocks a hook) and write-only (no part of autoresearch reads these back; they exist purely for debugging hook behavior). Safe to delete anytime.
+The directory is keyed by the project's working directory, so logs from every repo stay separated yet out of the repos themselves — nothing lands in a project's `.claude/` and nothing can be accidentally committed. Logging is fail-open (a write error never blocks a hook) and write-only (no part of forge reads these back; they exist purely for debugging hook behavior). Safe to delete anytime.
 
 Records from the safety-gate hooks (`dangerous-cmd-block`, `privacy-block`, `scout-block`) may include the blocked command text or file path, so treat `~/.claude/hooks/.logs/` as mildly sensitive — it stays on your own machine and is never written into a repo, but don't share it wholesale.
 
 ## File Structure
 
 ```
-.claude/hooks/autoresearch/
+.claude/hooks/forge/
 ├── hooks.json              # Hook registration (auto-loaded by Claude Code)
 ├── node-hook-runner.sh     # Shell wrapper for clean Node.js execution
 ├── .ckignore               # Baseline blocked patterns

@@ -7,7 +7,7 @@
 ## The Command
 
 ```
-/autoresearch:scenario --domain software --depth deep --focus recovery
+/forge:scenario --domain software --depth deep --focus recovery
 Scenario: IoT device fleet receives over-the-air firmware update — download, verify, install, reboot, and report status back to management server
 Iterations: 35
 ```
@@ -174,7 +174,7 @@ POS device reboots during active transaction. Customer's payment fails. Store lo
 ### scenario → security
 ```bash
 # Audit firmware update security — signing, anti-rollback, supply chain
-/autoresearch:security --focus firmware
+/forge:security --focus firmware
 Scope: src/ota/**, src/firmware/**, src/device-management/**
 Focus: Firmware signing, anti-rollback, certificate management, supply chain integrity
 Iterations: 20
@@ -182,19 +182,19 @@ Iterations: 20
 
 ### scenario → debug → fix
 ```bash
-/autoresearch:debug
+/forge:debug
 Scope: src/ota/**, src/fleet/**
 Symptom: Recovery failures — bricked devices, partial updates, A/B partition issues
 Iterations: 15
 
-/autoresearch:fix --from-debug
+/forge:fix --from-debug
 Guard: make test
 Iterations: 20
 ```
 
 ### predict → scenario (adversarial)
 ```bash
-/autoresearch:predict --adversarial --chain scenario,security,fix
+/forge:predict --adversarial --chain scenario,security,fix
 Scope: src/ota/**
 Goal: Harden OTA update pipeline against supply chain attacks and firmware tampering
 ```
@@ -207,12 +207,12 @@ Goal: Harden OTA update pipeline against supply chain attacks and firmware tampe
 
 **Test with `--focus recovery` and `--focus error` in separate runs.** Recovery scenarios (what happens after failure) and error scenarios (what causes failure) surface different bugs. Run both.
 
-**Delta updates change the risk profile.** If your OTA uses binary diffs instead of full images, run a separate scenario: `/autoresearch:scenario --depth deep --focus edge-cases` with `Scenario: Delta firmware update where base version varies across fleet`. Delta updates introduce a new class of bugs — wrong base version, corrupt diff, partial application.
+**Delta updates change the risk profile.** If your OTA uses binary diffs instead of full images, run a separate scenario: `/forge:scenario --depth deep --focus edge-cases` with `Scenario: Delta firmware update where base version varies across fleet`. Delta updates introduce a new class of bugs — wrong base version, corrupt diff, partial application.
 
 ---
 
 <div align="center">
 
-**[Scenario Guides](README.md)** | **[Scenario Command Reference](../autoresearch-scenario.md)** | **[Chains & Combinations](../chains-and-combinations.md)**
+**[Scenario Guides](README.md)** | **[Scenario Command Reference](../forge-scenario.md)** | **[Chains & Combinations](../chains-and-combinations.md)**
 
 </div>

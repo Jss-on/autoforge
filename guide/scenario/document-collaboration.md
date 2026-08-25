@@ -7,7 +7,7 @@
 ## The Command
 
 ```
-/autoresearch:scenario --domain software --depth deep --focus concurrent
+/forge:scenario --domain software --depth deep --focus concurrent
 Scenario: Multiple users simultaneously edit a shared document with real-time sync, commenting, suggesting mode, and version history
 Iterations: 35
 ```
@@ -172,12 +172,12 @@ Comment thread and its 4 replies are permanently deleted when anchor text is rem
 
 ### scenario → debug → fix
 ```bash
-/autoresearch:debug
+/forge:debug
 Scope: src/collaboration/**, src/crdt/**, src/sync/**
 Symptom: Concurrent editing bugs — merge conflicts, cursor drift, operation ordering
 Iterations: 20
 
-/autoresearch:fix --from-debug
+/forge:fix --from-debug
 Guard: npm test
 Iterations: 25
 ```
@@ -185,7 +185,7 @@ Iterations: 25
 ### scenario → security
 ```bash
 # Audit permission model and data isolation
-/autoresearch:security
+/forge:security
 Scope: src/collaboration/**, src/permissions/**, src/sharing/**
 Focus: Permission bypass, link sharing scope, edit injection via WebSocket
 Iterations: 15
@@ -193,7 +193,7 @@ Iterations: 15
 
 ### predict → scenario
 ```bash
-/autoresearch:predict --chain scenario,debug,fix
+/forge:predict --chain scenario,debug,fix
 Scope: src/collaboration/**
 Goal: Ensure collaborative editing handles all concurrency edge cases
 ```
@@ -206,12 +206,12 @@ Goal: Ensure collaborative editing handles all concurrency edge cases
 
 **Test with 3+ concurrent editors, not just 2.** Two-user conflicts have well-known solutions. Three-user conflicts reveal ordering assumptions that break when the conflict graph has cycles. Set up test scenarios with 3-5 simultaneous editors.
 
-**Permission changes during active sessions are underexplored.** Most collaboration systems test permissions at session start. Run a dedicated scenario: `/autoresearch:scenario --depth shallow --focus permission` with `Scenario: Document permission changes while multiple users have active editing sessions`.
+**Permission changes during active sessions are underexplored.** Most collaboration systems test permissions at session start. Run a dedicated scenario: `/forge:scenario --depth shallow --focus permission` with `Scenario: Document permission changes while multiple users have active editing sessions`.
 
 ---
 
 <div align="center">
 
-**[Scenario Guides](README.md)** | **[Scenario Command Reference](../autoresearch-scenario.md)** | **[Chains & Combinations](../chains-and-combinations.md)**
+**[Scenario Guides](README.md)** | **[Scenario Command Reference](../forge-scenario.md)** | **[Chains & Combinations](../chains-and-combinations.md)**
 
 </div>

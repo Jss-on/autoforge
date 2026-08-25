@@ -7,7 +7,7 @@
 ## The Command
 
 ```
-/autoresearch:scenario --domain product --depth standard --focus scale
+/forge:scenario --domain product --depth standard --focus scale
 Scenario: App sends push notifications to users — targeting by segments, scheduling delivery windows, handling opt-outs, deep linking into specific screens, and managing cross-platform delivery (iOS/Android)
 Iterations: 25
 ```
@@ -182,7 +182,7 @@ Android engagement rate significantly lower than iOS for the same campaign. A/B 
 
 ### scenario → debug
 ```bash
-/autoresearch:debug
+/forge:debug
 Scope: src/notifications/**, src/push/**
 Symptom: Delivery failures — stale tokens, timezone mismatches, deep link routing, quota exhaustion
 Iterations: 15
@@ -191,7 +191,7 @@ Iterations: 15
 ### scenario → security
 ```bash
 # Audit notification system for consent compliance and data privacy
-/autoresearch:security
+/forge:security
 Scope: src/notifications/**, src/consent/**, src/targeting/**
 Focus: GDPR consent enforcement, opt-out compliance, notification content injection, token security
 Iterations: 10
@@ -199,7 +199,7 @@ Iterations: 10
 
 ### predict → scenario
 ```bash
-/autoresearch:predict --chain scenario,debug,fix
+/forge:predict --chain scenario,debug,fix
 Scope: src/notifications/**
 Goal: Ensure push notification system handles scale, compliance, and cross-platform edge cases
 ```
@@ -208,16 +208,16 @@ Goal: Ensure push notification system handles scale, compliance, and cross-platf
 
 ## Tips
 
-**Test with real device token lifecycle.** Token refresh, app reinstall, OS update, and device migration all affect delivery. Run a dedicated scenario: `/autoresearch:scenario --depth shallow --focus error` with `Scenario: Push notification device token lifecycle — registration, refresh, expiry, and cross-device migration`.
+**Test with real device token lifecycle.** Token refresh, app reinstall, OS update, and device migration all affect delivery. Run a dedicated scenario: `/forge:scenario --depth shallow --focus error` with `Scenario: Push notification device token lifecycle — registration, refresh, expiry, and cross-device migration`.
 
 **Consent is not optional.** GDPR, CCPA, and platform policies (Apple ATT, Android notification channels) all impose consent requirements. Use `--domain security` for a follow-up run focused on consent compliance: any notification sent without proper consent is a regulatory risk.
 
-**Monitor delivery rates, not just send rates.** A 100% send rate with a 60% delivery rate means 40% of your audience is invisible. Track: sent → delivered → opened → acted. Run `/autoresearch` with metric: "notification delivery rate %" to iteratively improve.
+**Monitor delivery rates, not just send rates.** A 100% send rate with a 60% delivery rate means 40% of your audience is invisible. Track: sent → delivered → opened → acted. Run `/forge` with metric: "notification delivery rate %" to iteratively improve.
 
 ---
 
 <div align="center">
 
-**[Scenario Guides](README.md)** | **[Scenario Command Reference](../autoresearch-scenario.md)** | **[Chains & Combinations](../chains-and-combinations.md)**
+**[Scenario Guides](README.md)** | **[Scenario Command Reference](../forge-scenario.md)** | **[Chains & Combinations](../chains-and-combinations.md)**
 
 </div>

@@ -1,4 +1,4 @@
-# Autoresearch Domain Glossary
+# AutoForge Domain Glossary
 
 Terms meaningful to domain experts. Implementation details live in code, not here.
 
@@ -40,9 +40,9 @@ Terms meaningful to domain experts. Implementation details live in code, not her
 | Term | Definition |
 |------|------------|
 | **ICP** | Ideal Customer Profile. The specific customer segment the product targets. Used by improve to filter and prioritize insights by relevance to the target buyer. |
-| **Product context** | Background understanding of what a product does, derived from existing docs. Sourced (in priority order) from: learn summary (`autoresearch/learn-*/summary.md`), README.md (≥500 chars), package manifest description (≥10 chars), or conditional auto-discover scan. NOT `docs/codebase-summary.md` which is autoresearch's own doc. |
+| **Product context** | Background understanding of what a product does, derived from existing docs. Sourced (in priority order) from: learn summary (`forge/learn-*/summary.md`), README.md (≥500 chars), package manifest description (≥10 chars), or conditional auto-discover scan. NOT `docs/codebase-summary.md` which is forge's own doc. |
 | **Chain** | Sequential handoff between subcommands via `handoff.json`. Each command reads upstream findings and passes its own downstream. |
-| **Terminal emitter** | A command whose output is consumed by humans or external tools, not by other autoresearch subcommands. Writes handoff.json for protocol consistency but is the last autoresearch link. Example: improve produces PRDs for `/ck:plan` and `/ck:cook`, not for autoresearch re-entry. |
+| **Terminal emitter** | A command whose output is consumed by humans or external tools, not by other forge subcommands. Writes handoff.json for protocol consistency but is the last forge link. Example: improve produces PRDs for `/ck:plan` and `/ck:cook`, not for forge re-entry. |
 | **Guard** | An optional safety command (e.g., `npm test`) that must pass for a "keep" decision. Reverts on failure regardless of metric improvement. |
 | **Metric direction** | `higher_is_better` or `lower_is_better`. Written as TSV comment on line 1. Determines whether improvement means going up or down. |
 | **Saturation** | The state where a loop produces diminishing returns. Detected when net-new output drops below a threshold for N consecutive iterations. |

@@ -2,7 +2,7 @@
 
 Date: 2026-08-19 · Scope: the three GitHub repos below, read in full (SKILL files, references,
 detector source, data catalogs), measured against AutoForge's actual build outputs
-(`build-output/*` screenshots + `DESIGN.md`s), and distilled into `/autoresearch:design`
+(`build-output/*` screenshots + `DESIGN.md`s), and distilled into `/forge:design`
 (v2.5.0). Result summary at the end.
 
 | Repo | Version read | Shape | Size | License |
@@ -143,7 +143,7 @@ knew how to measure it.
 
 ## 4. What AutoForge now has (v2.5.0)
 
-- **`/autoresearch:design`** (19th command): `system` · `audit` · `--fix` — see `guide/autoresearch-design.md`.
+- **`/forge:design`** (19th command): `system` · `audit` · `--fix` — see `guide/forge-design.md`.
 - **`references/design-protocol.md`** — the distilled contract (modes, archetypes, direction protocol,
   DESIGN.md schema, craft floor + rule table, states/hardening/onboarding/copy, design QA, remediation).
 - **`scripts/design-scan.cjs`** + **`scripts/score-design.sh`** — the mechanical seams; the fixture pair

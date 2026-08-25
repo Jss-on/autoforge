@@ -25,12 +25,12 @@
 [2/7] Bump versions:
       → claude-plugin/.claude-plugin/plugin.json  (version field)
       → .claude-plugin/marketplace.json           (version fields — top-level + plugins array)
-      → .claude/skills/autoresearch/SKILL.md      (version frontmatter)
+      → .claude/skills/forge/SKILL.md      (version frontmatter)
       → README.md                                 (version badge)
       → guide/README.md                           (version badge)
 [3/7] Sync distribution files:
-      → Copies .claude/commands/autoresearch/ → claude-plugin/commands/autoresearch/
-      → Copies .claude/skills/autoresearch/  → claude-plugin/skills/autoresearch/
+      → Copies .claude/commands/forge/ → claude-plugin/commands/forge/
+      → Copies .claude/skills/forge/  → claude-plugin/skills/forge/
       → Ensures claude-plugin/ distribution matches .claude/ source of truth
 [4/7] Pause for doc review:
       → Shows changelog since last tag
@@ -99,10 +99,10 @@ The `claude-plugin/` directory is the **distribution package** — what Claude C
 **Before every release**, the script syncs `claude-plugin/` from `.claude/`:
 ```bash
 # What the sync step does:
-cp .claude/commands/autoresearch.md claude-plugin/commands/autoresearch.md
-cp .claude/commands/autoresearch/*.md claude-plugin/commands/autoresearch/
-cp .claude/skills/autoresearch/SKILL.md claude-plugin/skills/autoresearch/SKILL.md
-cp .claude/skills/autoresearch/references/*.md claude-plugin/skills/autoresearch/references/
+cp .claude/commands/forge.md claude-plugin/commands/forge.md
+cp .claude/commands/forge/*.md claude-plugin/commands/forge/
+cp .claude/skills/forge/SKILL.md claude-plugin/skills/forge/SKILL.md
+cp .claude/skills/forge/references/*.md claude-plugin/skills/forge/references/
 ```
 
 If you add a new subcommand during development, it goes into `.claude/` first. The release script ensures `claude-plugin/` stays in sync.

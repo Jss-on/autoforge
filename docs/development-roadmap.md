@@ -1,6 +1,6 @@
 # Development Roadmap
 
-Strategic milestones and feature development phases for autoresearch.
+Strategic milestones and feature development phases for forge.
 
 ## Completed Phases
 
@@ -27,10 +27,10 @@ Strategic milestones and feature development phases for autoresearch.
 - Budget enforcement and git-hash stamping
 
 ### Phase 5: Learn + Probe Subcommands — 2026-03-21 / 2026-04-16
-- `/autoresearch:learn` autonomous documentation engine (v1.8.0)
+- `/forge:learn` autonomous documentation engine (v1.8.0)
 - 4 modes: init, update, check, summarize
 - Diff-based targeting for update mode
-- `/autoresearch:probe` requirement interrogation engine (v1.10.0)
+- `/forge:probe` requirement interrogation engine (v1.10.0)
 - 8 personas, saturation-based termination
 
 ### Phase 6: Multi-Platform GA — 2026-04-28
@@ -43,9 +43,9 @@ Strategic milestones and feature development phases for autoresearch.
 - Thin SKILL.md routing table (41 lines, was 813 lines)
 - 12 self-contained command files (94–120 lines each)
 - 3 focused reference files (was 13)
-- `/autoresearch:evals` new subcommand for TSV analysis
+- `/forge:evals` new subcommand for TSV analysis
 - `scripts/transform.sh` replaces sync-opencode.sh + sync-codex.sh
-- Removed Python wrapper CLI and autoresearch-command-spec.json
+- Removed Python wrapper CLI and forge-command-spec.json
 - TSV `# metric_direction` comment for auto-detection
 - 8 TSV status values (added `keep (reworked)`, `hook-blocked`, `metric-error`)
 - `--evals` / `--evals-interval` flags on all looping commands
@@ -53,18 +53,18 @@ Strategic milestones and feature development phases for autoresearch.
 
 ### Phase 8: Hook System + Product Improvement — 2026-05-22 (v2.1.1 / v2.2.0)
 - 9-hook safety system (v2.1.1)
-- `/autoresearch:improve` — product improvement research + PRD generation (v2.2.0)
+- `/forge:improve` — product improvement research + PRD generation (v2.2.0)
   - 5 research categories with saturation-based termination
   - ICP-aligned tiered ranking (Must-have / Nice-to-have / Moonshot)
   - Per-feature PRD generation with evidence chains
   - Conditional auto-discover for zero-context codebases
-  - Terminal emitter — outputs PRDs for external tools, not autoresearch re-entry
+  - Terminal emitter — outputs PRDs for external tools, not forge re-entry
 - Subcommand count: 12 → 13
 
 ## Current Phase
 
 ### Phase 9: Regression Stability Gate + Stabilization — 2026-06-19 (v2.1.4)
-- `/autoresearch:regression` — layered stability gate, 14th family member
+- `/forge:regression` — layered stability gate, 14th family member
   - 8 dimensions, tiered HARD/SCORE verdict, green→red classification invariant
   - git-worktree baseline cache (SHA-keyed), statistical perf gate (Mann–Whitney U), hard-guarded forward-only data-migration
   - `scripts/score-regression.sh` (rubric + verdict) + `tests/test-regression.sh` (50 assertions, 10 golden fixtures)

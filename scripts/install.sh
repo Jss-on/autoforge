@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Autoresearch installer — supports Claude Code, OpenCode, and OpenAI Codex, local or global.
+# AutoForge installer — supports Claude Code, OpenCode, and OpenAI Codex, local or global.
 
 set -euo pipefail
 
@@ -164,10 +164,10 @@ sync_file() { mkdir -p "$(dirname "$2")"; cp "$1" "$2"; }
 confirm_overwrite() {
   local target_root="$1"
   if [[ $FORCE -eq 1 ]]; then return 0; fi
-  if [[ ! -d "$target_root/skills/autoresearch" ]]; then return 0; fi
+  if [[ ! -d "$target_root/skills/forge" ]]; then return 0; fi
   if ! is_interactive; then return 0; fi
   local answer
-  printf 'Existing autoresearch files found in %s. Replace? [Y/n]: ' "$target_root"
+  printf 'Existing forge files found in %s. Replace? [Y/n]: ' "$target_root"
   read -r answer || cancelled
   case "${answer:-Y}" in
     [yY]|[yY][eE][sS]|'') ;;
@@ -178,32 +178,32 @@ confirm_overwrite() {
 install_claude() {
   local t="$1"
   mkdir -p "$t/skills" "$t/commands"
-  # skills/autoresearch carries SKILL.md + references/ + scripts/ — the seam
+  # skills/forge carries SKILL.md + references/ + scripts/ — the seam
   # scripts ARE the mechanical gates; an install without them silently degrades
   # every gate to model self-report.
-  sync_dir "$REPO_ROOT/.claude/skills/autoresearch" "$t/skills/autoresearch"
-  if [[ -d "$REPO_ROOT/.claude/commands/autoresearch" ]]; then
-    sync_dir "$REPO_ROOT/.claude/commands/autoresearch" "$t/commands/autoresearch"
+  sync_dir "$REPO_ROOT/.claude/skills/forge" "$t/skills/forge"
+  if [[ -d "$REPO_ROOT/.claude/commands/forge" ]]; then
+    sync_dir "$REPO_ROOT/.claude/commands/forge" "$t/commands/forge"
   fi
-  if [[ -f "$REPO_ROOT/.claude/commands/autoresearch.md" ]]; then
-    sync_file "$REPO_ROOT/.claude/commands/autoresearch.md" "$t/commands/autoresearch.md"
+  if [[ -f "$REPO_ROOT/.claude/commands/forge.md" ]]; then
+    sync_file "$REPO_ROOT/.claude/commands/forge.md" "$t/commands/forge.md"
   fi
   # The 9 safety/context hooks were previously never installed at all — an
   # advertised feature that only worked via the plugin marketplace path.
-  if [[ -d "$REPO_ROOT/.claude/hooks/autoresearch" ]]; then
-    sync_dir "$REPO_ROOT/.claude/hooks/autoresearch" "$t/hooks/autoresearch"
-    printf 'Hooks synced to %s/hooks/autoresearch.\n' "$t"
+  if [[ -d "$REPO_ROOT/.claude/hooks/forge" ]]; then
+    sync_dir "$REPO_ROOT/.claude/hooks/forge" "$t/hooks/forge"
+    printf 'Hooks synced to %s/hooks/forge.\n' "$t"
     printf 'NOTE: hook REGISTRATION is automatic only for the marketplace plugin install\n'
-    printf '      (/plugin install autoresearch@autoforge). For this file install, wire\n'
-    printf '      hooks/autoresearch/hooks.json entries into your settings.json manually.\n'
+    printf '      (/plugin install forge@autoforge). For this file install, wire\n'
+    printf '      hooks/forge/hooks.json entries into your settings.json manually.\n'
   fi
 }
 
 install_opencode() {
   local t="$1" src
   mkdir -p "$t/skills" "$t/commands" "$t/agents"
-  sync_dir "$REPO_ROOT/.opencode/skills/autoresearch" "$t/skills/autoresearch"
-  for src in "$REPO_ROOT"/.opencode/commands/autoresearch*.md; do
+  sync_dir "$REPO_ROOT/.opencode/skills/forge" "$t/skills/forge"
+  for src in "$REPO_ROOT"/.opencode/commands/forge*.md; do
     if [[ -f "$src" ]]; then
       sync_file "$src" "$t/commands/$(basename "$src")"
     fi
@@ -214,7 +214,7 @@ install_opencode() {
 install_codex() {
   local t="$1"
   mkdir -p "$t/skills"
-  sync_dir "$REPO_ROOT/.agents/skills/autoresearch" "$t/skills/autoresearch"
+  sync_dir "$REPO_ROOT/.agents/skills/forge" "$t/skills/forge"
 }
 
 main() {
@@ -226,7 +226,7 @@ main() {
 
   local label
   case "$TOOL" in claude) label="Claude Code" ;; opencode) label="OpenCode" ;; codex) label="OpenAI Codex" ;; esac
-  printf 'Installing Autoresearch for %s (%s)\nTarget: %s\n' "$label" "$LOCATION" "$target_root"
+  printf 'Installing AutoForge for %s (%s)\nTarget: %s\n' "$label" "$LOCATION" "$target_root"
 
   case "$TOOL" in
     claude) install_claude "$target_root" ;;
@@ -235,8 +235,8 @@ main() {
   esac
 
   case "$TOOL" in
-    codex) printf 'Done. Use $autoresearch in Codex to start.\n' ;;
-    *) printf 'Done. Run /autoresearch to start.\n' ;;
+    codex) printf 'Done. Use $forge in Codex to start.\n' ;;
+    *) printf 'Done. Run /forge to start.\n' ;;
   esac
 }
 

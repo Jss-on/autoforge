@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Test harness for autoresearch:requirements — score-requirements.sh (rubric + validate),
+# Test harness for forge:requirements — score-requirements.sh (rubric + validate),
 # the requirements.md spec, mirror parity, manifest count.
 set -uo pipefail
 
@@ -12,7 +12,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 SCORE_SH="$REPO_ROOT/scripts/score-requirements.sh"
 FIX="$REPO_ROOT/tests/fixtures/requirements"
-SPEC="$REPO_ROOT/claude-plugin/commands/autoresearch/requirements.md"
+SPEC="$REPO_ROOT/claude-plugin/commands/forge/requirements.md"
 RUBRIC_TARGET="${REQ_RUBRIC_TARGET:-16}"
 
 PASS=0; FAIL=0; TOTAL=0
@@ -78,7 +78,7 @@ spec_has "traceab"                                "spec: traceability"
 spec_has "validation|validate"                    "spec: validation phase"
 spec_has "out.of.scope|out-of-scope"             "spec: out-of-scope"
 spec_has "spec.yaml|build spec"                   "spec: generates build spec"
-spec_has "/autoresearch:build|autoresearch build" "spec: emits build invocation"
+spec_has "/forge:build|forge build" "spec: emits build invocation"
 spec_has "handoff"                                "spec: handoff/chain"
 
 # ============================================================================
@@ -107,7 +107,7 @@ spec_has "Saturation|saturation"                  "spec: saturation stop conditi
 spec_has "honesty clause"                         "spec: iterative-capture honesty clause"
 
 # --- protocol reference file exists + parity across the 5 surfaces ---
-PROTO="$REPO_ROOT/claude-plugin/skills/autoresearch/references/elicitation-protocol.md"
+PROTO="$REPO_ROOT/claude-plugin/skills/forge/references/elicitation-protocol.md"
 [[ -f "$PROTO" ]] && pass "protocol: reference file exists" || fail "protocol: reference file exists"
 proto_has() { grep -qiE -- "$1" "$PROTO" 2>/dev/null && pass "$2" || fail "$2 (protocol missing /$1/)"; }
 proto_has "Kano"                                  "protocol: Kano model grounding"
@@ -117,10 +117,10 @@ proto_has "end-of-shift|rhythms"                  "protocol: periodic rituals pr
 proto_has "criticize an artifact|selection and correction" "protocol: react-not-specify premise"
 proto_has "pronoun test"                          "protocol: pronoun ambiguity check"
 proto_has "authority on their business"           "protocol: client-authority stance"
-for m in "$REPO_ROOT/.claude/skills/autoresearch/references/elicitation-protocol.md" \
-         "$REPO_ROOT/.agents/skills/autoresearch/references/elicitation-protocol.md" \
-         "$REPO_ROOT/plugins/autoresearch/skills/autoresearch/references/elicitation-protocol.md" \
-         "$REPO_ROOT/.opencode/skills/autoresearch/references/elicitation-protocol.md"; do
+for m in "$REPO_ROOT/.claude/skills/forge/references/elicitation-protocol.md" \
+         "$REPO_ROOT/.agents/skills/forge/references/elicitation-protocol.md" \
+         "$REPO_ROOT/plugins/forge/skills/forge/references/elicitation-protocol.md" \
+         "$REPO_ROOT/.opencode/skills/forge/references/elicitation-protocol.md"; do
   if [[ -f "$m" ]] && diff -q "$PROTO" "$m" >/dev/null 2>&1; then
     pass "protocol parity: ${m#$REPO_ROOT/}"
   else
@@ -133,10 +133,10 @@ printf '\n--- distribution: mirror parity (5 surfaces) ---\n'
 # ============================================================================
 
 MIRRORS=(
-  "$REPO_ROOT/.claude/commands/autoresearch/requirements.md"
-  "$REPO_ROOT/.agents/skills/autoresearch/requirements.md"
-  "$REPO_ROOT/plugins/autoresearch/skills/autoresearch/requirements.md"
-  "$REPO_ROOT/.opencode/commands/autoresearch_requirements.md"
+  "$REPO_ROOT/.claude/commands/forge/requirements.md"
+  "$REPO_ROOT/.agents/skills/forge/requirements.md"
+  "$REPO_ROOT/plugins/forge/skills/forge/requirements.md"
+  "$REPO_ROOT/.opencode/commands/forge_requirements.md"
 )
 for m in "${MIRRORS[@]}"; do
   if [[ -f "$m" ]] && diff -q "$SPEC" "$m" >/dev/null 2>&1; then
@@ -152,7 +152,7 @@ printf '\n--- distribution: manifest command count = 16 + requirements listed --
 
 for mf in "$REPO_ROOT/.claude-plugin/marketplace.json" \
           "$REPO_ROOT/claude-plugin/.claude-plugin/plugin.json" \
-          "$REPO_ROOT/plugins/autoresearch/.codex-plugin/plugin.json"; do
+          "$REPO_ROOT/plugins/forge/.codex-plugin/plugin.json"; do
   name="${mf#$REPO_ROOT/}"
   grep -q "19 commands" "$mf" && pass "manifest count 19: $name" || fail "manifest count 19: $name"
   grep -q "requirements" "$mf" && pass "manifest lists requirements: $name" || fail "manifest lists requirements: $name"

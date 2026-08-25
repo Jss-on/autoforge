@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Test harness for autoresearch:fix — the defect-remediation / error burn-down loop.
+# Test harness for forge:fix — the defect-remediation / error burn-down loop.
 # fix consumes test's defect ledger (score-test.sh defects schema) and hands back to
 # test for independent verification, so this gates the command spec's alignment with
 # requirements/build/test: seam resolution, defect lifecycle ceiling, evidence,
@@ -10,7 +10,7 @@ export AR_SCORE_LOG=0
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-SPEC="$REPO_ROOT/claude-plugin/commands/autoresearch/fix.md"
+SPEC="$REPO_ROOT/claude-plugin/commands/forge/fix.md"
 
 PASS=0; FAIL=0; TOTAL=0
 pass() { printf '  PASS: %s\n' "$1"; PASS=$((PASS + 1)); TOTAL=$((TOTAL + 1)); }
@@ -78,7 +78,7 @@ spec_has "Merge: manual|Merge:./--merge"            "spec: Merge argument"
 spec_has "merge state"                              "spec: summary reports merge state"
 spec_has "ship. stays human-gated"                  "spec: merging is not deploying"
 spec_has "validate-handoff\.sh"                     "spec: handoff validated via seam"
-spec_has "\"2\.5\.0\""                              "spec: handoff version 2.5.0"
+spec_has "\"3\.0\.0\""                              "spec: handoff version 3.0.0"
 spec_has "BOUND: EXCEEDED"                          "spec: mechanical iteration bound"
 spec_has "never deploy|Never deploy"                "spec: deploy human-gated"
 spec_has "localhost/\`_test\`|_test.{0,3}allowlist" "spec: DB allowlist"
@@ -88,10 +88,10 @@ spec_has "production datastore"                     "spec: prod datastore untouc
 printf '\n--- distribution: mirror parity (5 surfaces) ---\n'
 # ============================================================================
 MIRRORS=(
-  "$REPO_ROOT/.claude/commands/autoresearch/fix.md"
-  "$REPO_ROOT/.agents/skills/autoresearch/fix.md"
-  "$REPO_ROOT/plugins/autoresearch/skills/autoresearch/fix.md"
-  "$REPO_ROOT/.opencode/commands/autoresearch_fix.md"
+  "$REPO_ROOT/.claude/commands/forge/fix.md"
+  "$REPO_ROOT/.agents/skills/forge/fix.md"
+  "$REPO_ROOT/plugins/forge/skills/forge/fix.md"
+  "$REPO_ROOT/.opencode/commands/forge_fix.md"
 )
 for m in "${MIRRORS[@]}"; do
   if [[ -f "$m" ]] && diff -q "$SPEC" "$m" >/dev/null 2>&1; then
@@ -106,7 +106,7 @@ printf '\n--- distribution: manifest count + fix listed ---\n'
 # ============================================================================
 for mf in "$REPO_ROOT/.claude-plugin/marketplace.json" \
           "$REPO_ROOT/claude-plugin/.claude-plugin/plugin.json" \
-          "$REPO_ROOT/plugins/autoresearch/.codex-plugin/plugin.json"; do
+          "$REPO_ROOT/plugins/forge/.codex-plugin/plugin.json"; do
   name="${mf#$REPO_ROOT/}"
   grep -q "19 commands" "$mf" && pass "manifest count 19: $name" || fail "manifest count 19: $name"
   grep -q "fix" "$mf" && pass "manifest lists fix: $name" || fail "manifest lists fix: $name"
@@ -119,7 +119,7 @@ printf '\n--- seam smoke: fix-mode ledger transitions score correctly ---\n'
 # STILL block (only verified/closed lift the block — the independence contract).
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
-ST="$REPO_ROOT/claude-plugin/skills/autoresearch/scripts/score-test.sh"
+ST="$REPO_ROOT/claude-plugin/skills/forge/scripts/score-test.sh"
 
 printf 'id\tseverity\tpriority\tstatus\ttest_id\tsummary\tevidence\n' > "$TMP/defects.tsv"
 printf 'DEF-1\tcritical\tP1\tfixed\tTC-1\tprod build fails\tevidence/def-1-green.txt\n' >> "$TMP/defects.tsv"
@@ -137,13 +137,13 @@ echo "$OUT2" | grep -q "blocking=0" && pass "verified (tester's stamp) lifts the
   || fail "verified lifts the block (got: $OUT2)"
 
 # handoff: fix source accepts results_tsv OR errors_remaining; rejects neither
-VH="$REPO_ROOT/claude-plugin/skills/autoresearch/scripts/validate-handoff.sh"
+VH="$REPO_ROOT/claude-plugin/skills/forge/scripts/validate-handoff.sh"
 cat > "$TMP/handoff-good.json" <<'EOF'
-{"version":"2.5.0","source":"fix","timestamp":"2026-08-14T00:00:00+08:00","status":"COMPLETE","results_tsv":"iterations.tsv","errors_remaining":0}
+{"version":"3.0.0","source":"fix","timestamp":"2026-08-14T00:00:00+08:00","status":"COMPLETE","results_tsv":"iterations.tsv","errors_remaining":0}
 EOF
 bash "$VH" "$TMP/handoff-good.json" fix >/dev/null 2>&1 && pass "handoff: fix with results_tsv → VALID" || fail "handoff: fix with results_tsv → VALID"
 cat > "$TMP/handoff-bad.json" <<'EOF'
-{"version":"2.5.0","source":"fix","timestamp":"2026-08-14T00:00:00+08:00","status":"COMPLETE"}
+{"version":"3.0.0","source":"fix","timestamp":"2026-08-14T00:00:00+08:00","status":"COMPLETE"}
 EOF
 bash "$VH" "$TMP/handoff-bad.json" fix >/dev/null 2>&1 && fail "handoff: fix without results → INVALID" || pass "handoff: fix without results → INVALID"
 

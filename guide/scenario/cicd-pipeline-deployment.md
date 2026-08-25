@@ -7,7 +7,7 @@
 ## The Command
 
 ```
-/autoresearch:scenario --domain software --depth deep --focus recovery
+/forge:scenario --domain software --depth deep --focus recovery
 Scenario: Developer pushes code that triggers CI/CD pipeline — build, test, deploy to staging, promote to production, with rollback capability
 Iterations: 35
 ```
@@ -172,7 +172,7 @@ Deployed code doesn't match tested code. "Works in CI, broken in prod" with no c
 ### scenario → debug
 ```bash
 # Hunt for the bugs surfaced by scenario exploration
-/autoresearch:debug
+/forge:debug
 Scope: .github/workflows/**, scripts/deploy/**, Dockerfile, docker-compose*.yml
 Symptom: Pipeline state issues — race conditions, missing rollback, secret exposure
 Iterations: 15
@@ -181,14 +181,14 @@ Iterations: 15
 ### scenario → security → fix
 ```bash
 # Audit pipeline for secret leakage and permission escalation
-/autoresearch:security --fix --fail-on critical
+/forge:security --fix --fail-on critical
 Scope: .github/workflows/**, .gitlab-ci.yml, Jenkinsfile, scripts/**
 Iterations: 15
 ```
 
 ### predict → scenario
 ```bash
-/autoresearch:predict --adversarial --chain scenario,security
+/forge:predict --adversarial --chain scenario,security
 Scope: .github/workflows/**, scripts/deploy/**
 Goal: Ensure CI/CD pipeline is resilient to failure modes and supply chain attacks
 ```
@@ -197,7 +197,7 @@ Goal: Ensure CI/CD pipeline is resilient to failure modes and supply chain attac
 
 ## Tips
 
-**Always audit secrets separately.** Run `/autoresearch:security --focus secrets` on your pipeline config files. Secret leakage in CI logs is one of the most common real-world security incidents — and the hardest to detect retroactively.
+**Always audit secrets separately.** Run `/forge:security --focus secrets` on your pipeline config files. Secret leakage in CI logs is one of the most common real-world security incidents — and the hardest to detect retroactively.
 
 **Test your rollback before you need it.** Chain `:scenario` with `:debug` specifically targeting the rollback path. Many teams discover their rollback is broken during an incident — the worst possible time.
 
@@ -207,6 +207,6 @@ Goal: Ensure CI/CD pipeline is resilient to failure modes and supply chain attac
 
 <div align="center">
 
-**[Scenario Guides](README.md)** | **[Scenario Command Reference](../autoresearch-scenario.md)** | **[Chains & Combinations](../chains-and-combinations.md)**
+**[Scenario Guides](README.md)** | **[Scenario Command Reference](../forge-scenario.md)** | **[Chains & Combinations](../chains-and-combinations.md)**
 
 </div>

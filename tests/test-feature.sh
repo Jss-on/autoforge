@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Test harness for autoresearch:feature — the brownfield feature-addition loop.
+# Test harness for forge:feature — the brownfield feature-addition loop.
 # feature reuses score-build (pass-rate) + score-regression (floor), so this gates the
 # command spec: required loop semantics, mirror parity, and manifest count.
 set -uo pipefail
@@ -10,7 +10,7 @@ export AR_SCORE_LOG=0
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-SPEC="$REPO_ROOT/claude-plugin/commands/autoresearch/feature.md"
+SPEC="$REPO_ROOT/claude-plugin/commands/forge/feature.md"
 
 PASS=0; FAIL=0; TOTAL=0
 pass() { printf '  PASS: %s\n' "$1"; PASS=$((PASS + 1)); TOTAL=$((TOTAL + 1)); }
@@ -42,10 +42,10 @@ spec_has "handoff"                                 "spec: handoff/chain"
 printf '\n--- distribution: mirror parity (5 surfaces) ---\n'
 # ============================================================================
 MIRRORS=(
-  "$REPO_ROOT/.claude/commands/autoresearch/feature.md"
-  "$REPO_ROOT/.agents/skills/autoresearch/feature.md"
-  "$REPO_ROOT/plugins/autoresearch/skills/autoresearch/feature.md"
-  "$REPO_ROOT/.opencode/commands/autoresearch_feature.md"
+  "$REPO_ROOT/.claude/commands/forge/feature.md"
+  "$REPO_ROOT/.agents/skills/forge/feature.md"
+  "$REPO_ROOT/plugins/forge/skills/forge/feature.md"
+  "$REPO_ROOT/.opencode/commands/forge_feature.md"
 )
 for m in "${MIRRORS[@]}"; do
   if [[ -f "$m" ]] && diff -q "$SPEC" "$m" >/dev/null 2>&1; then
@@ -60,7 +60,7 @@ printf '\n--- distribution: manifest command count = 17 + feature listed ---\n'
 # ============================================================================
 for mf in "$REPO_ROOT/.claude-plugin/marketplace.json" \
           "$REPO_ROOT/claude-plugin/.claude-plugin/plugin.json" \
-          "$REPO_ROOT/plugins/autoresearch/.codex-plugin/plugin.json"; do
+          "$REPO_ROOT/plugins/forge/.codex-plugin/plugin.json"; do
   name="${mf#$REPO_ROOT/}"
   grep -q "19 commands" "$mf" && pass "manifest count 19: $name" || fail "manifest count 19: $name"
   grep -q "requirements, feature" "$mf" && pass "manifest lists feature: $name" || fail "manifest lists feature: $name"

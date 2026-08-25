@@ -7,7 +7,7 @@
 ## The Command
 
 ```
-/autoresearch:scenario --domain software --depth deep --focus concurrent
+/forge:scenario --domain software --depth deep --focus concurrent
 Scenario: User sends messages in a real-time chat application with typing indicators, read receipts, and online presence
 Iterations: 35
 ```
@@ -173,13 +173,13 @@ Contacts see "User came online" / "User went offline" notifications repeatedly. 
 ```bash
 # Step 1: Generate scenarios (already done above)
 # Step 2: Hunt bugs in discovered risk areas
-/autoresearch:debug
+/forge:debug
 Scope: src/chat/**, src/websocket/**
 Symptom: Concurrency issues from scenario exploration — message ordering, reconnection, presence flapping
 Iterations: 15
 
 # Step 3: Fix what was found
-/autoresearch:fix --from-debug
+/forge:fix --from-debug
 Guard: npm test
 Iterations: 20
 ```
@@ -187,7 +187,7 @@ Iterations: 20
 ### scenario → security
 ```bash
 # Audit WebSocket endpoints for injection, auth bypass, rate limiting
-/autoresearch:security
+/forge:security
 Scope: src/chat/**, src/websocket/**, src/auth/**
 Focus: WebSocket authentication, message injection, presence spoofing
 Iterations: 15
@@ -196,7 +196,7 @@ Iterations: 15
 ### predict → scenario
 ```bash
 # Get expert analysis first, then explore edge cases
-/autoresearch:predict --chain scenario,debug,fix
+/forge:predict --chain scenario,debug,fix
 Scope: src/chat/**
 Goal: Ensure chat handles all concurrency edge cases before launch
 ```
@@ -205,16 +205,16 @@ Goal: Ensure chat handles all concurrency edge cases before launch
 
 ## Tips
 
-**WebSocket testing is inherently non-deterministic.** When chaining to `/autoresearch:debug`, set `Noise: high` on any latency-based metric — network timing varies between runs.
+**WebSocket testing is inherently non-deterministic.** When chaining to `/forge:debug`, set `Noise: high` on any latency-based metric — network timing varies between runs.
 
 **Focus on `concurrent` dimension for chat.** The highest-severity bugs in real-time systems are almost always race conditions. Use `--focus concurrent` to weight sampling toward these.
 
-**Presence is harder than messaging.** Message delivery has well-known solutions (queues, sequence numbers). Presence has no standard — debounce thresholds, heartbeat intervals, and grace periods all need tuning. Run a separate shallow scenario just for presence: `/autoresearch:scenario --depth shallow --focus temporal` with `Scenario: User presence detection across web and mobile clients`.
+**Presence is harder than messaging.** Message delivery has well-known solutions (queues, sequence numbers). Presence has no standard — debounce thresholds, heartbeat intervals, and grace periods all need tuning. Run a separate shallow scenario just for presence: `/forge:scenario --depth shallow --focus temporal` with `Scenario: User presence detection across web and mobile clients`.
 
 ---
 
 <div align="center">
 
-**[Scenario Guides](README.md)** | **[Scenario Command Reference](../autoresearch-scenario.md)** | **[Chains & Combinations](../chains-and-combinations.md)**
+**[Scenario Guides](README.md)** | **[Scenario Command Reference](../forge-scenario.md)** | **[Chains & Combinations](../chains-and-combinations.md)**
 
 </div>

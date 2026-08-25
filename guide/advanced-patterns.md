@@ -10,7 +10,7 @@ Every looping command has a default iteration cap. When to change it:
 
 | Signal | Action |
 |--------|--------|
-| Goal achieved before default cap | Stop early — autoresearch stops when metric target is met |
+| Goal achieved before default cap | Stop early — forge stops when metric target is met |
 | Diminishing returns (plateau) | Lower `Iterations:` or use `--evals-interval` for early detection |
 | Complex domain with known search space | Raise `Iterations:` above default |
 | Nightly CI run with time budget | Set `Iterations:` to fit your build window |
@@ -20,7 +20,7 @@ Every looping command has a default iteration cap. When to change it:
 **Rule:** start with the default. Let evals tell you if you need more.
 
 ```
-/autoresearch
+/forge
 Iterations: 25        # default — change if evals says "plateau at 12"
 Goal: Reduce p95 latency below 50ms
 Verify: npm run bench:api | grep "p95"
@@ -54,7 +54,7 @@ Guard: docker compose up -d && sleep 3 && curl -sf http://localhost:3000/health 
 ### Guard as a gate (security)
 
 ```
-/autoresearch:security --fail-on critical
+/forge:security --fail-on critical
 ```
 
 Returns non-zero exit on critical findings — use directly in CI steps.
@@ -86,7 +86,7 @@ jobs:
 
       - name: Run optimization loop
         run: |
-          claude -p "/autoresearch
+          claude -p "/forge
           Iterations: 40
           Goal: Increase test coverage to 90%
           Scope: src/**/*.ts
@@ -97,7 +97,7 @@ jobs:
 
       - name: Parse evals output
         run: |
-          claude -p "/autoresearch:evals --format json --recommend" > evals.json
+          claude -p "/forge:evals --format json --recommend" > evals.json
           echo "Goal achieved: $(jq '.goal_achieved' evals.json)"
           echo "Improvement: $(jq '.improvement_pct' evals.json)%"
 
@@ -105,7 +105,7 @@ jobs:
         run: |
           ACHIEVED=$(jq '.goal_achieved' evals.json)
           if [ "$ACHIEVED" = "true" ]; then
-            claude -p "/autoresearch:ship --type code-pr --auto"
+            claude -p "/forge:ship --type code-pr --auto"
           else
             echo "Goal not reached — review evals.json"
             exit 1
@@ -117,7 +117,7 @@ jobs:
 ```yaml
 - name: Security audit
   run: |
-    claude -p "/autoresearch:security --fail-on critical --diff"
+    claude -p "/forge:security --fail-on critical --diff"
     # Non-zero exit if critical findings → pipeline fails
 ```
 
@@ -126,9 +126,9 @@ jobs:
 ```yaml
 - name: Re-probe requirements
   run: |
-    claude -p "/autoresearch:probe --mode autonomous --scope src/**
+    claude -p "/forge:probe --mode autonomous --scope src/**
     Topic: Check if any new constraints emerged from recent changes"
-  # outputs autoresearch-config.yml for next day's optimization loop
+  # outputs forge-config.yml for next day's optimization loop
 ```
 
 ---
@@ -142,19 +142,19 @@ jobs:
 ./scripts/transform.sh
 
 # Transform specific command
-./scripts/transform.sh autoresearch-debug
+./scripts/transform.sh forge-debug
 ```
 
 What it produces:
 
 | Source | Output (OpenCode) | Output (Codex) |
 |--------|-------------------|----------------|
-| `skills/autoresearch.md` | `opencode/autoresearch.md` | `codex/autoresearch.sh` |
-| `skills/autoresearch-debug.md` | `opencode/autoresearch_debug.md` | `codex/autoresearch_debug.sh` |
-| `skills/autoresearch-evals.md` | `opencode/autoresearch_evals.md` | `codex/autoresearch_evals.sh` |
+| `skills/forge.md` | `opencode/forge.md` | `codex/forge.sh` |
+| `skills/forge-debug.md` | `opencode/forge_debug.md` | `codex/forge_debug.sh` |
+| `skills/forge-evals.md` | `opencode/forge_evals.md` | `codex/forge_evals.sh` |
 
 **Transform rules:**
-- `/autoresearch:cmd` → `/autoresearch_cmd` (OpenCode) or `$autoresearch cmd` (Codex)
+- `/forge:cmd` → `/forge_cmd` (OpenCode) or `$forge cmd` (Codex)
 - Strips Claude Code-specific frontmatter
 - Converts chain syntax for each platform
 
@@ -169,28 +169,28 @@ Run in CI to keep all platforms in sync:
 
 ## MCP Integration
 
-autoresearch commands work alongside MCP tools.
+forge commands work alongside MCP tools.
 
-### code-review-graph → autoresearch
+### code-review-graph → forge
 
 Use the graph to find high-impact scope, then feed it to the loop:
 
 ```
 # semantic_search_nodes → identify hot paths
-# → set Scope: to those files in /autoresearch
+# → set Scope: to those files in /forge
 ```
 
-### autoresearch:security → MCP security tools
+### forge:security → MCP security tools
 
 ```
-/autoresearch:security
+/forge:security
 Scope: src/api/**/*.ts
 # Findings seed manual MCP-based verification
 ```
 
 ### learn + graph
 
-`/autoresearch:learn --mode init` generates `codebase-summary.md`. Feed it to `code-review-graph` for richer structural analysis on subsequent runs.
+`/forge:learn --mode init` generates `codebase-summary.md`. Feed it to `code-review-graph` for richer structural analysis on subsequent runs.
 
 ---
 
@@ -199,7 +199,7 @@ Scope: src/api/**/*.ts
 ### Override predict personas
 
 ```
-/autoresearch:predict --personas "CTO,Frontend Lead,QA Engineer,Customer Success"
+/forge:predict --personas "CTO,Frontend Lead,QA Engineer,Customer Success"
 ```
 
 Overrides defaults from `references/predict-personas.md` for this run only.
@@ -207,7 +207,7 @@ Overrides defaults from `references/predict-personas.md` for this run only.
 ### Override probe personas
 
 ```
-/autoresearch:probe --personas 4 --adversarial
+/forge:probe --personas 4 --adversarial
 ```
 
 4 personas, Skeptic + Contradiction Finder + Edge-Case Hunter rotated to front.
@@ -215,7 +215,7 @@ Overrides defaults from `references/predict-personas.md` for this run only.
 ### Override reason judges
 
 ```
-/autoresearch:reason --judge-personas "Principal Engineer,Staff Engineer,Platform Lead"
+/forge:reason --judge-personas "Principal Engineer,Staff Engineer,Platform Lead"
 ```
 
 ---
@@ -226,16 +226,16 @@ Comma-separated `--chain` targets run sequentially. For parallel investigation a
 
 ```
 # Run independently in different sessions
-/autoresearch:scenario --domain software
+/forge:scenario --domain software
 Scenario: Checkout flow under high load
 
-/autoresearch:debug
+/forge:debug
 Scope: src/checkout/**
 Symptom: Intermittent payment failures
 Iterations: 15
 
 # Merge findings, then fix
-/autoresearch:fix --from-debug
+/forge:fix --from-debug
 Guard: npm test
 ```
 
@@ -248,7 +248,7 @@ Guard: npm test
 ```yaml
 - name: Overnight loop (bounded)
   run: |
-    claude -p "/autoresearch
+    claude -p "/forge
     Iterations: 80
     Goal: Maximize test coverage
     Verify: npm test -- --coverage | grep 'All files'
@@ -259,7 +259,7 @@ Guard: npm test
 
 ### Stop-on-goal
 
-autoresearch stops automatically when metric target is met — no special flag needed:
+forge stops automatically when metric target is met — no special flag needed:
 
 ```
 Goal: Increase test coverage to 90%  # stops as soon as 90% is hit
@@ -272,18 +272,18 @@ Goal: Increase test coverage as high as possible  # runs to Iterations cap
 
 | Command | TSV location |
 |---------|-------------|
-| autoresearch | `autoresearch/{slug}/autoresearch-results.tsv` |
+| forge | `forge/{slug}/forge-results.tsv` |
 | debug | `debug/{slug}/debug-results.tsv` |
 | security | `security/{slug}/security-audit-results.tsv` |
 | reason | `reason/{slug}/reason-results.tsv` |
 
-Run `autoresearch:evals --file <path>` on any of these at any time.
+Run `forge:evals --file <path>` on any of these at any time.
 
 ### Comparing two sessions
 
 ```
-/autoresearch:evals --file autoresearch/session-a/autoresearch-results.tsv --format json
-/autoresearch:evals --file autoresearch/session-b/autoresearch-results.tsv --format json
+/forge:evals --file forge/session-a/forge-results.tsv --format json
+/forge:evals --file forge/session-b/forge-results.tsv --format json
 ```
 
 Compare `improvement_pct` and `plateau_start` to determine which session was more effective.
@@ -298,7 +298,7 @@ Compare `improvement_pct` and `plateau_start` to determine which session was mor
 | Only audit changed files | `security` | `--diff` |
 | Analyze results + gate | `evals` | `--format json --recommend` |
 | Auto-PR after optimization | `ship` | `--type code-pr --auto` |
-| Overnight optimization | `autoresearch` | `Iterations: N --evals-interval M` |
+| Overnight optimization | `forge` | `Iterations: N --evals-interval M` |
 | Requirements re-probe | `probe` | `--mode autonomous` |
 | Post-deploy health | `ship` | `--monitor N` |
 
@@ -308,5 +308,5 @@ Compare `improvement_pct` and `plateau_start` to determine which session was mor
 
 - [chains-and-combinations.md](chains-and-combinations.md) — full pipeline examples
 - [examples-by-domain.md](examples-by-domain.md) — domain-specific CI/CD patterns
-- [autoresearch-evals.md](autoresearch-evals.md) — evals output format and JSON schema
-- [autoresearch-ship.md](autoresearch-ship.md) — ship types and monitoring
+- [forge-evals.md](forge-evals.md) — evals output format and JSON schema
+- [forge-ship.md](forge-ship.md) — ship types and monitoring

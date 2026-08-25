@@ -1,8 +1,8 @@
 # Scenario Guides
 
-Real-world, end-to-end walkthroughs of `/autoresearch:scenario` applied to specific domains and use cases. Each guide includes the command config, example situations generated across the 12 exploration dimensions, chain patterns, and domain-specific tips.
+Real-world, end-to-end walkthroughs of `/forge:scenario` applied to specific domains and use cases. Each guide includes the command config, example situations generated across the 12 exploration dimensions, chain patterns, and domain-specific tips.
 
-For the command reference, see [autoresearch-scenario.md](../autoresearch-scenario.md).
+For the command reference, see [forge-scenario.md](../forge-scenario.md).
 
 ---
 
@@ -30,7 +30,7 @@ Each guide is a self-contained example you can adapt to your own project:
 
 1. **Read the scenario** — understand what's being explored and why
 2. **Copy the command** — adjust scope and iterations for your codebase
-3. **Review the example situations** — see what autoresearch:scenario surfaces
+3. **Review the example situations** — see what forge:scenario surfaces
 4. **Follow the chain** — each guide suggests next steps (debug, fix, security, ship, learn)
 
 ## Quick Picks
@@ -51,6 +51,6 @@ Each guide is a self-contained example you can adapt to your own project:
 
 <div align="center">
 
-**[Guide Index](../README.md)** | **[Scenario Command Reference](../autoresearch-scenario.md)** | **[Chains & Combinations](../chains-and-combinations.md)**
+**[Guide Index](../README.md)** | **[Scenario Command Reference](../forge-scenario.md)** | **[Chains & Combinations](../chains-and-combinations.md)**
 
 </div>

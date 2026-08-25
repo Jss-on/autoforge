@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Test harness for autoresearch:regression — score-regression.sh (verdict + rubric),
+# Test harness for forge:regression — score-regression.sh (verdict + rubric),
 # the regression.md spec, mirror parity, and manifest count.
 set -uo pipefail
 
@@ -12,7 +12,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 SCORE_SH="$REPO_ROOT/scripts/score-regression.sh"
 FIX="$REPO_ROOT/tests/fixtures/regression"
-SPEC="$REPO_ROOT/claude-plugin/commands/autoresearch/regression.md"
+SPEC="$REPO_ROOT/claude-plugin/commands/forge/regression.md"
 RUBRIC_TARGET="${REG_RUBRIC_TARGET:-32}"
 
 PASS=0; FAIL=0; TOTAL=0
@@ -132,10 +132,10 @@ printf '\n--- distribution: mirror parity (5 surfaces byte-identical) ---\n'
 # ============================================================================
 
 MIRRORS=(
-  "$REPO_ROOT/.claude/commands/autoresearch/regression.md"
-  "$REPO_ROOT/.agents/skills/autoresearch/regression.md"
-  "$REPO_ROOT/plugins/autoresearch/skills/autoresearch/regression.md"
-  "$REPO_ROOT/.opencode/commands/autoresearch_regression.md"
+  "$REPO_ROOT/.claude/commands/forge/regression.md"
+  "$REPO_ROOT/.agents/skills/forge/regression.md"
+  "$REPO_ROOT/plugins/forge/skills/forge/regression.md"
+  "$REPO_ROOT/.opencode/commands/forge_regression.md"
 )
 for m in "${MIRRORS[@]}"; do
   if [[ -f "$m" ]] && diff -q "$SPEC" "$m" >/dev/null 2>&1; then
@@ -149,7 +149,7 @@ done
 printf '\n--- distribution: manifest command count = 14 + regression listed ---\n'
 # ============================================================================
 
-for mf in "$REPO_ROOT/.claude-plugin/marketplace.json" "$REPO_ROOT/claude-plugin/.claude-plugin/plugin.json" "$REPO_ROOT/plugins/autoresearch/.codex-plugin/plugin.json"; do
+for mf in "$REPO_ROOT/.claude-plugin/marketplace.json" "$REPO_ROOT/claude-plugin/.claude-plugin/plugin.json" "$REPO_ROOT/plugins/forge/.codex-plugin/plugin.json"; do
   name="${mf#$REPO_ROOT/}"
   grep -q "19 commands" "$mf" && pass "manifest count 19: $name" || fail "manifest count 19: $name"
   grep -q "regression" "$mf"  && pass "manifest lists regression: $name" || fail "manifest lists regression: $name"

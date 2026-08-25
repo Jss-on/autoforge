@@ -1,0 +1,42 @@
+{
+  "name": "forge",
+  "version": "3.0.0-codex.0",
+  "description": "Autonomous improvement engine for Codex. 19 commands: iterate, plan, debug, fix, security, ship, scenario, predict, learn, reason, probe, improve, evals, regression, build, requirements, feature, test, design.",
+  "author": {
+    "name": "Jss-on",
+    "url": "https://github.com/Jss-on"
+  },
+  "homepage": "https://github.com/Jss-on/autoforge",
+  "repository": "https://github.com/Jss-on/autoforge",
+  "license": "Proprietary",
+  "keywords": [
+    "forge",
+    "codex",
+    "automation",
+    "debugging",
+    "security",
+    "documentation",
+    "evals"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "AutoForge",
+    "shortDescription": "Autonomous improvement workflows for Codex.",
+    "longDescription": "19 self-contained commands: core iterate loop, plan, debug, fix, security, ship, scenario, predict, learn, reason, probe, evals, improve, regression, build, requirements, feature, test, design. Thin routing SKILL.md + per-command instruction files.",
+    "developerName": "Jss-on",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/Jss-on/autoforge",
+    "privacyPolicyURL": "https://github.com/Jss-on/autoforge/blob/master/LICENSE",
+    "termsOfServiceURL": "https://github.com/Jss-on/autoforge/blob/master/LICENSE",
+    "defaultPrompt": [
+      "$forge plan Improve test coverage to 90%",
+      "$forge security --diff --fail-on critical",
+      "$forge learn --mode update --scope docs/**/*.md"
+    ],
+    "brandColor": "#0F766E"
+  }
+}

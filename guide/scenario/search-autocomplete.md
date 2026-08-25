@@ -7,7 +7,7 @@
 ## The Command
 
 ```
-/autoresearch:scenario --domain software --depth standard --focus edge-cases
+/forge:scenario --domain software --depth standard --focus edge-cases
 Scenario: User types a search query and receives real-time autocomplete suggestions — with typo correction, personalization, trending results, and abuse-resistant ranking
 Iterations: 25
 ```
@@ -174,7 +174,7 @@ User input is escaped before regex construction. `a]` matches literally. No serv
 
 ### scenario → debug
 ```bash
-/autoresearch:debug
+/forge:debug
 Scope: src/search/**, src/autocomplete/**, src/suggestions/**
 Symptom: Edge cases — regex crash, CJK IME handling, stale index, typo tolerance gaps
 Iterations: 15
@@ -183,7 +183,7 @@ Iterations: 15
 ### scenario → security
 ```bash
 # Audit for injection, suggestion manipulation, and privacy leaks
-/autoresearch:security
+/forge:security
 Scope: src/search/**, src/autocomplete/**
 Focus: Regex injection, suggestion bombing, personalization privacy, XSS in suggestion display
 Iterations: 10
@@ -191,7 +191,7 @@ Iterations: 10
 
 ### predict → scenario
 ```bash
-/autoresearch:predict --chain scenario,debug,fix
+/forge:predict --chain scenario,debug,fix
 Scope: src/search/**
 Goal: Harden autocomplete against edge cases and adversarial manipulation
 ```
@@ -200,16 +200,16 @@ Goal: Harden autocomplete against edge cases and adversarial manipulation
 
 ## Tips
 
-**Performance IS the feature.** Autocomplete must respond in <100ms. Any scenario that adds latency (fuzzy matching, personalization lookup, real-time fallback) must be evaluated against the latency budget. Run a performance-focused loop after scenarios: `/autoresearch` with metric: "p95 autocomplete latency."
+**Performance IS the feature.** Autocomplete must respond in <100ms. Any scenario that adds latency (fuzzy matching, personalization lookup, real-time fallback) must be evaluated against the latency budget. Run a performance-focused loop after scenarios: `/forge` with metric: "p95 autocomplete latency."
 
 **Test with real typo patterns, not random mutations.** Common typos follow keyboard adjacency patterns (e.g., 'e' and 'r' are adjacent). Use real typo datasets or keyboard-distance models for realistic fuzzy matching evaluation.
 
-**Multilingual autocomplete is a separate problem.** CJK, Arabic (RTL), and Latin scripts have fundamentally different input methods. Run a dedicated scenario: `/autoresearch:scenario --depth standard --focus data-variation` with `Scenario: Multilingual search autocomplete supporting English, Japanese, Arabic, and Korean input`.
+**Multilingual autocomplete is a separate problem.** CJK, Arabic (RTL), and Latin scripts have fundamentally different input methods. Run a dedicated scenario: `/forge:scenario --depth standard --focus data-variation` with `Scenario: Multilingual search autocomplete supporting English, Japanese, Arabic, and Korean input`.
 
 ---
 
 <div align="center">
 
-**[Scenario Guides](README.md)** | **[Scenario Command Reference](../autoresearch-scenario.md)** | **[Chains & Combinations](../chains-and-combinations.md)**
+**[Scenario Guides](README.md)** | **[Scenario Command Reference](../forge-scenario.md)** | **[Chains & Combinations](../chains-and-combinations.md)**
 
 </div>

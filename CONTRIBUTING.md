@@ -1,15 +1,15 @@
-# Contributing to Autoresearch
+# Contributing to AutoForge
 
 Whether you're fixing a typo, adding examples, creating a new sub-command, or improving the loop protocol — this guide will get you up and running.
 
 ## Quick Start
 
-Autoresearch is Markdown files that Claude Code, OpenCode, and Codex discover from `skills/` and `commands/` directories. No build step, no compilation — edit a `.md` file, invoke the skill, see your changes.
+AutoForge is Markdown files that Claude Code, OpenCode, and Codex discover from `skills/` and `commands/` directories. No build step, no compilation — edit a `.md` file, invoke the skill, see your changes.
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/uditgoenka/autoresearch.git
-cd autoresearch
+git clone https://github.com/Jss-on/autoforge.git
+cd autoforge
 
 # 2. Install via guided installer
 ./scripts/install.sh --claude --global   # Claude Code
@@ -17,9 +17,9 @@ cd autoresearch
 ./scripts/install.sh --codex --global    # Codex
 
 # 3. Or symlink for live editing (recommended for development)
-ln -s $(pwd)/.claude/skills/autoresearch ~/.claude/skills/autoresearch
-ln -s $(pwd)/.claude/commands/autoresearch ~/.claude/commands/autoresearch
-ln -s $(pwd)/.claude/commands/autoresearch.md ~/.claude/commands/autoresearch.md
+ln -s $(pwd)/.claude/skills/forge ~/.claude/skills/forge
+ln -s $(pwd)/.claude/commands/forge ~/.claude/commands/forge
+ln -s $(pwd)/.claude/commands/forge.md ~/.claude/commands/forge.md
 ```
 
 ### Multi-Platform Sync
@@ -35,14 +35,14 @@ The canonical source is `.claude/`. After making changes, run the transform to s
 ## Repository Structure (v2.1.0)
 
 ```
-autoresearch/
+forge/
 ├── .claude/                                       ← CANONICAL SOURCE — edit here first
-│   ├── skills/autoresearch/
+│   ├── skills/forge/
 │   │   ├── SKILL.md                               ← Thin routing table (41 lines)
 │   │   └── references/                            ← 3 focused reference files
 │   └── commands/
-│       ├── autoresearch.md                        ← Core loop (self-contained, ~110 lines)
-│       └── autoresearch/                          ← 12 subcommand files (self-contained)
+│       ├── forge.md                        ← Core loop (self-contained, ~110 lines)
+│       └── forge/                          ← 12 subcommand files (self-contained)
 ├── .opencode/                                     ← OpenCode port (generated via transform.sh)
 ├── .agents/ + plugins/                            ← Codex port (generated via transform.sh)
 ├── claude-plugin/                                 ← Distribution package (Claude Code plugin install)
@@ -53,7 +53,7 @@ autoresearch/
 │   └── release.md                                 ← Release checklist
 ├── guide/                                         ← Guides — one per command + advanced patterns
 ├── docs/                                          ← Project docs (architecture, changelog, standards)
-├── COMPARISON.md                                  ← Karpathy vs Claude Autoresearch
+├── COMPARISON.md                                  ← Karpathy vs Claude AutoForge
 └── CONTRIBUTING.md                                ← You are here
 ```
 
@@ -61,9 +61,9 @@ autoresearch/
 
 | File | Purpose | Edit when... |
 |------|---------|-------------|
-| `.claude/skills/autoresearch/SKILL.md` | Thin routing table — subcommand list, defaults, universal flags | Adding subcommands, changing defaults |
-| `.claude/commands/autoresearch.md` | Core loop — self-contained instructions (~110 lines) | Changing loop behavior |
-| `.claude/commands/autoresearch/*.md` | Subcommand files — each self-contained with full instructions | Modifying any subcommand |
+| `.claude/skills/forge/SKILL.md` | Thin routing table — subcommand list, defaults, universal flags | Adding subcommands, changing defaults |
+| `.claude/commands/forge.md` | Core loop — self-contained instructions (~110 lines) | Changing loop behavior |
+| `.claude/commands/forge/*.md` | Subcommand files — each self-contained with full instructions | Modifying any subcommand |
 | `references/security-checklist.md` | STRIDE + OWASP checklist (loaded by security command) | Adding security checks |
 | `references/predict-personas.md` | 5 expert personas (loaded by predict command) | Adding/modifying personas |
 | `references/reason-judge-protocol.md` | Adversarial refinement protocol (loaded by reason command) | Changing judge/critic behavior |
@@ -79,7 +79,7 @@ autoresearch/
 | **New domain examples** | Add to `guide/examples-by-domain.md` | Easy |
 | **Verification script templates** | Reusable verify/guard commands for common metrics | Easy |
 | **Bug fixes** | Loop edge cases, incorrect behavior | Medium |
-| **New sub-commands** | `/autoresearch:refactor`, `/autoresearch:test` | Medium |
+| **New sub-commands** | `/forge:refactor`, `/forge:test` | Medium |
 | **OWASP/STRIDE additions** | New security checks | Medium |
 | **Protocol improvements** | Better stuck-detection, smarter ideation | Hard |
 | **MCP integration patterns** | Database, API, analytics verification examples | Hard |
@@ -95,7 +95,7 @@ autoresearch/
 ### 1. Create the command file
 
 ```
-.claude/commands/autoresearch/yourcommand.md
+.claude/commands/forge/yourcommand.md
 ```
 
 Self-contained file with: YAML frontmatter (`name`, `description`, `argument-hint`), argument parsing, setup gate, loop/phases, output, chain handoff. Target: 80-120 lines.
@@ -104,7 +104,7 @@ Self-contained file with: YAML frontmatter (`name`, `description`, `argument-hin
 
 Add one row to the subcommands table:
 ```markdown
-| `/autoresearch:yourcommand` | Description | Default iterations |
+| `/forge:yourcommand` | Description | Default iterations |
 ```
 
 ### 3. Create reference file (only if needed by 3+ commands)
@@ -141,11 +141,11 @@ Update: README.md (commands table), guide/ (new guide file), COMPARISON.md (subc
 
 ## Testing
 
-No automated tests — autoresearch is Markdown instructions. Testing means using it:
+No automated tests — forge is Markdown instructions. Testing means using it:
 
 1. Symlink your working tree (see Quick Start)
 2. Open Claude Code in a real project
-3. Invoke the command (`/autoresearch`, `/autoresearch:plan`, etc.)
+3. Invoke the command (`/forge`, `/forge:plan`, etc.)
 4. Verify behavior matches your changes
 5. Try edge cases — wrong metric? 0 files in scope? Guard always fails?
 
@@ -161,9 +161,9 @@ Contributors don't need to bump versions.
 
 ## Getting Help
 
-- **Questions?** Open an [issue](https://github.com/uditgoenka/autoresearch/issues)
+- **Questions?** Open an [issue](https://github.com/Jss-on/autoforge/issues)
 - **Ideas?** Open an issue with `[Idea]` prefix
-- **Discussion?** Tag [@uditgoenka](https://github.com/uditgoenka) in your PR
+- **Discussion?** Tag [@Jss-on](https://github.com/Jss-on) in your PR
 
 Thanks for contributing!
 
@@ -171,7 +171,7 @@ Thanks for contributing!
 
 ### Adding a New Hook
 
-1. Create `.claude/hooks/autoresearch/{name}.cjs`
+1. Create `.claude/hooks/forge/{name}.cjs`
 2. Use the shared library: `require('./lib/ar-hook-utils.cjs')`
 3. Follow the pattern:
    ```js
@@ -203,10 +203,10 @@ Thanks for contributing!
 
 ```bash
 # Syntax check
-node --check .claude/hooks/autoresearch/my-hook.cjs
+node --check .claude/hooks/forge/my-hook.cjs
 
 # Manual test
-echo '{"tool_name":"Read","tool_input":{"file_path":"test.txt"}}' | node .claude/hooks/autoresearch/my-hook.cjs
+echo '{"tool_name":"Read","tool_input":{"file_path":"test.txt"}}' | node .claude/hooks/forge/my-hook.cjs
 echo "Exit code: $?"
 
 # Full test suite

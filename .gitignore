@@ -9,13 +9,14 @@ __pycache__/
 # Claude Code local state
 .claude/agents/
 .claude/hooks/*
-!.claude/hooks/autoresearch/
+!.claude/hooks/forge/
 .claude/metadata.json
 .claude/rules/
 .claude/skills/*
-!.claude/skills/autoresearch/
+!.claude/skills/forge/
 
 # Debug/temp files
+forge-debug-fix-results.tsv
 autoresearch-debug-fix-results.tsv
 *.log
 *.bak
@@ -27,9 +28,11 @@ plans/
 debug/
 learn/
 scenario/
-# Run-output dirs at the repo root (autoresearch/<cmd>-<timestamp>/) are client
-# work products, never harness source. Root-anchored: a bare `autoresearch/`
-# would also ignore every */skills/autoresearch/ mirror tree.
+# Run-output dirs at the repo root (forge/<cmd>-<timestamp>/) are client
+# work products, never harness source. Root-anchored: a bare `forge/`
+# would also ignore every */skills/forge/ mirror tree.
+# /autoresearch/ stays ignored: pre-v3.0.0 run dirs from the old command name.
+/forge/
 /autoresearch/
 # Client design artifacts + Windows redirect residue
 /DESIGN.md
@@ -54,3 +57,6 @@ node_modules/
 .gstack/
 
 build-output
+hanai_design
+bella_large_replication_kit*
+score-log.tsv

@@ -1,8 +1,36 @@
 # Project Changelog
 
-All notable changes to the autoresearch project are documented here.
+All notable changes to the forge project are documented here.
 
-## v2.5.0 — `/autoresearch:design`: the UI/UX designer + design QA (2026-08-19)
+## v3.0.0 — The `forge` rename (2026-08-20)
+
+**Theme:** the product has been AutoForge since the fork; the commands still carried the inherited
+`autoresearch` namespace. v3.0.0 closes that gap — one name, everywhere the user types.
+
+**BREAKING — command namespace renamed `autoresearch` → `forge`:**
+
+- Claude Code / claude-plugin: `/autoresearch` → `/forge`, `/autoresearch:<cmd>` → `/forge:<cmd>` (all 19 commands).
+- OpenCode: `autoresearch_<cmd>` → `forge_<cmd>`.
+- Codex: `$autoresearch <cmd>` → `$forge <cmd>`.
+- Plugin renamed `autoresearch` → `forge` (marketplace name stays `autoforge`). Existing installs must
+  re-add the marketplace and install the `forge` plugin to receive updates.
+- Run-output directories now `forge/<cmd>-<timestamp>/`. Pre-3.0 `autoresearch/` run dirs remain valid
+  historical artifacts and stay gitignored; hooks and `run-index.sh` index the new root (pass the old
+  root explicitly to inventory legacy runs).
+- Skill/command/hook/guide trees renamed across all 5 distribution surfaces
+  (`.claude`, `claude-plugin`, `.opencode`, `.agents`, `plugins/forge`); byte-parity preserved.
+- Handoff schema `version` now `"3.0.0"`; the validator still accepts `2.1.0+`, so chains can read
+  legacy handoffs.
+
+**Deliberately unchanged:**
+
+- Env vars keep the `AR_` prefix (`AR_SCORE_LOG`, `AR_ROOT`, `AR_DISABLE_*`, …) — the automation
+  contract survives the rename.
+- Hook lib filename `ar-hook-utils.cjs`.
+- Upstream attributions keep the original name: [Karpathy's autoresearch](https://github.com/karpathy/autoresearch)
+  and Udit Goenka's autoresearch engine (see NOTICE).
+
+## v2.5.0 — `/forge:design`: the UI/UX designer + design QA (2026-08-19)
 
 **Theme:** every mechanical `ux` gate was green while builds shipped the AI-generated dashboard
 template — emoji nav icons, cream + oxblood, three identical stat tiles, kicker labels above every
@@ -11,7 +39,7 @@ heading, nested cards, em-dash copy, "Acme". A comprehensive assessment of three
 command, a protocol reference, and two seams that make **taste-adjacent quality mechanical**.
 
 ### Added
-- **`/autoresearch:design`** — `system` (mode-aware direction protocol → machine-readable
+- **`/forge:design`** — `system` (mode-aware direction protocol → machine-readable
   `DESIGN.md`; deterministic seed roll over 5–7 candidate directions; `score-design.sh lint` checks
   schema + computed contrast pairs), `audit` (independent, app-source read-only: valid captures at
   every viewport, the mechanical floor, axe + keyboard walk, Nielsen 0–4 + cognitive-load critique,
@@ -130,7 +158,7 @@ chores. PRs opened by the loop now **merge themselves once they have earned it**
 evidence only.
 
 ### Added
-- **Auto-merge in `/autoresearch:fix`** (default ON). A PR merges when *all* of these hold: every CI
+- **Auto-merge in `/forge:fix`** (default ON). A PR merges when *all* of these hold: every CI
   check green (`gh pr checks --watch`; a red or still-running check never merges) · guard + targeted
   regression green on the final commit · no ledger item left `open` beyond ones explicitly recorded
   as not-reproducible · `mergeable == MERGEABLE` (a `CONFLICTING` branch is rebased onto base,
@@ -185,14 +213,14 @@ crashed with an opaque `TypeError` rather than saying so. Ported to Playwright, 
 assertions pass with axe clean on all 16 routes, **on the runner as well as locally**, and the repo
 reached its first fully green CI run.
 
-## v2.4.1 — `/autoresearch:fix` rebuilt: defect remediation aligned with requirements/build/test (2026-08-14)
+## v2.4.1 — `/forge:fix` rebuilt: defect remediation aligned with requirements/build/test (2026-08-14)
 
 **Theme:** The old `fix` predated the evidence/seam/output-repo generation and only understood
 compiler-style error counts. Rebuilt as the **builder half of the test↔fix independence loop**,
 speaking the same contracts as `requirements`, `build`, and `test`.
 
 ### Changed
-- **`/autoresearch:fix`** — two intake modes on one bounded loop:
+- **`/forge:fix`** — two intake modes on one bounded loop:
   - **Defect remediation** (`--from-test` / `Defects:`): the work queue is a `score-test.sh
     defects`-validated ledger; metric = unresolved critical/high **blocking count** → 0, queue
     ordered unblock-first (build/CI blockers precede all) then severity → priority.
@@ -221,7 +249,7 @@ speaking the same contracts as `requirements`, `build`, and `test`.
   block (`blocking=2`) while `verified` lifts (`blocking=0`), plus fix-source handoff validation.
   Full battery now **633 asserts across 8 suites**.
 
-## v2.4.0 — `/autoresearch:test`: the QA-Engineer Engagement (2026-08-13)
+## v2.4.0 — `/forge:test`: the QA-Engineer Engagement (2026-08-13)
 
 **Theme:** An 18th command that performs the full software-test-engineer role on existing software,
 standards-aligned and evidence-anchored. Built from primary-source research: ISO/IEC/IEEE 29119
@@ -229,7 +257,7 @@ standards-aligned and evidence-anchored. Built from primary-source research: ISO
 characteristics, 2023 naming), WCAG 2.2 (55 AA criteria), OWASP Top 10 2021/2025 + ASVS 5.0.
 
 ### Added
-- **`/autoresearch:test`** — a complete QA engagement: static requirements review + ambiguity
+- **`/forge:test`** — a complete QA engagement: static requirements review + ambiguity
   interrogation → risk register (likelihood × impact drives test depth) → 29119-3 test plan with
   entry/exit criteria → formal test design (EP, BVA, decision tables, state transition, pairwise,
   scenario, error guessing; `logic` golden rows for business rules) with a bidirectional RTM gate →
@@ -268,14 +296,14 @@ characteristics, 2023 naming), WCAG 2.2 (55 AA criteria), OWASP Top 10 2021/2025
 - New `score-build.sh bound iterations.tsv <max>`: `BOUND: EXCEEDED` mechanically blocks CONVERGED (the flagship DJN run had used 48 of a 40-iteration bound and still reported converged).
 
 ### Enforcement ships (W-2)
-- The seam scripts (`score-build/requirements/regression/debug-fix.sh`, `orchestrate.sh`, new `doctor.sh`) now ship inside `skills/autoresearch/scripts/` in **all five** distribution trees; `install.sh` also installs the 9 hooks (previously never installed at all).
-- Commands carry an explicit seam/reference resolution order (`${CLAUDE_PLUGIN_ROOT}/skills/autoresearch` → `.claude/skills/autoresearch` → merged layouts) — the bare `references/*.md` paths silently resolved to nothing on installed Claude Code plugins.
+- The seam scripts (`score-build/requirements/regression/debug-fix.sh`, `orchestrate.sh`, new `doctor.sh`) now ship inside `skills/forge/scripts/` in **all five** distribution trees; `install.sh` also installs the 9 hooks (previously never installed at all).
+- Commands carry an explicit seam/reference resolution order (`${CLAUDE_PLUGIN_ROOT}/skills/forge` → `.claude/skills/forge` → merged layouts) — the bare `references/*.md` paths silently resolved to nothing on installed Claude Code plugins.
 - All four mirror routers resynced from canonical (were stamped 2.2.1 and **missing the `requirements`/`build`/`feature` rows**); `transform.sh` sed tables replaced with generic rules so new commands can never be silently skipped again.
 - New `scripts/doctor.sh` preflight: CORE (bash/node≥18/git/awk/sed/sha256sum), BUILD (gstack, docker), OPTIONAL (axe, k6/autocannon, gh); `build` Phase 0 runs it with `--require-build`.
 
 ### Distribution & docs (W-3)
-- README/AGENTS.md/guide fully rebranded: install paths → `Jss-on/autoforge` (`/plugin marketplace add Jss-on/autoforge`, `/plugin install autoresearch@autoforge`), MIT badge/PayPal/star-history/upstream author block removed, license → Proprietary with the retained MIT attribution line, six-dimension acceptance model + 0.50 logic gate + Prerequisites section documented; upstream `context7.json` and the foreign `.claude/skills/.env.example` removed.
-- Client artifacts untracked from the product tree (root `DESIGN.md` design tokens, `autoresearch/` run dirs); run dirs root-ignored.
+- README/AGENTS.md/guide fully rebranded: install paths → `Jss-on/autoforge` (`/plugin marketplace add Jss-on/autoforge`, `/plugin install forge@autoforge`), MIT badge/PayPal/star-history/upstream author block removed, license → Proprietary with the retained MIT attribution line, six-dimension acceptance model + 0.50 logic gate + Prerequisites section documented; upstream `context7.json` and the foreign `.claude/skills/.env.example` removed.
+- Client artifacts untracked from the product tree (root `DESIGN.md` design tokens, `forge/` run dirs); run dirs root-ignored.
 
 ### Orchestrator seam (W-4)
 - `classify`: `security|audit|owasp|cve|lock-down` now reach `harden` ("run a security audit" previously classified as `explore`); explicit `ship` outranks an incidental fix mention per the router spec.
@@ -298,23 +326,23 @@ characteristics, 2023 naming), WCAG 2.2 (55 AA criteria), OWASP Top 10 2021/2025
 
 ## v2.3.0 — Build Pipeline: Full-SDLC Software Engine (2026-06-28)
 
-**Theme:** Autoresearch becomes a full software-development-lifecycle engine. Three new commands take a product from a one-line idea to a tested, hardened, shippable system — `requirements → build → feature → regression → ship` — with UI/UX as a first-class, mechanically-verified acceptance dimension. Command count 14 → 17.
+**Theme:** AutoForge becomes a full software-development-lifecycle engine. Three new commands take a product from a one-line idea to a tested, hardened, shippable system — `requirements → build → feature → regression → ship` — with UI/UX as a first-class, mechanically-verified acceptance dimension. Command count 14 → 17.
 
 ### Added
-- **`/autoresearch:build`** — greenfield full-stack builder. Runs the standard SDLC (requirements → design → implement (TDD) → debug → comprehensive test → deploy) as an autoresearch loop, to passing acceptance across **five weighted dimensions**: functional 0.30 · ux 0.20 · devops 0.15 · monitoring 0.15 · hardening 0.20. Acceptance is *run, not claimed* — build, boot, probe, the test pyramid, and a real browser via gstack `/browse` (e2e + axe a11y + responsive + DESIGN.md conformance). Default 40 iterations.
-- **`/autoresearch:requirements`** — interactive requirements engineering. Interviews the user back-and-forth (**no assumptions** on scope-defining questions), classifies FR/NFR, maps NFRs to the five dimensions, prioritizes with MoSCoW, and emits a validated `evals/fullstack/<name>.spec.yaml`. A mechanical gate (`score-requirements.sh validate`) releases the spec only when all five dimensions are present + weighted.
-- **`/autoresearch:feature`** — brownfield feature addition. The same build loop on an existing app, on a delta acceptance set, under a **hard non-regression ratchet**: every iteration runs `regression`; any existing green→red auto-reverts. On convergence the feature ratchets permanently into the spec — improvements compound.
+- **`/forge:build`** — greenfield full-stack builder. Runs the standard SDLC (requirements → design → implement (TDD) → debug → comprehensive test → deploy) as an forge loop, to passing acceptance across **five weighted dimensions**: functional 0.30 · ux 0.20 · devops 0.15 · monitoring 0.15 · hardening 0.20. Acceptance is *run, not claimed* — build, boot, probe, the test pyramid, and a real browser via gstack `/browse` (e2e + axe a11y + responsive + DESIGN.md conformance). Default 40 iterations.
+- **`/forge:requirements`** — interactive requirements engineering. Interviews the user back-and-forth (**no assumptions** on scope-defining questions), classifies FR/NFR, maps NFRs to the five dimensions, prioritizes with MoSCoW, and emits a validated `evals/fullstack/<name>.spec.yaml`. A mechanical gate (`score-requirements.sh validate`) releases the spec only when all five dimensions are present + weighted.
+- **`/forge:feature`** — brownfield feature addition. The same build loop on an existing app, on a delta acceptance set, under a **hard non-regression ratchet**: every iteration runs `regression`; any existing green→red auto-reverts. On convergence the feature ratchets permanently into the spec — improvements compound.
 - **`scripts/score-build.sh`** — `pass-rate` (weighted, renormalized over the dimensions that ran; `skip` excluded; single-division so an all-pass build scores exactly 1.00) + `rubric` (spec-quality grep). Shared metric for build + feature.
 - **`scripts/score-requirements.sh`** — `validate` (a generated spec is a valid build input iff it has name + stack + all five weighted acceptance dimensions) + `rubric`.
 - **Four reference docs** (mirrored across all 5 surfaces): `sdlc-protocol.md` (phase gates), `uiux-checklist.md` (the ux dimension + DESIGN.md conformance), `fullstack-hardening-checklist.md` (the five acceptance dimensions + results-TSV schema), `requirements-protocol.md` (the RE process + generated-spec schema).
 - **DESIGN.md / UI-UX integration.** The design system is a committed `DESIGN.md` (Google DESIGN.md spec; getdesign.md / `awesome-design-md` catalog). build/feature adopt one (catalog slug · file · URL · or generate via gstack `design-consultation`), derive all UI tokens from it, and verify **conformance mechanically** via `/browse`. New `Design:` arg + spec `design:` block + a `ux` `design-conformance` assertion.
 - **Seed eval specs** under `evals/fullstack/` (todo-api, url-shortener, notes-app, money-tracker, expense-tracker), each declaring stack + five-dimension acceptance + a `design:` reference.
 - **Tests:** `tests/test-build.sh` (59), `tests/test-requirements.sh` (35), `tests/test-feature.sh` (27) + deterministic fixtures under `tests/fixtures/{build,requirements}/`.
-- **Docs:** new `guide/building-software-with-autoresearch.md` (~16-page playbook) + a "Building Complex Software" section in the README.
+- **Docs:** new `guide/building-software-with-forge.md` (~16-page playbook) + a "Building Complex Software" section in the README.
 
 ### Changed
 - **Command count 14 → 17** across all 3 plugin manifests + the marketplace manifest + 5 `SKILL.md` mirrors. New commands mirrored byte-identical across the 5 distribution surfaces (`.claude`, `.agents`, `plugins`, `.opencode`, `claude-plugin`).
-- **`build` and `requirements` made first-principle-explicit.** `build.md` now states the autoresearch loop verbatim — read git → one atomic slice → `git commit experiment:` *before* verify → mechanical verify → keep/discard (simplicity wins) → log `iterations.tsv` → bounded; git-as-memory + automatic rollback. `requirements.md` states the single-pass form (constraint + mechanical gate + bounded; validate-until-VALID).
+- **`build` and `requirements` made first-principle-explicit.** `build.md` now states the forge loop verbatim — read git → one atomic slice → `git commit experiment:` *before* verify → mechanical verify → keep/discard (simplicity wins) → log `iterations.tsv` → bounded; git-as-memory + automatic rollback. `requirements.md` states the single-pass form (constraint + mechanical gate + bounded; validate-until-VALID).
 - **Orchestrator routing** (`orchestrator-routing.md`): the `build-feature` archetype now routes **greenfield → `build`, existing codebase → `feature`** (autonomy); `requirements` is the brief→spec front end.
 - Version 2.2.1 → 2.3.0 across all 3 plugin manifests, the marketplace manifest, 5 `SKILL.md` mirrors, the README + guide version badges, and the `test-orchestrator.sh` version-parity assertion.
 
@@ -341,10 +369,10 @@ characteristics, 2023 naming), WCAG 2.2 (55 AA criteria), OWASP Top 10 2021/2025
 
 ## v2.2.0 — Autonomous Goal-directed Orchestrator (2026-06-20)
 
-**Theme:** Bare `/autoresearch` becomes a complete autonomous orchestrator — state a plain-language goal and it self-selects the subcommands, flags, and iteration counts needed to reach it, the way `/ck:cook` orchestrates implementation.
+**Theme:** Bare `/forge` becomes a complete autonomous orchestrator — state a plain-language goal and it self-selects the subcommands, flags, and iteration counts needed to reach it, the way `/ck:cook` orchestrates implementation.
 
 ### Added
-- **Orchestrator mode on bare `/autoresearch`** — classifies a free-form goal, derives a concrete success predicate (exact command + expected output), confirms once, then loops the right subcommands until the predicate holds
+- **Orchestrator mode on bare `/forge`** — classifies a free-form goal, derives a concrete success predicate (exact command + expected output), confirms once, then loops the right subcommands until the predicate holds
   - **Dispatch:** `Metric:`/`Verify:` present → classic metric loop (unchanged); free-form goal → orchestrator; nothing → setup wizard; `--classic`/`--auto` force the mode; mode printed in a banner
   - **9 goal archetypes** in two modes — *Orchestration loop* (ship-ready, optimize-metric, fix-broken, harden, build-feature, explore) loops until a mechanical predicate is met; *Single-pass dispatch* (document, what-to-build, decide-design) routes once to learn / improve / reason and self-terminates
   - **Bounded termination:** plateau detection (5 cycles no net progress) + hard ceiling (50, override `--max-cycles N`); repeated unknown-units cycles route to `BLOCKED`, never counted as progress
@@ -352,10 +380,10 @@ characteristics, 2023 naming), WCAG 2.2 (55 AA criteria), OWASP Top 10 2021/2025
   - `orchestrator-state.json` tracks goal, archetype, predicate, units-remaining history, per-hop outcomes; each hop's `handoff.json` is folded in unchanged
 - `scripts/orchestrate.sh` — deterministic routing seam exposing `classify`, `next-hop`, `units`, `plateau`, `screen-cmd`, `verdict` (mirrors the `scripts/score-regression.sh` pattern)
 - `tests/test-orchestrator.sh` (97 assertions) + fixtures under `tests/fixtures/orchestrator/`
-- `.claude/skills/autoresearch/references/orchestrator-routing.md` — archetype table, preset pipelines, router decision table; new `guide/autoresearch-orchestrator.md` per-command guide
+- `.claude/skills/forge/references/orchestrator-routing.md` — archetype table, preset pipelines, router decision table; new `guide/forge-orchestrator.md` per-command guide
 
 ### Changed
-- Bare `/autoresearch` dispatch is now mode-aware; classic Metric-loop behavior is unchanged when `Metric:`/`Verify:` are supplied
+- Bare `/forge` dispatch is now mode-aware; classic Metric-loop behavior is unchanged when `Metric:`/`Verify:` are supplied
 - Version 2.1.4 → 2.2.0 across all 3 plugin manifests and 5 `SKILL.md` mirrors (command count stays 14 — the orchestrator overloads the root command, it is not a new subcommand)
 
 ### Fixed
@@ -367,7 +395,7 @@ characteristics, 2023 naming), WCAG 2.2 (55 AA criteria), OWASP Top 10 2021/2025
 **Theme:** A 14th family member — a heavy, layered regression-testing gate that proves a change is safe to push.
 
 ### Added
-- `/autoresearch:regression` — stability gate that captures baseline behavior from a `git worktree` of the base ref, diffs the candidate across 8 dimensions, and emits a single STABLE / UNSTABLE verdict
+- `/forge:regression` — stability gate that captures baseline behavior from a `git worktree` of the base ref, diffs the candidate across 8 dimensions, and emits a single STABLE / UNSTABLE verdict
   - **Classification phase** enforces the core invariant: a regression is a green→red transition only. red→red (pre-existing), absent→red (new coverage), and flake→red (flaky) are classified out, never counted. Tests matched by test-id then path.
   - **Tiered verdict:** HARD gate (`functional`, `api-contract`, `data-migration`, `integration-e2e`) — any green→red = UNSTABLE; SCORE 0–100 noise-tolerant weighted (`flakiness` .30, `performance` .30, `resource` .20, `visual-ui` .20), UNSTABLE below threshold 95
   - **4 input axes:** diff (default), repeat N×, full, matrix (opt-in)
@@ -389,20 +417,20 @@ characteristics, 2023 naming), WCAG 2.2 (55 AA criteria), OWASP Top 10 2021/2025
 **Theme:** A navigable knowledge base from `learn`, plus a clean, fully-synced distribution across all platforms.
 
 ### Added
-- `/autoresearch:learn --mode wiki` — generates a navigable `wiki/` knowledge base instead of prescriptive `docs/`
+- `/forge:learn --mode wiki` — generates a navigable `wiki/` knowledge base instead of prescriptive `docs/`
   - `index.md`, `architecture.md` (Mermaid diagrams), per-module deep dives (`modules/`, cap 10), `glossary.md`, `onboarding.md`
   - Write-ahead `wiki-manifest.json` (gitignored) for resume-after-interruption; `--force` regenerates from scratch
   - `--modules <list>` overrides automatic module detection
   - Two-layer secrets filter — prompt instruction (extract env var names, not values) + post-generation regex scan (AWS keys, `sk-`/`ghp_` tokens, DB URIs, password assignments), non-blocking warning
-  - Won't overwrite user-authored pages (skipped when `generated_by: autoresearch` frontmatter is absent)
+  - Won't overwrite user-authored pages (skipped when `generated_by: forge` frontmatter is absent)
 
 ### Changed
-- Wiki examples and output-structure reference added to `guide/autoresearch-learn.md` (now 5 modes)
+- Wiki examples and output-structure reference added to `guide/forge-learn.md` (now 5 modes)
 - All distributions regenerated from `.claude/` source via `scripts/transform.sh` (OpenCode, Codex) and synced to `claude-plugin/` (install source)
 
 ### Fixed
 - Distribution parity — `claude-plugin/` install source now carries the `improve` command row (had drifted out of the distribution `SKILL.md`)
-- Removed v2.1.0 wrapper-CLI leftovers that broke a fresh-clone test run (dead `bin/autoresearch` entrypoint and orphaned Python test modules)
+- Removed v2.1.0 wrapper-CLI leftovers that broke a fresh-clone test run (dead `bin/forge` entrypoint and orphaned Python test modules)
 - Aligned command count to 13 across `AGENTS.md`, `marketplace.json`, and the Codex plugin manifest
 - Synced version fields across `marketplace.json` (was 2.1.0), the Codex plugin (was 2.1.0-codex.0), and both `SKILL.md` files
 
@@ -411,14 +439,14 @@ characteristics, 2023 naming), WCAG 2.2 (55 AA criteria), OWASP Top 10 2021/2025
 **Theme:** Outward-looking product strategy — "what should we build next?"
 
 ### Added
-- `/autoresearch:improve` — research ICP challenges, discover improvements, generate per-feature PRDs
+- `/forge:improve` — research ICP challenges, discover improvements, generate per-feature PRDs
   - 5 research categories: ICP challenges, competitor gaps, market trends, UX & experience, revenue & growth
   - Saturation-based termination (net-new < 2 for 3 consecutive non-reserved iterations)
   - Tiered ranking: ICP binary gate → Must-have / Nice-to-have / Moonshot → pairwise within Must-have
   - Conditional auto-discover when product context is zero (OR gate)
   - WebSearch triangulation with HIGH/MEDIUM/LOW confidence tags
   - Per-feature PRD generation with evidence chains, DECISION NEEDED markers, open questions
-  - Terminal emitter — outputs PRDs for external tools, not autoresearch re-entry
+  - Terminal emitter — outputs PRDs for external tools, not forge re-entry
 - `CONTEXT.md` domain glossary with output types, loop shapes (+ Notes column), scoring systems, key concepts
 - Upstream chain integration: `--improve` flag on probe, predict, debug, security
 
@@ -464,13 +492,13 @@ characteristics, 2023 naming), WCAG 2.2 (55 AA criteria), OWASP Top 10 2021/2025
 ### Changed
 - `plugin.json` version bumped to 2.1.1
 - `scripts/transform.sh` now copies hooks to `claude-plugin/hooks/`
-- `.gitignore` updated with `!.claude/hooks/autoresearch/` exclusion
+- `.gitignore` updated with `!.claude/hooks/forge/` exclusion
 - `docs/system-architecture.md` updated with hook system architecture
 - `CONTRIBUTING.md` updated with hook development guide
 
 ### Design Decisions
 - SessionEnd event (not Stop) for notifications — Stop fires per-turn, SessionEnd fires once
-- Force-push only blocking — regular `git push` allowed for `/autoresearch:ship` compatibility
+- Force-push only blocking — regular `git push` allowed for `/forge:ship` compatibility
 - Smart Bash argument parsing — prevents false positives on string literals
 - Session state via `/tmp/ar-session-{hash}.json` — hooks are subprocesses, can't share env vars
 - Iteration-based throttling (every 5th) — matches loop cadence, not wall-clock time
@@ -478,10 +506,10 @@ characteristics, 2023 naming), WCAG 2.2 (55 AA criteria), OWASP Top 10 2021/2025
 ## v2.1.0 — 2026-05-22
 
 ### Summary
-Modular rebuild. Thin SKILL.md routing table replaces the 813-line monolith. Twelve self-contained command files replace the old minimal-registration + 13-reference-file pattern. Net result: ~95% token reduction per invocation (~5–8K tokens vs ~100K). New `/autoresearch:evals` subcommand added.
+Modular rebuild. Thin SKILL.md routing table replaces the 813-line monolith. Twelve self-contained command files replace the old minimal-registration + 13-reference-file pattern. Net result: ~95% token reduction per invocation (~5–8K tokens vs ~100K). New `/forge:evals` subcommand added.
 
 ### Added
-- `/autoresearch:evals` — one-shot analysis of any `*-results.tsv`: trends, plateaus, regressions, file hotspots, technique effectiveness, recommendations
+- `/forge:evals` — one-shot analysis of any `*-results.tsv`: trends, plateaus, regressions, file hotspots, technique effectiveness, recommendations
 - `--evals` flag on all looping commands — adaptive mid-loop checkpoints + final evals-summary.md
 - `--evals-interval N` — override checkpoint frequency
 - `# metric_direction: higher_is_better|lower_is_better` comment on TSV line 1 — enables evals auto-detection
@@ -496,9 +524,9 @@ Modular rebuild. Thin SKILL.md routing table replaces the 813-line monolith. Twe
 - Subcommand count: 11 → 12 (added evals)
 
 ### Removed
-- `plugins/autoresearch/resources/autoresearch-command-spec.json` — command contracts now live in individual command files
+- `plugins/forge/resources/forge-command-spec.json` — command contracts now live in individual command files
 - `scripts/sync-opencode.sh` and `scripts/sync-codex.sh` — replaced by `scripts/transform.sh`
-- `plugins/autoresearch/scripts/autoresearch_cli.py` — Python wrapper CLI no longer needed
+- `plugins/forge/scripts/forge_cli.py` — Python wrapper CLI no longer needed
 - 10 per-command workflow reference files (plan, debug, fix, security, ship, scenario, predict, learn, reason, probe workflows)
 
 ### Technical Details
@@ -538,16 +566,16 @@ Multi-platform GA release. Claude Code, OpenCode, and Codex all fully supported 
 ## v1.10.0 — 2026-04-16
 
 ### Added
-- `/autoresearch:probe` — adversarial multi-persona requirement interrogation engine
+- `/forge:probe` — adversarial multi-persona requirement interrogation engine
 - probe-workflow.md reference (449 lines) — 10-phase protocol
 - 8 personas: Skeptic, Edge-Case Hunter, Scope Sentinel, Ambiguity Detective, Contradiction Finder, Prior-Art Investigator, Success-Criteria Auditor, Constraint Excavator
 - Mechanical saturation termination: net-new constraints below threshold for K consecutive rounds
-- Output bundle: probe-spec.md, constraints.tsv, questions-asked.tsv, contradictions.md, hidden-assumptions.md, autoresearch-config.yml, summary.md, handoff.json
+- Output bundle: probe-spec.md, constraints.tsv, questions-asked.tsv, contradictions.md, hidden-assumptions.md, forge-config.yml, summary.md, handoff.json
 
 ## v1.8.0 — 2026-03-21
 
 ### Added
-- `/autoresearch:learn` — autonomous codebase documentation engine
+- `/forge:learn` — autonomous codebase documentation engine
 - 4 modes: init, update, check, summarize
 - Diff-based targeting for update mode: maps git changes to affected docs
 - Validation-fix loop with mechanical verification (max 3 retries)
@@ -556,7 +584,7 @@ Multi-platform GA release. Claude Code, OpenCode, and Codex all fully supported 
 ## v1.7.0 — 2026-03-18
 
 ### Added
-- `/autoresearch:predict` — multi-persona swarm prediction
+- `/forge:predict` — multi-persona swarm prediction
 - 5 default personas: Architecture Reviewer, Security Analyst, Performance Engineer, Reliability Engineer, Devil's Advocate
 - Adversarial debate mode (Red/Blue teams), anti-herd detection, budget enforcement
 - Zero external dependencies — file-based knowledge representation

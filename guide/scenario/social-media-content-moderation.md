@@ -7,7 +7,7 @@
 ## The Command
 
 ```
-/autoresearch:scenario --domain product --depth standard --focus edge-cases
+/forge:scenario --domain product --depth standard --focus edge-cases
 Scenario: User posts content that triggers automated moderation — detection, action, notification, appeal, and resolution
 Iterations: 25
 ```
@@ -149,7 +149,7 @@ Policy-compliant content regularly removed via coordinated report abuse. Users l
 
 ### scenario → debug
 ```bash
-/autoresearch:debug
+/forge:debug
 Scope: src/moderation/**, src/classifiers/**, src/appeals/**
 Symptom: Edge cases from scenario — Unicode bypass, cascade failures, coordinated abuse detection
 Iterations: 15
@@ -158,7 +158,7 @@ Iterations: 15
 ### scenario → security
 ```bash
 # Audit for abuse vectors and privilege escalation in moderation tools
-/autoresearch:security
+/forge:security
 Scope: src/moderation/**, src/admin/**
 Focus: Moderator privilege escalation, coordinated abuse, classifier bypass techniques
 Iterations: 15
@@ -166,7 +166,7 @@ Iterations: 15
 
 ### predict → scenario (adversarial)
 ```bash
-/autoresearch:predict --adversarial --chain scenario,debug,fix
+/forge:predict --adversarial --chain scenario,debug,fix
 Scope: src/moderation/**
 Goal: Harden content moderation against adversarial bypass and abuse
 ```
@@ -185,6 +185,6 @@ Goal: Harden content moderation against adversarial bypass and abuse
 
 <div align="center">
 
-**[Scenario Guides](README.md)** | **[Scenario Command Reference](../autoresearch-scenario.md)** | **[Chains & Combinations](../chains-and-combinations.md)**
+**[Scenario Guides](README.md)** | **[Scenario Command Reference](../forge-scenario.md)** | **[Chains & Combinations](../chains-and-combinations.md)**
 
 </div>

@@ -7,7 +7,7 @@
 ## The Command
 
 ```
-/autoresearch:scenario --domain software --depth standard
+/forge:scenario --domain software --depth standard
 Scenario: New organization signs up for SaaS platform, invites team members, configures roles, and activates a billing plan
 Iterations: 25
 ```
@@ -170,7 +170,7 @@ Owner is immediately locked out mid-session. Unsaved invitation drafts are lost.
 ### scenario → security
 ```bash
 # Tenant isolation is a security-critical concern
-/autoresearch:security
+/forge:security
 Scope: src/tenants/**, src/auth/**, src/billing/**
 Focus: Cross-tenant data access, row-level security, invitation token security
 Iterations: 15
@@ -179,19 +179,19 @@ Iterations: 15
 ### scenario → debug → fix
 ```bash
 # Hunt for the bugs surfaced by scenario exploration
-/autoresearch:debug
+/forge:debug
 Scope: src/onboarding/**, src/tenants/**
 Symptom: State transition bugs — incomplete onboarding, stale invitations, orphaned records
 Iterations: 15
 
-/autoresearch:fix --from-debug
+/forge:fix --from-debug
 Guard: npm test
 Iterations: 20
 ```
 
 ### predict → scenario
 ```bash
-/autoresearch:predict --chain scenario,security,fix
+/forge:predict --chain scenario,security,fix
 Scope: src/tenants/**, src/auth/**
 Goal: Verify tenant isolation and onboarding resilience before launch
 ```
@@ -210,6 +210,6 @@ Goal: Verify tenant isolation and onboarding resilience before launch
 
 <div align="center">
 
-**[Scenario Guides](README.md)** | **[Scenario Command Reference](../autoresearch-scenario.md)** | **[Chains & Combinations](../chains-and-combinations.md)**
+**[Scenario Guides](README.md)** | **[Scenario Command Reference](../forge-scenario.md)** | **[Chains & Combinations](../chains-and-combinations.md)**
 
 </div>

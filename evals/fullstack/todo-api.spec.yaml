@@ -1,4 +1,4 @@
-# autoresearch:build eval spec — declares what to build + per-dimension acceptance.
+# forge:build eval spec — declares what to build + per-dimension acceptance.
 # The build mode satisfies these; score-build.sh grades the resulting build-results.tsv.
 name: todo-api
 summary: REST todo service with a persistent store and a minimal web UI.

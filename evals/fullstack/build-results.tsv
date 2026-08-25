@@ -1,5 +1,5 @@
 # metric_direction: higher_is_better
-# build: kanban-board (local real-time autoresearch board)  run: 260628-0051  verified live via gstack /browse on :4317
+# build: kanban-board (local real-time forge board)  run: 260628-0051  verified live via gstack /browse on :4317
 spec	dimension	assertion	weight	status	detail
 kanban-board	functional	server boots on 127.0.0.1	2	pass	/healthz 200, GET / 200
 kanban-board	functional	discover + switch runs	2	pass	/api/runs lists live-demo + real runs; switcher works

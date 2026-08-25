@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Release script for autoresearch plugin.
+# Release script for forge plugin.
 # Creates a release branch, bumps versions, prompts for doc review,
 # creates a detailed PR, and merges only after confirmation.
 #
@@ -75,7 +75,7 @@ fi
 # Read current version
 CURRENT=$(grep -o '"version": "[^"]*"' "$PLUGIN_JSON" | cut -d'"' -f4)
 echo ""
-echo "=== autoresearch release ==="
+echo "=== forge release ==="
 echo "  Current version: $CURRENT"
 echo "  New version:     $VERSION"
 echo "  Tag:             $TAG"
@@ -100,7 +100,7 @@ for JSON_FILE in "$PLUGIN_JSON" "$MARKETPLACE_JSON"; do
 done
 
 # --- Bump version in distribution SKILL.md ---
-DIST_SKILL="claude-plugin/skills/autoresearch/SKILL.md"
+DIST_SKILL="claude-plugin/skills/forge/SKILL.md"
 if [[ -f "$DIST_SKILL" ]] && grep -q "^version:" "$DIST_SKILL"; then
   echo "    Updating $DIST_SKILL"
   if [[ "$(uname)" == "Darwin" ]]; then
@@ -111,7 +111,7 @@ if [[ -f "$DIST_SKILL" ]] && grep -q "^version:" "$DIST_SKILL"; then
 fi
 
 # --- Bump version in SKILL.md frontmatter ---
-SKILL_FILE=".claude/skills/autoresearch/SKILL.md"
+SKILL_FILE=".claude/skills/forge/SKILL.md"
 if [[ -f "$SKILL_FILE" ]] && grep -q "^version:" "$SKILL_FILE"; then
   echo "    Updating $SKILL_FILE"
   if [[ "$(uname)" == "Darwin" ]]; then
@@ -136,15 +136,15 @@ done
 # --- Sync distribution files from .claude/ to claude-plugin/ ---
 echo ""
 echo "[3/7] Syncing distribution files to claude-plugin/"
-if [[ -d ".claude/commands/autoresearch" ]]; then
-  cp .claude/commands/autoresearch.md claude-plugin/commands/autoresearch.md
-  cp .claude/commands/autoresearch/*.md claude-plugin/commands/autoresearch/
-  echo "    Synced claude-plugin/commands/autoresearch/"
+if [[ -d ".claude/commands/forge" ]]; then
+  cp .claude/commands/forge.md claude-plugin/commands/forge.md
+  cp .claude/commands/forge/*.md claude-plugin/commands/forge/
+  echo "    Synced claude-plugin/commands/forge/"
 fi
-if [[ -d ".claude/skills/autoresearch" ]]; then
-  cp .claude/skills/autoresearch/SKILL.md claude-plugin/skills/autoresearch/SKILL.md
-  cp .claude/skills/autoresearch/references/*.md claude-plugin/skills/autoresearch/references/
-  echo "    Synced claude-plugin/skills/autoresearch/"
+if [[ -d ".claude/skills/forge" ]]; then
+  cp .claude/skills/forge/SKILL.md claude-plugin/skills/forge/SKILL.md
+  cp .claude/skills/forge/references/*.md claude-plugin/skills/forge/references/
+  echo "    Synced claude-plugin/skills/forge/"
 fi
 
 # --- Doc review prompt ---

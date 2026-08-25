@@ -11,7 +11,7 @@ Copy-paste configurations organized by domain. Every example uses v2.1.0 syntax 
 ### Increase test coverage
 
 ```
-/autoresearch
+/forge
 Iterations: 20
 Goal: Increase test coverage from 72% to 90%
 Scope: src/**/*.test.ts, src/**/*.ts
@@ -22,7 +22,7 @@ Verify: npm test -- --coverage | grep "All files"
 ### Reduce bundle size
 
 ```
-/autoresearch
+/forge
 Iterations: 15
 Goal: Reduce production bundle size below 200KB
 Scope: src/**/*.tsx, src/**/*.ts
@@ -34,7 +34,7 @@ Guard: npm test
 ### API performance (p95 latency)
 
 ```
-/autoresearch
+/forge
 Iterations: 20
 Goal: API response time under 100ms (p95)
 Scope: src/api/**/*.ts, src/services/**/*.ts
@@ -46,7 +46,7 @@ Guard: npm test
 ### Eliminate TypeScript `any` types
 
 ```
-/autoresearch
+/forge
 Iterations: 25
 Goal: Eliminate all TypeScript `any` types
 Scope: src/**/*.ts
@@ -58,7 +58,7 @@ Guard: tsc --noEmit
 ### Fix flaky tests
 
 ```
-/autoresearch
+/forge
 Iterations: 10
 Goal: Zero flaky tests — all tests pass 5 consecutive runs
 Scope: src/**/*.test.ts
@@ -69,7 +69,7 @@ Verify: for i in {1..5}; do npm test 2>&1; done | grep -c "FAIL"
 ### Lighthouse performance score
 
 ```
-/autoresearch
+/forge
 Iterations: 20
 Goal: Lighthouse performance score 95+
 Scope: src/components/**/*.tsx, src/app/**/*.tsx
@@ -81,18 +81,18 @@ Guard: npx playwright test
 ### Debug → fix → ship (incident pipeline)
 
 ```
-/autoresearch:debug --fix --severity high
+/forge:debug --fix --severity high
 Scope: src/**/*.ts
 Symptom: Payment confirmations silently failing
 Iterations: 20
 
-/autoresearch:ship --type code-pr --auto
+/forge:ship --type code-pr --auto
 ```
 
 ### Security audit + auto-fix
 
 ```
-/autoresearch:security --diff --fix --fail-on critical
+/forge:security --diff --fix --fail-on critical
 Iterations: 15
 ```
 
@@ -103,7 +103,7 @@ Iterations: 15
 ### Increase pytest coverage
 
 ```
-/autoresearch
+/forge
 Iterations: 30
 Goal: Increase pytest coverage from 68% to 90%
 Scope: tests/**/*.py, app/**/*.py
@@ -114,7 +114,7 @@ Verify: pytest --cov=app --cov-report=term-missing 2>&1 | grep "TOTAL" | awk '{p
 ### Reduce Django N+1 queries
 
 ```
-/autoresearch
+/forge
 Iterations: 15
 Goal: Eliminate N+1 queries — reduce total DB queries per request
 Scope: app/views/**/*.py, app/models/**/*.py
@@ -126,7 +126,7 @@ Guard: pytest
 ### Fix mypy strict errors
 
 ```
-/autoresearch:fix --target "mypy app/ --strict"
+/forge:fix --target "mypy app/ --strict"
 Guard: pytest
 Iterations: 25
 ```
@@ -134,7 +134,7 @@ Iterations: 25
 ### FastAPI response time
 
 ```
-/autoresearch
+/forge
 Iterations: 20
 Goal: Reduce p95 response time to under 50ms
 Scope: app/routers/**/*.py, app/services/**/*.py
@@ -150,7 +150,7 @@ Guard: pytest
 ### Increase test coverage
 
 ```
-/autoresearch
+/forge
 Iterations: 25
 Goal: Increase test coverage to 85%
 Scope: **/*.go
@@ -161,7 +161,7 @@ Verify: go test ./... -coverprofile=cover.out && go tool cover -func=cover.out |
 ### Benchmark optimization
 
 ```
-/autoresearch
+/forge
 Iterations: 20
 Goal: Improve hot-path benchmark by 2x
 Scope: internal/parser/**/*.go
@@ -173,7 +173,7 @@ Guard: go test ./...
 ### Fix vet + staticcheck errors
 
 ```
-/autoresearch:fix --target "go vet ./... && staticcheck ./..."
+/forge:fix --target "go vet ./... && staticcheck ./..."
 Guard: go test ./...
 Iterations: 15
 ```
@@ -185,7 +185,7 @@ Iterations: 15
 ### Increase test coverage
 
 ```
-/autoresearch
+/forge
 Iterations: 20
 Goal: Increase test coverage to 80%
 Scope: src/**/*.rs
@@ -196,7 +196,7 @@ Verify: cargo tarpaulin --out Stdout 2>&1 | grep "coverage" | awk '{print $2}'
 ### Criterion benchmark optimization
 
 ```
-/autoresearch
+/forge
 Iterations: 25
 Goal: Reduce p95 request handling time
 Scope: src/handlers/**/*.rs
@@ -208,7 +208,7 @@ Guard: cargo test
 ### Fix clippy warnings
 
 ```
-/autoresearch:fix --target "cargo clippy -- -D warnings"
+/forge:fix --target "cargo clippy -- -D warnings"
 Guard: cargo test
 Iterations: 20
 ```
@@ -220,7 +220,7 @@ Iterations: 20
 ### Cold email optimization
 
 ```
-/autoresearch
+/forge
 Iterations: 15
 Goal: Improve cold email reply rate prediction score
 Scope: content/email-templates/*.md
@@ -231,7 +231,7 @@ Verify: node scripts/score-email-template.js
 ### Objection handling docs
 
 ```
-/autoresearch
+/forge
 Iterations: 20
 Goal: Cover all 20 common objections with responses under 50 words each
 Scope: content/objection-responses.md
@@ -242,14 +242,14 @@ Verify: node scripts/score-objections.js
 ### Ship a sales proposal
 
 ```
-/autoresearch:ship --type sales
+/forge:ship --type sales
 Target: proposals/enterprise-q1.md
 ```
 
 ### Sales edge case scenarios
 
 ```
-/autoresearch:scenario --domain business --depth deep
+/forge:scenario --domain business --depth deep
 Scenario: Enterprise customer evaluates SaaS during procurement with 5 stakeholders
 Iterations: 25
 ```
@@ -261,7 +261,7 @@ Iterations: 25
 ### Blog SEO score
 
 ```
-/autoresearch
+/forge
 Iterations: 25
 Goal: Maximize SEO score for target keywords
 Scope: content/blog/*.md
@@ -272,7 +272,7 @@ Verify: node scripts/seo-score.js --file content/blog/target-post.md
 ### Readability optimization
 
 ```
-/autoresearch
+/forge
 Iterations: 15
 Goal: Maximize Flesch readability + keyword density for "AI automation"
 Scope: content/landing-pages/ai-automation.md
@@ -283,7 +283,7 @@ Verify: node scripts/content-score.js content/landing-pages/ai-automation.md
 ### Meta descriptions batch
 
 ```
-/autoresearch
+/forge
 Iterations: 20
 Goal: All blog posts have meta descriptions under 160 chars with target keyword
 Scope: content/blog/*.md
@@ -294,7 +294,7 @@ Verify: node scripts/meta-description-audit.js
 ### Ship blog content
 
 ```
-/autoresearch:ship --type content
+/forge:ship --type content
 Target: content/blog/my-new-post.md
 ```
 
@@ -305,7 +305,7 @@ Target: content/blog/my-new-post.md
 ### Email campaign optimization
 
 ```
-/autoresearch
+/forge
 Iterations: 20
 Goal: Optimize 7-day nurture sequence for clarity and CTA strength
 Scope: content/email-sequences/onboarding/*.md
@@ -316,7 +316,7 @@ Verify: node scripts/score-email-sequence.js onboarding
 ### Landing page CRO
 
 ```
-/autoresearch
+/forge
 Iterations: 15
 Goal: Maximize landing page quality score
 Scope: content/landing-pages/product-launch.md
@@ -327,7 +327,7 @@ Verify: node scripts/cro-score.js content/landing-pages/product-launch.md
 ### Google Ads headlines
 
 ```
-/autoresearch
+/forge
 Iterations: 30
 Goal: Generate 50 ad headline variants (max 30 chars) with power words + CTA
 Scope: content/ads/google-search/*.md
@@ -338,7 +338,7 @@ Verify: node scripts/google-ads-validator.js --type headlines
 ### Ship email campaign
 
 ```
-/autoresearch:ship --type marketing-email
+/forge:ship --type marketing-email
 Target: content/emails/product-launch-campaign.html
 ```
 
@@ -349,7 +349,7 @@ Target: content/emails/product-launch-campaign.html
 ### Improve scraper success rate
 
 ```
-/autoresearch
+/forge
 Iterations: 25
 Goal: Increase scraper success rate from 85% to 99%
 Scope: scrapers/**/*.py
@@ -361,7 +361,7 @@ Guard: python -m pytest tests/scrapers/
 ### Scraping edge cases
 
 ```
-/autoresearch:scenario --domain software --focus edge-cases
+/forge:scenario --domain software --focus edge-cases
 Scenario: Web scraper encounters anti-bot measures, dynamic content, and rate limiting
 Iterations: 20
 ```
@@ -369,7 +369,7 @@ Iterations: 20
 ### Debug scraper failures
 
 ```
-/autoresearch:debug
+/forge:debug
 Scope: scrapers/**/*.py
 Symptom: Scraper fails on paginated results after page 5 with 403 errors
 Iterations: 10
@@ -382,7 +382,7 @@ Iterations: 10
 ### Reduce Docker image size
 
 ```
-/autoresearch
+/forge
 Iterations: 10
 Goal: Reduce Docker image size below 100MB
 Scope: Dockerfile, .dockerignore
@@ -393,7 +393,7 @@ Verify: docker build -t bench . 2>&1 && docker images bench --format "{{.Size}}"
 ### Optimize CI/CD pipeline duration
 
 ```
-/autoresearch
+/forge
 Iterations: 15
 Goal: Reduce CI/CD pipeline from 12 minutes to under 5 minutes
 Scope: .github/workflows/*.yml, Dockerfile
@@ -405,7 +405,7 @@ Guard: docker compose up -d && sleep 5 && curl -sf http://localhost:3000/health
 ### Infrastructure security audit
 
 ```
-/autoresearch:security
+/forge:security
 Scope: Dockerfile, docker-compose.yml, .github/workflows/**/*.yml, k8s/**/*.yaml
 Focus: exposed secrets, container privileges, network policies
 Iterations: 12
@@ -414,7 +414,7 @@ Iterations: 12
 ### Ship a deployment
 
 ```
-/autoresearch:ship --type deployment --monitor 10
+/forge:ship --type deployment --monitor 10
 ```
 
 ### Nightly optimization (GitHub Actions)
@@ -432,7 +432,7 @@ jobs:
       - run: npm ci
       - name: Run overnight loop
         run: |
-          claude -p "/autoresearch
+          claude -p "/forge
           Iterations: 50
           Goal: Improve test coverage and reduce bundle size
           Scope: src/**/*.ts
@@ -440,7 +440,7 @@ jobs:
           Guard: npm run build
           --evals"
       - name: Create PR with improvements
-        run: claude -p "/autoresearch:ship --type code-pr --auto"
+        run: claude -p "/forge:ship --type code-pr --auto"
 ```
 
 ---
@@ -450,7 +450,7 @@ jobs:
 ### Training loss reduction
 
 ```
-/autoresearch
+/forge
 Iterations: unlimited
 Goal: Reduce validation loss (val_bpb)
 Scope: train.py, model.py
@@ -461,7 +461,7 @@ Verify: uv run train.py --epochs 1 2>&1 | grep "val_bpb" | tail -1 | awk '{print
 ### ML model accuracy
 
 ```
-/autoresearch
+/forge
 Iterations: 25
 Goal: Improve classification accuracy from 85% to 95%
 Scope: model.py, config.yaml, data/augmentation.py
@@ -472,7 +472,7 @@ Guard: python -m pytest tests/test_model.py -q
 ### SQL query optimization
 
 ```
-/autoresearch
+/forge
 Iterations: 15
 Goal: Reduce total query execution time for dashboard queries
 Scope: queries/dashboard/*.sql
@@ -487,7 +487,7 @@ Verify: psql -f scripts/bench-queries.sql | grep "total_ms"
 ### WCAG 2.1 AA compliance
 
 ```
-/autoresearch
+/forge
 Iterations: 25
 Goal: Reach WCAG 2.1 AA — zero axe violations
 Scope: src/components/**/*.tsx
@@ -498,7 +498,7 @@ Verify: npx playwright test a11y.spec.ts | grep "violations"
 ### Replace hardcoded colors with design tokens
 
 ```
-/autoresearch
+/forge
 Iterations: 20
 Goal: Replace all hardcoded colors/spacing with design tokens
 Scope: src/**/*.tsx, src/**/*.css
@@ -513,7 +513,7 @@ Verify: grep -rE "#[0-9a-fA-F]{3,6}|px\b" src/ --include="*.tsx" --include="*.cs
 ### Job description clarity
 
 ```
-/autoresearch
+/forge
 Iterations: 15
 Goal: Improve job descriptions — bias-free language, clear requirements, inclusive tone
 Scope: content/job-descriptions/*.md
@@ -524,7 +524,7 @@ Verify: node scripts/jd-inclusivity-score.js
 ### Policy readability
 
 ```
-/autoresearch
+/forge
 Iterations: 10
 Goal: Reduce average reading level of HR policies to grade 8
 Scope: content/policies/*.md
@@ -535,7 +535,7 @@ Verify: node scripts/readability.js content/policies/
 ### Hiring process scenarios
 
 ```
-/autoresearch:scenario --domain business --depth deep
+/forge:scenario --domain business --depth deep
 Scenario: Candidate moves through interview process from application to offer
 Iterations: 25
 ```
@@ -547,26 +547,26 @@ Iterations: 25
 ### Generate docs for a new codebase
 
 ```
-/autoresearch:learn --mode init --depth deep
+/forge:learn --mode init --depth deep
 ```
 
 ### Update docs after a sprint
 
 ```
-/autoresearch:learn --mode update
+/forge:learn --mode update
 ```
 
 ### Check docs health before release
 
 ```
-/autoresearch:learn --mode check
+/forge:learn --mode check
 ```
 
 ### Docs → security pipeline
 
 ```
-/autoresearch:learn --mode init
-/autoresearch:security
+/forge:learn --mode init
+/forge:security
 Iterations: 15
 ```
 
@@ -585,4 +585,4 @@ Iterations: 15
 | Blog/content | Readability score | `content/*.md` | Custom script | — |
 | Performance | Benchmark (ms) | Target files | `npm run bench` | `npm test` |
 | DevOps | Pipeline minutes | `*.yml` | `gh run list` | Health check |
-| Security | OWASP + STRIDE | API/auth | `/autoresearch:security` | — |
+| Security | OWASP + STRIDE | API/auth | `/forge:security` | — |

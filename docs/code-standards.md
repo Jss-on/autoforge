@@ -8,8 +8,8 @@ This project is entirely **markdown-based** with shell script helpers. There is 
 
 - **kebab-case** for all file names: `security-checklist.md`, `transform.sh`
 - Names should be descriptive enough that an LLM understands purpose without reading content
-- Command files match their command name: `debug.md` for `/autoresearch:debug`
-- OpenCode distribution uses underscores: `autoresearch_debug.md`
+- Command files match their command name: `debug.md` for `/forge:debug`
+- OpenCode distribution uses underscores: `forge_debug.md`
 
 ## SKILL.md Pattern (v2.1.0)
 
@@ -24,7 +24,7 @@ Target: ~41 lines. All protocol lives in the command files.
 
 ## Command File Pattern (v2.1.0)
 
-Each command file (`.claude/commands/autoresearch/*.md`) is **self-contained**:
+Each command file (`.claude/commands/forge/*.md`) is **self-contained**:
 - YAML frontmatter: `name`, `description`, `argument-hint`
 - `EXECUTE IMMEDIATELY` header — no deliberation before reading
 - Parse Arguments section — extract all flags inline
@@ -38,7 +38,7 @@ Target: 94–120 lines per command file. Never split protocol across files unles
 
 ## Reference Files Pattern (v2.1.0)
 
-Reference files (`.claude/skills/autoresearch/references/`) are for **shared content only**:
+Reference files (`.claude/skills/forge/references/`) are for **shared content only**:
 - Loaded explicitly by the command file that needs them
 - Must be referenced by 3+ commands to justify existence as a reference
 - Current 3 references: `predict-personas.md`, `reason-judge-protocol.md`, `security-checklist.md`
@@ -63,7 +63,7 @@ The `# metric_direction` comment on line 1 enables the evals command to auto-det
 
 - Version tracked in **two** plugin.json files:
   - `claude-plugin/.claude-plugin/plugin.json` — Claude Code (e.g. `2.1.0`)
-  - `plugins/autoresearch/.codex-plugin/plugin.json` — Codex (e.g. `2.1.0-codex.0`)
+  - `plugins/forge/.codex-plugin/plugin.json` — Codex (e.g. `2.1.0-codex.0`)
 - Version also appears in SKILL.md frontmatter and README badges
 - `scripts/release.sh` automates version bumping across all touchpoints
 
@@ -82,7 +82,7 @@ Source of truth is `.claude/`. To update OpenCode or Codex distributions:
 2. Run `scripts/transform.sh` to regenerate platform distributions
 3. Commit all generated files together
 
-Do not hand-edit `.opencode/` or `plugins/autoresearch/` files directly.
+Do not hand-edit `.opencode/` or `plugins/forge/` files directly.
 
 ## Documentation Standards
 

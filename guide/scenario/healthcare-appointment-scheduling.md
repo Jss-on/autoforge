@@ -7,7 +7,7 @@
 ## The Command
 
 ```
-/autoresearch:scenario --domain business --depth deep
+/forge:scenario --domain business --depth deep
 Scenario: Patient books a medical appointment through an online portal — selects provider, picks available slot, verifies insurance, receives confirmation, with cancellation and rescheduling
 Iterations: 35
 ```
@@ -175,7 +175,7 @@ Patient ends up with two appointments on the same day. Misses one and is charged
 ### scenario → security
 ```bash
 # HIPAA compliance audit on the scheduling system
-/autoresearch:security
+/forge:security
 Scope: src/appointments/**, src/patients/**, src/notifications/**
 Focus: PHI exposure, access controls, audit logging, HIPAA compliance
 Iterations: 20
@@ -183,19 +183,19 @@ Iterations: 20
 
 ### scenario → debug → fix
 ```bash
-/autoresearch:debug
+/forge:debug
 Scope: src/appointments/**, src/insurance/**
 Symptom: Temporal and state transition bugs — pre-auth expiry, double-booking, timezone mismatches
 Iterations: 15
 
-/autoresearch:fix --from-debug
+/forge:fix --from-debug
 Guard: npm test
 Iterations: 20
 ```
 
 ### predict → scenario (comprehensive)
 ```bash
-/autoresearch:predict --chain scenario,security,fix,ship
+/forge:predict --chain scenario,security,fix,ship
 Scope: src/appointments/**
 Goal: Ensure appointment scheduling handles all edge cases and is HIPAA-compliant before launch
 ```
@@ -206,14 +206,14 @@ Goal: Ensure appointment scheduling handles all edge cases and is HIPAA-complian
 
 **Run with `--domain business` not `--domain software`.** Healthcare scheduling bugs are process bugs, not just code bugs. Business domain produces scenarios in stakeholder language that maps directly to compliance requirements and process documentation.
 
-**Always follow up with a security audit.** Any system handling PHI (Protected Health Information) needs `/autoresearch:security` focused on data access, audit logging, and communication templates. HIPAA violations carry fines of $100-$50,000 per violation.
+**Always follow up with a security audit.** Any system handling PHI (Protected Health Information) needs `/forge:security` focused on data access, audit logging, and communication templates. HIPAA violations carry fines of $100-$50,000 per violation.
 
-**Timezone is a first-class concern.** Telehealth has made timezone bugs a top-5 scheduling issue. Run a dedicated shallow scenario just for timezones: `/autoresearch:scenario --depth shallow --focus edge-cases` with `Scenario: Telehealth appointment across timezones including DST transition`.
+**Timezone is a first-class concern.** Telehealth has made timezone bugs a top-5 scheduling issue. Run a dedicated shallow scenario just for timezones: `/forge:scenario --depth shallow --focus edge-cases` with `Scenario: Telehealth appointment across timezones including DST transition`.
 
 ---
 
 <div align="center">
 
-**[Scenario Guides](README.md)** | **[Scenario Command Reference](../autoresearch-scenario.md)** | **[Chains & Combinations](../chains-and-combinations.md)**
+**[Scenario Guides](README.md)** | **[Scenario Command Reference](../forge-scenario.md)** | **[Chains & Combinations](../chains-and-combinations.md)**
 
 </div>

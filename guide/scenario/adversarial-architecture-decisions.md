@@ -7,7 +7,7 @@
 ## The Command
 
 ```
-/autoresearch:reason
+/forge:reason
 Task: Should we use event sourcing for our order management system?
 Domain: software
 Iterations: 8
@@ -19,7 +19,7 @@ Iterations: 8
 
 Architecture decisions don't have a single right answer — they depend on tradeoffs the team values differently. Event sourcing is a prime example: it solves audit trails and temporal queries elegantly, but introduces eventual consistency, operational complexity, and team expertise requirements that can sink projects.
 
-`autoresearch:reason` runs an adversarial loop: generate, critique, generate-again, synthesize, then let a judge panel pick the winner. Each round, the incumbent must survive critique or lose to the challenger. By round 8, the surviving architecture has been stress-tested against every objection the critic could raise.
+`forge:reason` runs an adversarial loop: generate, critique, generate-again, synthesize, then let a judge panel pick the winner. Each round, the incumbent must survive critique or lose to the challenger. By round 8, the surviving architecture has been stress-tested against every objection the critic could raise.
 
 **Why event sourcing is a good test case:**
 - High upside: audit trail, replay, temporal queries, decoupled consumers
@@ -220,18 +220,18 @@ The surviving design after 8 rounds of adversarial refinement:
 
 ```
 # After convergence, validate the design
-/autoresearch:predict --chain debug
+/forge:predict --chain debug
 Scope: src/orders/**
 Goal: Validate event sourcing proposal from reason loop
 
 # Explore edge cases in the proposed design
-/autoresearch:scenario
+/forge:scenario
 Scenario: Event sourcing for order management with hybrid CRUD
 Domain: software
 Depth: deep
 
 # If implementing, plan it out
-/autoresearch:reason --chain plan
+/forge:reason --chain plan
 Task: Implement the converged event sourcing architecture
 ```
 
@@ -262,7 +262,7 @@ The adversarial refinement loop is not specific to software architecture. Change
 
 **Product strategy — which feature to build next:**
 ```
-/autoresearch:reason
+/forge:reason
 Task: Should we build a native mobile app or optimize the web experience?
 Domain: product
 Iterations: 6
@@ -271,7 +271,7 @@ The critic will attack market sizing assumptions, competitive dynamics, and reso
 
 **Business decisions — pricing model:**
 ```
-/autoresearch:reason
+/forge:reason
 Task: Should we move from per-seat to usage-based pricing?
 Domain: business
 Judges: 5
@@ -281,7 +281,7 @@ Five judges simulate board-level disagreement. Convergence requires broader cons
 
 **Security approach — authentication architecture:**
 ```
-/autoresearch:reason --chain security
+/forge:reason --chain security
 Task: Should we implement passkeys or stick with password + TOTP?
 Domain: security
 Iterations: 6
@@ -290,7 +290,7 @@ The `--chain security` flag routes the converged design directly into a security
 
 **Content refinement — technical blog post:**
 ```
-/autoresearch:reason
+/forge:reason
 Task: Draft a technical explanation of event sourcing for engineering candidates
 Domain: content
 Mode: creative

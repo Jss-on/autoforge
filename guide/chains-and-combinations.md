@@ -1,8 +1,8 @@
 # Chains & Combinations — Multi-Command Pipelines
 
-The real power of autoresearch comes from chaining commands. Each command's output feeds the next via `handoff.json` — zero copy-pasting, zero context loss.
+The real power of forge comes from chaining commands. Each command's output feeds the next via `handoff.json` — zero copy-pasting, zero context loss.
 
-> **Autonomous orchestrator:** If you don't know which chain to use, type a plain-language goal to `/autoresearch` (e.g., `/autoresearch help me fix this bug`) and the orchestrator selects and runs the right chain for you automatically. The manual chains documented here still work exactly as before — the orchestrator picks them on your behalf when you prefer not to. See [/autoresearch — Orchestrator](autoresearch-orchestrator.md).
+> **Autonomous orchestrator:** If you don't know which chain to use, type a plain-language goal to `/forge` (e.g., `/forge help me fix this bug`) and the orchestrator selects and runs the right chain for you automatically. The manual chains documented here still work exactly as before — the orchestrator picks them on your behalf when you prefer not to. See [/forge — Orchestrator](forge-orchestrator.md).
 
 ---
 
@@ -55,10 +55,10 @@ Downstream commands read this file to initialize — never reconstructing contex
 ## Inline Chain Syntax
 
 ```
-/autoresearch:predict --chain debug
-/autoresearch:predict --chain scenario,debug,fix,ship
-/autoresearch:reason --chain predict,scenario
-/autoresearch:probe --chain plan
+/forge:predict --chain debug
+/forge:predict --chain scenario,debug,fix,ship
+/forge:reason --chain predict,scenario
+/forge:probe --chain plan
 ```
 
 Comma-separated targets execute sequentially. Each stage's output feeds directly into the next.
@@ -72,15 +72,15 @@ Comma-separated targets execute sequentially. Each stage's output feeds directly
 **When to use:** Requirements are fuzzy before starting.
 
 ```
-/autoresearch:probe
+/forge:probe
 Topic: Reduce p95 latency on /search to under 50ms
 
-# Saturates after ~12 rounds, emits autoresearch-config.yml
+# Saturates after ~12 rounds, emits forge-config.yml
 
-/autoresearch:plan
+/forge:plan
 Goal: (from probe output)
 
-/autoresearch
+/forge
 Iterations: 25
 Goal: Reduce p95 search latency below 50ms
 Scope: src/search/**/*.ts
@@ -96,12 +96,12 @@ Guard: npm test
 **When to use:** Something is broken and you want it found AND fixed.
 
 ```
-/autoresearch:debug
+/forge:debug
 Scope: src/**/*.ts
 Symptom: Multiple test failures after dependency upgrade
 Iterations: 15
 
-/autoresearch:fix --from-debug
+/forge:fix --from-debug
 Guard: npm test
 Iterations: 30
 ```
@@ -109,7 +109,7 @@ Iterations: 30
 **Shortcut:**
 
 ```
-/autoresearch:debug --fix
+/forge:debug --fix
 Scope: src/**/*.ts
 Iterations: 30
 ```
@@ -121,7 +121,7 @@ Iterations: 30
 **When to use:** Intermittent failures, "works on my machine" bugs.
 
 ```
-/autoresearch:predict --chain debug
+/forge:predict --chain debug
 Scope: src/auth/**
 Goal: Investigate intermittent 500 errors on POST /login
 ```
@@ -136,16 +136,16 @@ With predict: 5 experts debate → ranked hypotheses → debug tests in order �
 **When to use:** Feature works but you want edge case coverage.
 
 ```
-/autoresearch:scenario --domain software --focus edge-cases
+/forge:scenario --domain software --focus edge-cases
 Scenario: User uploads files through drag-and-drop
 Iterations: 20
 
-/autoresearch:debug
+/forge:debug
 Scope: src/upload/**/*.ts
 Symptom: edge cases from scenario — concurrent uploads, large files, network drops
 Iterations: 15
 
-/autoresearch:fix --from-debug
+/forge:fix --from-debug
 Guard: npm test
 Iterations: 20
 ```
@@ -157,23 +157,23 @@ Iterations: 20
 **When to use:** Pre-release security hardening.
 
 ```
-/autoresearch:security --fail-on high
+/forge:security --fail-on high
 Iterations: 15
 
-/autoresearch:fix --from-debug
+/forge:fix --from-debug
 Guard: npm test
 Iterations: 20
 
-/autoresearch:security --diff
+/forge:security --diff
 Iterations: 10
 
-/autoresearch:ship --type code-release
+/forge:ship --type code-release
 ```
 
 **Shortcut:**
 
 ```
-/autoresearch:security --fix --fail-on critical
+/forge:security --fix --fail-on critical
 Iterations: 25
 ```
 
@@ -184,14 +184,14 @@ Iterations: 25
 **When to use:** Optimize a metric, analyze results, then ship.
 
 ```
-/autoresearch
+/forge
 Iterations: 25
 Goal: Reduce bundle size below 200KB
 Verify: npm run build 2>&1 | grep "First Load JS"
 Guard: npm test
 --evals
 
-/autoresearch:ship --type code-pr --auto
+/forge:ship --type code-pr --auto
 ```
 
 ---
@@ -201,7 +201,7 @@ Guard: npm test
 **When to use:** New feature launch, major release, zero context loss.
 
 ```
-/autoresearch:predict --chain scenario,debug,security,fix,ship
+/forge:predict --chain scenario,debug,security,fix,ship
 Scope: src/**
 Goal: Full quality pipeline for v2.0 release
 ```
@@ -221,7 +221,7 @@ What happens:
 **When to use:** Subjective design decision that needs empirical validation.
 
 ```
-/autoresearch:reason --chain predict,fix
+/forge:reason --chain predict,fix
 Task: Design the caching strategy for our high-traffic API
 Domain: software
 Iterations: 6
@@ -238,7 +238,7 @@ Iterations: 6
 **When to use:** Unknown requirements + unknown edge cases + bugs.
 
 ```
-/autoresearch:probe --chain scenario,debug,fix --scope src/payments/**
+/forge:probe --chain scenario,debug,fix --scope src/payments/**
 Topic: Harden checkout against partial-failure modes
 ```
 
@@ -251,7 +251,7 @@ probe surfaces constraints → scenario enumerates situations → debug hunts bu
 **When to use:** Requirements are fuzzy AND you need product direction.
 
 ```
-/autoresearch:probe --improve
+/forge:probe --improve
 Topic: Improve checkout conversion for enterprise B2B SaaS
 ```
 
@@ -264,7 +264,7 @@ probe surfaces constraints → improve reads them as seeds → researches ICP ch
 **When to use:** Get expert perspectives, then research improvements.
 
 ```
-/autoresearch:predict --improve
+/forge:predict --improve
 Scope: src/**
 Goal: What should we build next for our enterprise customers?
 ```
@@ -277,17 +277,17 @@ predict identifies risk areas and opportunities → improve uses predictions to 
 
 ```
 # Document first, then audit
-/autoresearch:learn --mode init
-/autoresearch:security
+/forge:learn --mode init
+/forge:security
 
 # Check → update (conditional)
-/autoresearch:learn --mode check
+/forge:learn --mode check
 # If report says "Stale":
-/autoresearch:learn --mode update
+/forge:learn --mode update
 
 # Document, then ship docs PR
-/autoresearch:learn --mode update
-/autoresearch:ship --type code-pr
+/forge:learn --mode update
+/forge:ship --type code-pr
 ```
 
 ---
@@ -311,7 +311,7 @@ predict identifies risk areas and opportunities → improve uses predictions to 
 
 ```
 improve  →  research-findings.md, improvement-plan.md, prd-*.md, handoff.json (terminal)
-probe    →  constraints.tsv, autoresearch-config.yml, handoff.json
+probe    →  constraints.tsv, forge-config.yml, handoff.json
 predict  →  ranked findings, hypothesis queue, handoff.json
 scenario →  edge cases, failure modes, use case map
 debug    →  bug list with file:line, severity ratings

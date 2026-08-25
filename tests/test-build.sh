@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Test harness for autoresearch:build — score-build.sh (pass-rate + rubric),
+# Test harness for forge:build — score-build.sh (pass-rate + rubric),
 # the build.md spec, mirror parity, manifest count, hardening checklist, eval specs.
 set -uo pipefail
 
@@ -12,8 +12,8 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 SCORE_SH="$REPO_ROOT/scripts/score-build.sh"
 FIX="$REPO_ROOT/tests/fixtures/build"
-SPEC="$REPO_ROOT/claude-plugin/commands/autoresearch/build.md"
-CHECKLIST="$REPO_ROOT/claude-plugin/skills/autoresearch/references/fullstack-hardening-checklist.md"
+SPEC="$REPO_ROOT/claude-plugin/commands/forge/build.md"
+CHECKLIST="$REPO_ROOT/claude-plugin/skills/forge/references/fullstack-hardening-checklist.md"
 EVALS="$REPO_ROOT/evals/fullstack"
 RUBRIC_TARGET="${BUILD_RUBRIC_TARGET:-32}"
 
@@ -154,7 +154,7 @@ spec_has "sourcing ladder|CC0"                    "spec: asset sourcing ladder"
 spec_has "50 MB|LFS"                              "spec: size discipline / LFS rule"
 spec_has "seeded RNG|window\.__game"              "spec: determinism seams for canvas"
 spec_has "game edition of"                        "spec: game edition of anti-demo"
-GPROTO="$REPO_ROOT/claude-plugin/skills/autoresearch/references/game-assets-protocol.md"
+GPROTO="$REPO_ROOT/claude-plugin/skills/forge/references/game-assets-protocol.md"
 [[ -f "$GPROTO" ]] && pass "protocol: game-assets reference exists" || fail "protocol: game-assets reference exists"
 gproto_has() { grep -qiE -- "$1" "$GPROTO" 2>/dev/null && pass "$2" || fail "$2 (protocol missing /$1/)"; }
 gproto_has "Kenney"                               "protocol: CC0 pack sources named"
@@ -165,10 +165,10 @@ gproto_has "pure and headless|logic/render split" "protocol: logic/render split"
 gproto_has "antialias"                            "protocol: headless MSAA fps gotcha"
 gproto_has "manifest"                             "protocol: asset manifest"
 gproto_has "juice|game feel"                      "protocol: game-feel elicitation"
-for m in "$REPO_ROOT/.claude/skills/autoresearch/references/game-assets-protocol.md" \
-         "$REPO_ROOT/.agents/skills/autoresearch/references/game-assets-protocol.md" \
-         "$REPO_ROOT/plugins/autoresearch/skills/autoresearch/references/game-assets-protocol.md" \
-         "$REPO_ROOT/.opencode/skills/autoresearch/references/game-assets-protocol.md"; do
+for m in "$REPO_ROOT/.claude/skills/forge/references/game-assets-protocol.md" \
+         "$REPO_ROOT/.agents/skills/forge/references/game-assets-protocol.md" \
+         "$REPO_ROOT/plugins/forge/skills/forge/references/game-assets-protocol.md" \
+         "$REPO_ROOT/.opencode/skills/forge/references/game-assets-protocol.md"; do
   if [[ -f "$m" ]] && diff -q "$GPROTO" "$m" >/dev/null 2>&1; then
     pass "game protocol parity: ${m#$REPO_ROOT/}"
   else
@@ -192,10 +192,10 @@ printf '\n--- distribution: mirror parity (5 surfaces byte-identical) ---\n'
 # ============================================================================
 
 MIRRORS=(
-  "$REPO_ROOT/.claude/commands/autoresearch/build.md"
-  "$REPO_ROOT/.agents/skills/autoresearch/build.md"
-  "$REPO_ROOT/plugins/autoresearch/skills/autoresearch/build.md"
-  "$REPO_ROOT/.opencode/commands/autoresearch_build.md"
+  "$REPO_ROOT/.claude/commands/forge/build.md"
+  "$REPO_ROOT/.agents/skills/forge/build.md"
+  "$REPO_ROOT/plugins/forge/skills/forge/build.md"
+  "$REPO_ROOT/.opencode/commands/forge_build.md"
 )
 for m in "${MIRRORS[@]}"; do
   if [[ -f "$m" ]] && diff -q "$SPEC" "$m" >/dev/null 2>&1; then
@@ -211,7 +211,7 @@ printf '\n--- distribution: manifest command count = 15 + build listed ---\n'
 
 for mf in "$REPO_ROOT/.claude-plugin/marketplace.json" \
           "$REPO_ROOT/claude-plugin/.claude-plugin/plugin.json" \
-          "$REPO_ROOT/plugins/autoresearch/.codex-plugin/plugin.json"; do
+          "$REPO_ROOT/plugins/forge/.codex-plugin/plugin.json"; do
   name="${mf#$REPO_ROOT/}"
   grep -q "19 commands" "$mf" && pass "manifest count 19: $name" || fail "manifest count 19: $name"
   grep -q "regression, build" "$mf" && pass "manifest lists build: $name" || fail "manifest lists build: $name"
@@ -269,7 +269,7 @@ printf '\n--- v2.3.1 distribution: version consistency + shipped enforcement ---
 # ============================================================================
 
 # One version, everywhere the user can read one.
-CANON_VER=$(grep -m1 '^version:' "$REPO_ROOT/.claude/skills/autoresearch/SKILL.md" | sed 's/version:[[:space:]]*//')
+CANON_VER=$(grep -m1 '^version:' "$REPO_ROOT/.claude/skills/forge/SKILL.md" | sed 's/version:[[:space:]]*//')
 for vf in "$REPO_ROOT/.claude-plugin/marketplace.json" "$REPO_ROOT/claude-plugin/.claude-plugin/plugin.json"; do
   if grep -q "\"version\": \"$CANON_VER\"" "$vf"; then
     pass "version consistency: ${vf#$REPO_ROOT/} == $CANON_VER"
@@ -277,7 +277,7 @@ for vf in "$REPO_ROOT/.claude-plugin/marketplace.json" "$REPO_ROOT/claude-plugin
     fail "version consistency: ${vf#$REPO_ROOT/} != canonical $CANON_VER"
   fi
 done
-grep -q "\"version\": \"$CANON_VER" "$REPO_ROOT/plugins/autoresearch/.codex-plugin/plugin.json" \
+grep -q "\"version\": \"$CANON_VER" "$REPO_ROOT/plugins/forge/.codex-plugin/plugin.json" \
   && pass "version consistency: codex plugin tracks $CANON_VER" \
   || fail "version consistency: codex plugin off canonical $CANON_VER"
 
@@ -287,13 +287,13 @@ bash "$REPO_ROOT/scripts/doctor.sh" --help >/dev/null 2>&1 && pass "doctor.sh --
 
 # The enforcement layer ships inside the skill dir of every distributed tree —
 # an installed user must get the same mechanical gates as this repo.
-for tree in .claude claude-plugin .opencode .agents plugins/autoresearch; do
-  sdir="$REPO_ROOT/$tree/skills/autoresearch/scripts"
+for tree in .claude claude-plugin .opencode .agents plugins/forge; do
+  sdir="$REPO_ROOT/$tree/skills/forge/scripts"
   ok=1
   for s in score-build.sh score-requirements.sh score-regression.sh orchestrate.sh doctor.sh validate-handoff.sh run-index.sh; do
     [[ -f "$sdir/$s" ]] || ok=0
   done
-  [[ "$ok" -eq 1 ]] && pass "enforcement shipped: $tree/skills/autoresearch/scripts" \
+  [[ "$ok" -eq 1 ]] && pass "enforcement shipped: $tree/skills/forge/scripts" \
                     || fail "enforcement shipped: $tree missing seam scripts"
 done
 
@@ -316,7 +316,7 @@ printf '{"version":"2.3.1","source":"build","timestamp":"t","status":"CONVERGED"
 VH2=0; bash "$VH" "$_ht/noconv.json" >/dev/null 2>&1 || VH2=$?
 assert_eq 1 "$VH2" "validate-handoff: CONVERGED without coverage → INVALID"
 
-printf '{"version":"2.3.1","source":"autoresearch:build","timestamp":"t","status":"COMPLETE","results_tsv":"x","metric":"m","config":{}}' > "$_ht/colon.json"
+printf '{"version":"2.3.1","source":"forge:build","timestamp":"t","status":"COMPLETE","results_tsv":"x","metric":"m","config":{}}' > "$_ht/colon.json"
 VH3=0; bash "$VH" "$_ht/colon.json" >/dev/null 2>&1 || VH3=$?
 assert_eq 1 "$VH3" "validate-handoff: colon-form source → INVALID"
 
@@ -343,7 +343,7 @@ bash "$REPO_ROOT/scripts/smoke-seam.sh" >/dev/null 2>&1 \
   && pass "smoke-seam: full pipeline OK" || fail "smoke-seam: pipeline broken"
 
 # The schema reference ships with the skill.
-[[ -f "$REPO_ROOT/.claude/skills/autoresearch/references/handoff-schema.md" ]] \
+[[ -f "$REPO_ROOT/.claude/skills/forge/references/handoff-schema.md" ]] \
   && pass "handoff-schema.md reference present" || fail "handoff-schema.md missing"
 
 # Every build must create the project's own private GitHub output repo — the
