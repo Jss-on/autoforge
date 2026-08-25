@@ -23,7 +23,7 @@ Inside Claude Code:
 /plugin install forge@autoforge
 ```
 
-All 19 commands are available after restarting Claude Code. Update later with `/plugin marketplace update autoforge`.
+All 20 commands are available after restarting Claude Code. Update later with `/plugin marketplace update autoforge`.
 
 Local-clone alternative: `git clone https://github.com/Jss-on/autoforge && cd autoforge`, then `/plugin marketplace add .` and the same install command.
 

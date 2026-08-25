@@ -100,7 +100,7 @@ Print: feature, baseline→final pass-rate (over the union), new assertions gree
 (must be STABLE), iterations, kept vs reverted slices, and confirmation the delta was ratcheted into the spec.
 
 ## Chain Handoff
-Write handoff.json: version "3.0.0", source "feature", status
+Write handoff.json: version "3.1.0", source "feature", status
 (COMPLETE|CONVERGED|BOUNDED|BLOCKED|USER_INTERRUPT|ERROR), results_tsv, metric (fullstack_pass_rate),
 regression_verdict, findings = remaining red, config{feature, target, spec}. Schema:
 `references/handoff-schema.md`; after writing, `scripts/validate-handoff.sh <run-dir>/handoff.json

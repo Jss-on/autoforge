@@ -120,7 +120,7 @@ The build pipeline adds two software-specific properties on top:
 
 ## 4. The command suite at a glance
 
-AutoForge ships 19 commands. For building software you mostly use the **build pipeline** (bold),
+AutoForge ships 20 commands. For building software you mostly use the **build pipeline** (bold),
 with the others as supporting tools.
 
 | Command | Role in building software |

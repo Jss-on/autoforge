@@ -198,7 +198,7 @@ across 3+ checkpoints → recommend stepping back to `debug` (root-cause quality
 silent grinding.
 
 ## Chain Handoff
-Write handoff.json: version "3.0.0", source "fix", timestamp, status
+Write handoff.json: version "3.1.0", source "fix", timestamp, status
 (COMPLETE|BOUNDED|USER_INTERRUPT|ERROR), results_tsv (iterations.tsv) and/or errors_remaining,
 defects_tsv (the updated ledger copy, defect mode), merge{state: merged|auto-armed|open, pr, sha,
 base_ci}, findings = items still open (with the

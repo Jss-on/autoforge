@@ -202,7 +202,7 @@ Interval: floor(max_iterations / 3), min 1. Print pass-rate trend, execution pro
 A rising arrival curve at the bound → recommend extension or RELEASE_BLOCKED, never silent exit.
 
 ## Chain Handoff
-Write handoff.json: version "3.0.0", source "test", timestamp, status
+Write handoff.json: version "3.1.0", source "test", timestamp, status
 (COMPLETE|BOUNDED|BLOCKED|USER_INTERRUPT|ERROR), results_tsv, defects_tsv, verdict
 (RELEASE_RECOMMENDED|RELEASE_BLOCKED), summary (path), metric (fullstack_pass_rate), coverage,
 findings = unresolved defects + not-tested list, config{target, requirements, types, iterations}.

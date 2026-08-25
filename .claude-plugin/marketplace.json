@@ -1,8 +1,8 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "autoforge",
-  "version": "3.0.0",
-  "description": "AutoForge — autonomous goal-directed software-building harness for Claude Code. 19 commands: iterate, plan, debug, fix, security, ship, scenario, predict, learn, reason, probe, evals, improve, regression, build, requirements, feature, test, design.",
+  "version": "3.1.0",
+  "description": "AutoForge — autonomous goal-directed software-building harness for Claude Code. 20 commands: iterate, plan, debug, fix, security, ship, scenario, predict, learn, reason, probe, evals, improve, regression, build, requirements, feature, test, design, research.",
   "owner": {
     "name": "Jss-on",
     "url": "https://github.com/Jss-on"
@@ -10,8 +10,8 @@
   "plugins": [
     {
       "name": "forge",
-      "description": "Autonomous improvement engine. 19 commands with bounded defaults, chain handoff, and adaptive evals checkpoints. 95% token reduction via modular architecture.",
-      "version": "3.0.0",
+      "description": "Autonomous improvement engine. 20 commands with bounded defaults, chain handoff, and adaptive evals checkpoints. 95% token reduction via modular architecture.",
+      "version": "3.1.0",
       "author": {
         "name": "Jss-on",
         "url": "https://github.com/Jss-on"

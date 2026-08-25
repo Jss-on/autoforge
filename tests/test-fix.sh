@@ -78,7 +78,7 @@ spec_has "Merge: manual|Merge:./--merge"            "spec: Merge argument"
 spec_has "merge state"                              "spec: summary reports merge state"
 spec_has "ship. stays human-gated"                  "spec: merging is not deploying"
 spec_has "validate-handoff\.sh"                     "spec: handoff validated via seam"
-spec_has "\"3\.0\.0\""                              "spec: handoff version 3.0.0"
+spec_has "\"3.1.0\""                              "spec: handoff version 3.1.0"
 spec_has "BOUND: EXCEEDED"                          "spec: mechanical iteration bound"
 spec_has "never deploy|Never deploy"                "spec: deploy human-gated"
 spec_has "localhost/\`_test\`|_test.{0,3}allowlist" "spec: DB allowlist"
@@ -108,7 +108,7 @@ for mf in "$REPO_ROOT/.claude-plugin/marketplace.json" \
           "$REPO_ROOT/claude-plugin/.claude-plugin/plugin.json" \
           "$REPO_ROOT/plugins/forge/.codex-plugin/plugin.json"; do
   name="${mf#$REPO_ROOT/}"
-  grep -q "19 commands" "$mf" && pass "manifest count 19: $name" || fail "manifest count 19: $name"
+  grep -q "20 commands" "$mf" && pass "manifest count 20: $name" || fail "manifest count 20: $name"
   grep -q "fix" "$mf" && pass "manifest lists fix: $name" || fail "manifest lists fix: $name"
 done
 

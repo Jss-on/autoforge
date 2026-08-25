@@ -151,7 +151,7 @@ printf '\n--- distribution: manifest command count = 14 + regression listed ---\
 
 for mf in "$REPO_ROOT/.claude-plugin/marketplace.json" "$REPO_ROOT/claude-plugin/.claude-plugin/plugin.json" "$REPO_ROOT/plugins/forge/.codex-plugin/plugin.json"; do
   name="${mf#$REPO_ROOT/}"
-  grep -q "19 commands" "$mf" && pass "manifest count 19: $name" || fail "manifest count 19: $name"
+  grep -q "20 commands" "$mf" && pass "manifest count 20: $name" || fail "manifest count 20: $name"
   grep -q "regression" "$mf"  && pass "manifest lists regression: $name" || fail "manifest lists regression: $name"
 done
 

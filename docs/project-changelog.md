@@ -2,6 +2,34 @@
 
 All notable changes to the forge project are documented here.
 
+## v3.1.0 — /forge:research: the research analyst (2026-08-26)
+
+**Theme:** the pipeline could build, test, and design software but could not rigorously answer a
+question about the world. v3.1.0 adds the 20th command — a deep research engagement with the same
+evidence discipline the build loop applies to code.
+
+**Added:**
+
+- `/forge:research` — question decomposition (RQ-n) → multi-modal source sweep (scholarly indexes,
+  institutional publishers, standards bodies, quality press; reviews-first + 1-hop snowball) →
+  deep reading with per-source notes, verbatim quotes, and depth honesty (`full|abstract|secondary`)
+  → `claims.tsv` claims ledger with graded confidence (high = ≥2 independent T1/T2; T4-only support
+  mechanically invalid; contested reported two-sided) → adversarial disconfirmation pass per
+  load-bearing claim → cited dossier (`report.md`) with consensus-vs-contested and magnitudes
+  tables, limitations first-class, methodology appendix, full bibliography.
+- Seam: `scripts/score-research.sh` — `sources` (ledger schema + tier counts), `claims` (citation
+  anchoring, tier floors, orphan + uncitable-status detection), `verdict` (`DOSSIER_READY |
+  DOSSIER_BLOCKED`: ledgers valid · every plan RQ covered or scarcity-noted · `RESEARCH_T12_FLOOR`,
+  default 0.60). Synced into all 5 skill trees via `transform.sh`.
+- Contract: `references/research-protocol.md` — source-tier table (T1–T4 by publication class),
+  per-domain evidence hierarchies, search playbook, reading-note + dossier templates, confidence
+  rubric, numbers-carry-their-conditions rule, sensitive-domain register (medical/legal/financial/
+  safety: mandatory scope-of-use note; litigation support = background for counsel and retained
+  experts, never testimony), user-context quarantine.
+- Handoff schema v3.1.0: `research` source (`verdict` enum + `report` required), `report` field
+  known to `validate-handoff.sh`; all command pins bumped 3.0.0 → 3.1.0.
+- `tests/test-research.sh`; manifests/routers/docs at 20 commands; all five trees propagated.
+
 ## v3.0.0 — The `forge` rename (2026-08-20)
 
 **Theme:** the product has been AutoForge since the fork; the commands still carried the inherited

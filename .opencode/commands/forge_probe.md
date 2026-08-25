@@ -112,5 +112,5 @@ If --evals present:
 
 ## Chain Handoff
 
-Write handoff.json: version "3.0.0", source "probe", timestamp, status (COMPLETE|SATURATED|USER_INTERRUPT|BOUNDED|ERROR), findings = constraints, config = derived forge config.
+Write handoff.json: version "3.1.0", source "probe", timestamp, status (COMPLETE|SATURATED|USER_INTERRUPT|BOUNDED|ERROR), findings = constraints, config = derived forge config.
 Invoke next target in --chain order. Propagate --evals flag.

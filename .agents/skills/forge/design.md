@@ -211,7 +211,7 @@ band; a flat `SLOP` across 3 checkpoints → recommend `system --refresh` (the w
 is the problem) rather than more slices.
 
 ## Chain Handoff
-Write handoff.json: version "3.0.0", source "design", timestamp, status
+Write handoff.json: version "3.1.0", source "design", timestamp, status
 (COMPLETE|CONVERGED|BOUNDED|BLOCKED|USER_INTERRUPT|ERROR), results_tsv (`design-results.tsv`),
 defects_tsv, verdict (`SHIP|FIX|REBUILD`), design (path to DESIGN.md + `lint` result), slop (count),
 health (`N/M`), summary (path to `design-report.md`), findings = open defects + waived rules,

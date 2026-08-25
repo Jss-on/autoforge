@@ -1,7 +1,7 @@
 {
   "name": "forge",
-  "description": "Autonomous improvement engine. 19 commands: iterate, plan, debug, fix, security, ship, scenario, predict, learn, reason, probe, improve, evals, regression, build, requirements, feature, test, design.",
-  "version": "3.0.0",
+  "description": "Autonomous improvement engine. 20 commands: iterate, plan, debug, fix, security, ship, scenario, predict, learn, reason, probe, improve, evals, regression, build, requirements, feature, test, design, research.",
+  "version": "3.1.0",
   "author": {
     "name": "Jss-on",
     "url": "https://github.com/Jss-on"

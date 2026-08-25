@@ -1,7 +1,7 @@
 ---
 name: forge
 description: "Autonomous iteration loop: modify, verify, keep/discard against any metric"
-version: 3.0.0
+version: 3.1.0
 ---
 
 # AutoForge — Autonomous Goal-directed Iteration
@@ -49,6 +49,7 @@ Print a banner on every invocation: `[forge] mode: classic | orchestrator | wiza
 | `/forge_regression` | Regression stability gate: baseline vs candidate, verdict STABLE/UNSTABLE | N/A |
 | `/forge_test` | Full QA engagement on existing software (ISO 29119/ISTQB-aligned): risk-based plan → RTM → formal test design → execution + defect ledger → exit-criteria verdict | 20 |
 | `/forge_design` | UI/UX designer + design QA: mode-aware direction protocol → machine-readable `DESIGN.md` (`system`); independent audit of a running app — valid captures, mechanical anti-slop floor (`SLOP_GATE`), heuristic critique, personas, defect ledger, `SHIP|FIX|REBUILD` verdict (`audit`); bounded remediation (`--fix`) | 12 (`--fix`) |
+| `/forge_research` | Deep research engagement: decompose questions → multi-modal scholarly + web sweep → deep reading of primary literature → source-anchored claims ledger with graded confidence → cited dossier gated by `DOSSIER_READY|DOSSIER_BLOCKED` verdict | 15 |
 
 ## Universal Flags
 

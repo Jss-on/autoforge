@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # doctor.sh — environment preflight for the AutoForge build pipeline.
 #
-# Verifies every external tool the 19 commands actually invoke, split by tier:
+# Verifies every external tool the 20 commands actually invoke, split by tier:
 #   CORE      — required for any command to work (bash/node/git/coreutils)
 #   BUILD     — required for the build/feature pipeline's verification gates
 #               (Playwright drives the ux dimension; docker the devops one)

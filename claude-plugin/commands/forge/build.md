@@ -447,7 +447,7 @@ interval, print pass-rate trend + per-dimension breakdown (F/ux/D/M/H). Plateau 
 recommend a spec/stack/design rethink. At loop end → `evals-summary.md` in the output directory.
 
 ## Chain Handoff
-Write handoff.json: version "3.0.0", source "build", timestamp, status
+Write handoff.json: version "3.1.0", source "build", timestamp, status
 (COMPLETE|BOUNDED|CONVERGED|BLOCKED|USER_INTERRUPT|ERROR), results_tsv, metric (fullstack_pass_rate),
 coverage{requirements, design}, design{lint, slop, verdict, design_md}, phases_completed, findings = remaining red
 assertions + untraced requirements/tokens + open design defects, config{spec, scope, stack, target_rate}.

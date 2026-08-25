@@ -22,7 +22,7 @@ Based on [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) —
 
 *You don't need AGI. You need a goal, a metric, and a loop that never quits.*
 
-**Supports Claude Code, OpenCode, and OpenAI Codex. 19 commands. 9 safety hooks. Thin-router token architecture — command bodies load only when invoked.**
+**Supports Claude Code, OpenCode, and OpenAI Codex. 20 commands. 9 safety hooks. Thin-router token architecture — command bodies load only when invoked.**
 
 > **v3.0.0 — The `forge` rename.** Every command moved from the `autoresearch` namespace to `forge`: `/forge:build`, `/forge:test`, `/forge:fix`, … (`forge_*` on OpenCode, `$forge` on Codex). Same engine, same protocol — new name matching the product. Run outputs now land in `forge/<cmd>-<timestamp>/`; pre-3.0 `autoresearch/` run dirs stay valid as history. Reinstall the plugin (`/plugin marketplace add Jss-on/autoforge`, then install `forge`) to pick up the new commands. Env vars keep the `AR_` prefix.
 >
@@ -186,6 +186,7 @@ See [guide/hooks.md](guide/hooks.md) for full reference.
 | `/forge:feature` | Add a feature to existing software — delta acceptance + hard non-regression ratchet | 25 |
 | `/forge:test` | Full QA engagement on existing software — risk-based plan, RTM, formal test design, execution + defect ledger, exit-criteria verdict (ISO 29119/ISTQB-aligned) | 20 |
 | `/forge:design` | UI/UX designer + design QA — mode-aware direction protocol → machine-readable `DESIGN.md` (`system`); independent audit of a running app: valid captures, mechanical anti-slop floor (`SLOP_GATE`), heuristic critique, personas, defect ledger, `SHIP|FIX|REBUILD` verdict (`audit`); bounded remediation (`--fix`) | 12 (`--fix`) |
+| `/forge:research` | Deep research engagement — decompose questions, sweep scholarly + web sources, read the primary literature, build a source-anchored claims ledger, synthesize a cited dossier gated by `DOSSIER_READY|DOSSIER_BLOCKED` | 15 |
 | `/forge:debug` | Hunt bugs via hypothesis iteration | 15 |
 | `/forge:fix` | Remediate defects to zero, root-cause first | 20 |
 | `/forge:security` | STRIDE + OWASP audit with red-team | 15 |
@@ -203,7 +204,7 @@ See [guide/hooks.md](guide/hooks.md) for full reference.
 
 **All commands use interactive setup when invoked without arguments.** Just type the command — the agent asks for what it needs with smart defaults based on your codebase.
 
-> **OpenCode users:** Commands use underscore naming (`/forge_debug`, `/forge_fix`, etc.). All 19 commands available.
+> **OpenCode users:** Commands use underscore naming (`/forge_debug`, `/forge_fix`, etc.). All 20 commands available.
 >
 > **Codex users:** Invoke via `$forge` mention syntax. Subcommands are keywords: `$forge debug`, `$forge plan`, etc.
 
@@ -215,6 +216,7 @@ See [guide/hooks.md](guide/hooks.md) for full reference.
 | Turn a client brief into a validated build spec | `/forge:requirements` |
 | Add a feature to an existing app without regressions | `/forge:feature` |
 | Run a full QA engagement on an existing app (plan → RTM → verdict) | `/forge:test` |
+| Research a topic into a cited, source-anchored dossier | `/forge:research` |
 | Give a plain-language goal, let it self-orchestrate | `/forge <goal>` (bare, no Metric/Verify) |
 | Improve test coverage / reduce bundle size / any metric | `/forge` |
 | Run bounded iterations | Add `Iterations: N` to any command |
@@ -499,7 +501,7 @@ cp -r autoforge/.opencode/skills/forge ~/.config/opencode/skills/forge
 cp autoforge/.opencode/commands/forge*.md ~/.config/opencode/commands/
 ```
 
-> All 19 commands available as `/forge_debug`, `/forge_fix`, `/forge_improve`, etc.
+> All 20 commands available as `/forge_debug`, `/forge_fix`, `/forge_improve`, etc.
 
 ### Codex Quick Start
 
@@ -695,6 +697,45 @@ keep only if `SLOP` didn't rise, no acceptance row went red and regression is `S
 `fixed`, never `verified` — a re-audit grants that. `REBUILD` means the world failed: re-run
 `system --refresh`, don't patch. Goals like "make the UI look professional" route here from the
 orchestrator (`polish-ui` archetype).
+
+---
+
+## /forge:research — Deep Research Engagement
+
+The **research analyst** of the pipeline. Answers questions about the world — technology choices,
+scientific literature, standards, markets — with the same evidence discipline the build pipeline
+applies to code: **no claim without a source, no source without an accessed locator, no number
+without its conditions, no verdict without the seam.**
+
+```
+/forge:research Topic: "What do modern message queues guarantee about ordering?" Audience: "eng team choosing infra"
+/forge:research Topic: brief.md Recency: 5y --depth exhaustive --chain reason
+```
+
+**How it works:** decompose the topic into answerable research questions (RQ-n) → multi-modal
+sweep (scholarly indexes, institutional publishers, standards bodies, quality press — reviews
+first, 1-hop citation snowball) → deep-read the primary literature into per-source notes with
+verbatim quotes and depth honesty (`full|abstract|secondary` — what was actually read) → build
+`claims.tsv`, where every claim cites its sources at a graded confidence (**high** needs ≥2
+independent T1/T2 sources; T4-only support is mechanically invalid) → run the **adversarial
+disconfirmation pass** on every load-bearing claim (search against it, retractions, supersession)
+→ synthesize the dossier with inline `[S-nn]` citations, a consensus-vs-contested table, a
+magnitudes table, and limitations stated as prominently as findings.
+
+```
+criterion source-ledger: SOURCES: VALID total=24 t1=9 t2=7 t3=6 t4=2 unverified=0 PASS
+criterion claims-ledger: CLAIMS: VALID total=18 high=7 moderate=6 low=3 contested=2 orphans=0 PASS
+criterion rq-coverage: 6/6 PASS
+criterion t12-floor: 0.72 >= 0.60 PASS
+VERDICT: DOSSIER_READY
+```
+
+`scripts/score-research.sh` is the seam: `sources` and `claims` validate the ledgers (schema,
+tier floors, orphan and uncitable-status detection), `verdict` decides `DOSSIER_READY |
+DOSSIER_BLOCKED` — never "looks thorough". Sensitive domains (medical, legal, financial,
+safety) trigger a mandatory scope-of-use register: the dossier is literature background that
+supports qualified professionals, never advice or case-specific expert opinion. Chain
+`--chain reason` to debate the contested claims or `--chain requirements` to feed an SRS.
 
 ---
 
@@ -1067,7 +1108,7 @@ autoforge/
 │   │                                                security, personas, orchestrator routing, ux + hardening
 │   └── commands/
 │       ├── forge.md                        ← core loop (self-contained)
-│       └── forge/                          ← 18 subcommand files (19 commands total)
+│       └── forge/                          ← 19 subcommand files (20 commands total)
 ├── .claude-plugin/marketplace.json                ← marketplace manifest (marketplace name: autoforge)
 ├── claude-plugin/                                 ← Claude Code plugin package (skills + commands + hooks)
 ├── .opencode/                                     ← OpenCode port (via transform.sh)
@@ -1097,7 +1138,7 @@ A: Logic-first acceptance. The build pipeline now grades **six** weighted dimens
 A: The root `/forge` command now supports an autonomous orchestrator mode. Type a plain-language goal (e.g., `/forge help me fix the login bug`) instead of `Metric:`/`Verify:` and the orchestrator classifies your goal, derives a verifiable Success predicate, confirms it once, then loops across subcommands until done. Classic metric-loop behavior is unchanged when `Metric:` or `Verify:` are present.
 
 **Q: What changed in v2.1.0?**
-A: Architecture rebuild. The monolithic SKILL.md was replaced with a thin router that stays resident (~8KB) plus self-contained command files — now 19 commands whose bodies (~3–35KB each) load only when invoked, with reference files pulled on demand. A new `/forge:evals` command analyzes iteration results. Every looping command now has a bounded default instead of running unlimited.
+A: Architecture rebuild. The monolithic SKILL.md was replaced with a thin router that stays resident (~8KB) plus self-contained command files — now 20 commands whose bodies (~3–35KB each) load only when invoked, with reference files pulled on demand. A new `/forge:evals` command analyzes iteration results. Every looping command now has a bounded default instead of running unlimited.
 
 **Q: How do bounded defaults work?**
 A: Every looping command ships with a sensible default (e.g., `/forge` defaults to 25 iterations). Override inline: `Iterations: 50` for more, `Iterations: unlimited` for the old unbounded behavior.
@@ -1109,7 +1150,7 @@ A: Point it at any `*-results.tsv` file from a previous run. It reports trends, 
 A: Yes. Any language, framework, or domain. Install via plugin (Claude Code), installer script, or manual copy.
 
 **Q: Does this work with OpenCode?**
-A: Yes. Run `./scripts/install.sh --opencode --global` or manually copy `.opencode/` files. Commands use underscore naming (`/forge_debug`, `/forge_evals`, etc.). All 19 commands available.
+A: Yes. Run `./scripts/install.sh --opencode --global` or manually copy `.opencode/` files. Commands use underscore naming (`/forge_debug`, `/forge_evals`, etc.). All 20 commands available.
 
 **Q: Does this work with OpenAI Codex?**
 A: Yes. Run `./scripts/install.sh --codex --global` or copy `.agents/skills/forge/` to `~/.codex/skills/forge`. Invoke via `$forge` mention syntax.

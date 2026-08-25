@@ -242,7 +242,7 @@ Print the ready invocation:
 ```
 /forge:build Spec: evals/fullstack/<name>.spec.yaml Iterations: 40
 ```
-Write handoff.json to the output dir (`forge/requirements-{YYMMDD}-{HHMM}/`): version "3.0.0",
+Write handoff.json to the output dir (`forge/requirements-{YYMMDD}-{HHMM}/`): version "3.1.0",
 source "requirements", status COMPLETE, `spec` = generated spec path, config{name, stack}, traceability
 summary. Schema: `references/handoff-schema.md`; after writing, `scripts/validate-handoff.sh
 <run-dir>/handoff.json requirements` must print VALID.

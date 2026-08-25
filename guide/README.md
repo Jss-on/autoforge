@@ -50,7 +50,8 @@ Requires access to the private repo [Jss-on/autoforge](https://github.com/Jss-on
 | [/forge:regression](forge-regression.md) | Stability gate — baseline diff, STABLE/UNSTABLE verdict before you push |
 | [/forge:test](../README.md#commands) | Full QA engagement on existing software — risk-based plan, RTM, formal test design, execution + defect ledger, exit-criteria verdict (ISO 29119/ISTQB-aligned) |
 | [/forge:design](forge-design.md) | UI/UX designer + design QA — direction protocol → machine-readable `DESIGN.md`; independent design audit (anti-slop floor, heuristic critique, personas, ledger, `SHIP|FIX|REBUILD`); bounded `--fix` remediation |
-| [Chains & Combinations](chains-and-combinations.md) | Multi-command pipelines with all 19 commands |
+| [/forge:research](forge-research.md) | Deep research engagement — scholarly + web sweep, primary-literature reading, source-anchored claims ledger, cited dossier with `DOSSIER_READY|DOSSIER_BLOCKED` verdict |
+| [Chains & Combinations](chains-and-combinations.md) | Multi-command pipelines with all 20 commands |
 | [Examples by Domain](examples-by-domain.md) | Real-world examples: software, sales, marketing, DevOps, ML, HR |
 | [Advanced Patterns](advanced-patterns.md) | Guards, MCP, CI/CD, evals checkpoints, transform.sh |
 | [Hooks Reference](hooks.md) | 9 auto-firing hooks: safety gates, context injection, notifications |
