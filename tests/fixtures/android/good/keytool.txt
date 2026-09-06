@@ -1,0 +1,20 @@
+Keystore type: PKCS12
+Keystore provider: SUN
+
+Your keystore contains 1 entry
+
+Alias name: upload
+Creation date: Sep 6, 2026
+Entry type: PrivateKeyEntry
+Certificate chain length: 1
+Certificate[1]:
+Owner: CN=Forge Example App, O=Forge, C=PH
+Issuer: CN=Forge Example App, O=Forge, C=PH
+Serial number: 5f3a1c2d
+Valid from: Sun Sep 06 16:00:00 PST 2026 until: Thu Jan 22 16:00:00 PST 2054
+Certificate fingerprints:
+	 SHA1: 01:23:45:67:89:AB:CD:EF:01:23:45:67:89:AB:CD:EF:01:23:45:67
+	 SHA256: AB:CD:EF:01:23:45:67:89:AB:CD:EF:01:23:45:67:89:AB:CD:EF:01:23:45:67:89:AB:CD:EF:01:23:45:67:89
+Signature algorithm name: SHA256withRSA
+Subject Public Key Algorithm: 2048-bit RSA key
+Version: 3

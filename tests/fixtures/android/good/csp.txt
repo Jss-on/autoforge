@@ -1,0 +1,1 @@
+default-src 'self'; script-src 'self' 'nonce-Zm9yZ2U=' 'strict-dynamic'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.public.blob.vercel-storage.com; font-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'

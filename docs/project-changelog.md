@@ -2,6 +2,41 @@
 
 All notable changes to the forge project are documented here.
 
+## v3.6.0 — /forge:android: web app → Android app (2026-09-06)
+
+**Theme:** any forge-built web app becomes a store-ready Android app without being re-implemented.
+The lane is a **Trusted Web Activity** — Chrome renders the deployed origin inside a signed package,
+so sessions, CSRF, server components and the nonce CSP keep working; fidelity is a property of the
+packaging. Native-only needs are detected and reported as `BLOCKED`, never faked.
+
+**Added:**
+
+- `/forge:android` (`commands/forge/android.md`) — eight phases: preflight (Bubblewrap as an app
+  devDependency, JDK 17 toolchain state) → native-needs gate (`native-needs.md` matrix) → PWA-ify
+  (`app/manifest.ts`, maskable icons rendered with Playwright, `sw.js` + `/offline`, `/sw.js` headers,
+  middleware allowlist, `worker-src 'self'` + `manifest-src 'self'`, `e2e/pwa.spec.ts`) → trust (upload
+  keystore gitignored, secrets via `gh secret set`, `.well-known/assetlinks.json` with upload + Play App
+  Signing fingerprints) → package (`twa-manifest.json`, `appVersionCode` = `git rev-list --count HEAD`,
+  `bubblewrap update` / `build --skipPwaValidation` → AAB + APK, fingerprint match) → deploy + live trust
+  (Google `assetlinks:check` → `linked`) → fidelity (Pixel 7 suite + contact sheet; **emulator gate in CI**
+  on a `google_apis` image with KVM: first-run dismissal, `pm get-app-links` → `verified`, launch screencap
+  viewed) → release (`android-release.yml` on tags, Play internal upload behind a GitHub Environment with
+  required reviewers, store pack within Play's limits) → `STORE_READY | BLOCKED`.
+- `references/android-protocol.md` — TWA crash criteria, Digital Asset Links rules + the Play App Signing
+  loop, the native-needs matrix, every file template, both workflows + the device-gate script, the
+  device-relay phone script, store-pack limits, versioning, the ledger catalogue (eleven required gates).
+- `scripts/score-android.sh` — the seam: `manifest`, `assetlinks`, `twa`, `csp`, `fingerprint`, `live`
+  (production trust surfaces, no-redirect rule, DAL API), `verdict --strict-evidence`. One stdout line
+  per call; reasons on stderr; Windows-safe (MSYS path conversion, no keep-alive sockets).
+- Wiring: handoff source `android` (`verdict` + `results_tsv` required), orchestrator archetype
+  `package-android` (dispatch → `android`), doctor OPTIONAL rows `bubblewrap` / `keytool` / `adb`,
+  `.ckignore` gains `.gradle/` + `.cxx/`, `Track:` universal flag.
+- `tests/test-android.sh` — 249 rows, written first and frozen as the loop's scorer: seam checks on good
+  **and** planted-defect fixtures (`tests/fixtures/android/`), rubric rows on spec + protocol, handoff /
+  routing / doctor wiring, five-surface parity, manifests + routers at 3.6.0, docs.
+
+Product 3.6.0 (21 commands); handoff schema stays 3.1.0 (new fields additive).
+
 ## v3.3.0 — MCP integrations: generative media, design bridge, tracker sync (2026-08-26)
 
 **Theme:** built products get real pictures, animation, and 3D instead of placeholder slots;

@@ -1,0 +1,9 @@
+Keystore type: PKCS12
+Keystore provider: SUN
+
+Your keystore contains 1 entry
+
+Alias name: upload
+Certificate fingerprints:
+	 SHA1: 01:23:45:67:89:AB:CD:EF:01:23:45:67:89:AB:CD:EF:01:23:45:67
+Signature algorithm name: SHA256withRSA

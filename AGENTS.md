@@ -23,7 +23,7 @@ AutoForge is the product; `forge` is the engine and plugin it ships — all comm
 /plugin install forge@autoforge
 ```
 
-Restart session after install. All 19 commands become available as `/forge` and `/forge:<subcommand>`. Update later with `/plugin marketplace update autoforge`.
+Restart session after install. All 21 commands become available as `/forge` and `/forge:<subcommand>`. Update later with `/plugin marketplace update autoforge`.
 
 ### Codex (plugin)
 

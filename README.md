@@ -11,7 +11,7 @@ Based on [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) —
 [![Claude Code Skill](https://img.shields.io/badge/Claude_Code-Skill-blue?logo=anthropic&logoColor=white)](https://docs.anthropic.com/en/docs/claude-code)
 [![OpenCode](https://img.shields.io/badge/OpenCode-Skill-purple)](https://opencode.ai)
 [![Codex](https://img.shields.io/badge/Codex-Skill-green?logo=openai&logoColor=white)](https://developers.openai.com/codex)
-![Version](https://img.shields.io/badge/version-3.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-3.6.0-blue.svg)
 [![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 
 [![Based on](https://img.shields.io/badge/Based_on-Karpathy's_Autoresearch-orange)](https://github.com/karpathy/autoresearch)
@@ -22,7 +22,7 @@ Based on [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) —
 
 *You don't need AGI. You need a goal, a metric, and a loop that never quits.*
 
-**Supports Claude Code, OpenCode, and OpenAI Codex. 20 commands. 9 safety hooks. Thin-router token architecture — command bodies load only when invoked.**
+**Supports Claude Code, OpenCode, and OpenAI Codex. 21 commands. 9 safety hooks. Thin-router token architecture — command bodies load only when invoked.**
 
 > **v3.0.0 — The `forge` rename.** Every command moved from the `autoresearch` namespace to `forge`: `/forge:build`, `/forge:test`, `/forge:fix`, … (`forge_*` on OpenCode, `$forge` on Codex). Same engine, same protocol — new name matching the product. Run outputs now land in `forge/<cmd>-<timestamp>/`; pre-3.0 `autoresearch/` run dirs stay valid as history. Reinstall the plugin (`/plugin marketplace add Jss-on/autoforge`, then install `forge`) to pick up the new commands. Env vars keep the `AR_` prefix.
 >
@@ -187,6 +187,7 @@ See [guide/hooks.md](guide/hooks.md) for full reference.
 | `/forge:test` | Full QA engagement on existing software — risk-based plan, RTM, formal test design, execution + defect ledger, exit-criteria verdict (ISO 29119/ISTQB-aligned) | 20 |
 | `/forge:design` | UI/UX designer + design QA — mode-aware direction protocol → machine-readable `DESIGN.md` (`system`); independent audit of a running app: valid captures, mechanical anti-slop floor (`SLOP_GATE`), heuristic critique, personas, defect ledger, `SHIP|FIX|REBUILD` verdict (`audit`); bounded remediation (`--fix`) | 12 (`--fix`) |
 | `/forge:research` | Deep research engagement — decompose questions, sweep scholarly + web sources, read the primary literature, build a source-anchored claims ledger, synthesize a cited dossier gated by `DOSSIER_READY|DOSSIER_BLOCKED` | 15 |
+| `/forge:android` | Web app → Android app (Trusted Web Activity) — PWA-ify the deployed app, Digital Asset Links trust, signed AAB/APK via Bubblewrap, emulator gate in CI, release workflow + store pack; `STORE_READY|BLOCKED`, native-only needs reported honestly | 12 |
 | `/forge:debug` | Hunt bugs via hypothesis iteration | 15 |
 | `/forge:fix` | Remediate defects to zero, root-cause first | 20 |
 | `/forge:security` | STRIDE + OWASP audit with red-team | 15 |
@@ -204,7 +205,7 @@ See [guide/hooks.md](guide/hooks.md) for full reference.
 
 **All commands use interactive setup when invoked without arguments.** Just type the command — the agent asks for what it needs with smart defaults based on your codebase.
 
-> **OpenCode users:** Commands use underscore naming (`/forge_debug`, `/forge_fix`, etc.). All 20 commands available.
+> **OpenCode users:** Commands use underscore naming (`/forge_debug`, `/forge_fix`, etc.). All 21 commands available.
 >
 > **Codex users:** Invoke via `$forge` mention syntax. Subcommands are keywords: `$forge debug`, `$forge plan`, etc.
 
@@ -217,6 +218,7 @@ See [guide/hooks.md](guide/hooks.md) for full reference.
 | Add a feature to an existing app without regressions | `/forge:feature` |
 | Run a full QA engagement on an existing app (plan → RTM → verdict) | `/forge:test` |
 | Research a topic into a cited, source-anchored dossier | `/forge:research` |
+| Ship a built web app as an Android app (Play-ready TWA) | `/forge:android` |
 | Give a plain-language goal, let it self-orchestrate | `/forge <goal>` (bare, no Metric/Verify) |
 | Improve test coverage / reduce bundle size / any metric | `/forge` |
 | Run bounded iterations | Add `Iterations: N` to any command |
@@ -501,7 +503,7 @@ cp -r autoforge/.opencode/skills/forge ~/.config/opencode/skills/forge
 cp autoforge/.opencode/commands/forge*.md ~/.config/opencode/commands/
 ```
 
-> All 20 commands available as `/forge_debug`, `/forge_fix`, `/forge_improve`, etc.
+> All 21 commands available as `/forge_debug`, `/forge_fix`, `/forge_improve`, etc.
 
 ### Codex Quick Start
 
@@ -742,6 +744,43 @@ and/or an **IEEE paper** (`IEEEtran`) — same ledger, `[S-nn]` becomes `\cite{S
 generated from the cited `sources.tsv` rows, Limitations kept as its own section — validated by
 `score-research.sh paper` (orphan cite keys and uncitable bib entries block) and compiled to PDF
 when a LaTeX toolchain resolves.
+
+---
+
+## /forge:android — Web App → Android App
+
+The **Android packager** of the pipeline. Takes a forge-built web app and ships it as a first-class
+Android app **without re-implementing it**: a **Trusted Web Activity** — Chrome renders the deployed
+origin full-screen inside a signed package, so sessions, cookies, CSRF checks, server components and
+the nonce CSP keep working unchanged. Fidelity is a property of the packaging, not a hope.
+
+```
+/forge:android Target: build-output/hanai-intake Url: https://hanai.example.com
+/forge:android Url: https://pos.example.com Package: com.example.pos Track: internal --chain ship
+```
+
+**How it works:** native-needs gate (every capability the SRS implies → the Chrome-Android web API
+that provides it; background location, foreground services, telephony and the like are **native-only
+→ `BLOCKED`**, never faked) → PWA-ify (`app/manifest.ts`, maskable icons, `sw.js` with an offline
+fallback, `/offline`, middleware allowlist, `worker-src 'self'` + `manifest-src 'self'` in the CSP,
+`e2e/pwa.spec.ts` in the app's suite) → trust (upload keystore, gitignored; `.well-known/assetlinks.json`
+with the upload key **and** the Play App Signing key) → package (`twa-manifest.json`, Bubblewrap →
+`app-release-bundle.aab` + `app-release-signed.apk`, fingerprint must match) → deploy + live trust
+(Google's `assetlinks:check` → `linked: true`) → fidelity (Pixel 7 Playwright run + contact sheet, and
+a **real `google_apis` emulator in CI** that proves `pm get-app-links` → `verified` and screencaps the
+launch) → release (`android-release.yml` on tags, Play upload behind a GitHub Environment with required
+reviewers, store pack within Play's limits).
+
+```
+MANIFEST: VALID icons=3        CSP: OK        ASSETLINKS: VALID fingerprints=2       TWA: VALID
+ANDROID_LIVE: 9/9              gates=11/11 fails=0 skips=1 evidence_violations=0 (strict)
+ANDROID_VERDICT: STORE_READY
+```
+
+`scripts/score-android.sh` is the seam — `manifest`, `csp`, `fingerprint`, `assetlinks`, `twa`, `live`
+and `verdict`; eleven required gates, each `pass` only with an evidence file that exists, decide
+`STORE_READY | BLOCKED`. Secrets never leave the machine in the clear (`gh secret set` from files);
+tags, Play uploads and track promotions stay human-gated. Contract: `references/android-protocol.md`.
 
 ---
 
@@ -1114,12 +1153,12 @@ autoforge/
 │   │                                                security, personas, orchestrator routing, ux + hardening
 │   └── commands/
 │       ├── forge.md                        ← core loop (self-contained)
-│       └── forge/                          ← 19 subcommand files (20 commands total)
+│       └── forge/                          ← 20 subcommand files (21 commands total)
 ├── .claude-plugin/marketplace.json                ← marketplace manifest (marketplace name: autoforge)
 ├── claude-plugin/                                 ← Claude Code plugin package (skills + commands + hooks)
 ├── .opencode/                                     ← OpenCode port (via transform.sh)
 │   ├── skills/forge/
-│   └── commands/                                  ← 19 command files (forge_*.md)
+│   └── commands/                                  ← 20 command files (forge_*.md)
 ├── .agents/                                       ← Codex port (via transform.sh)
 │   └── skills/forge/
 └── plugins/forge/                          ← Codex plugin package
@@ -1156,7 +1195,7 @@ A: Point it at any `*-results.tsv` file from a previous run. It reports trends, 
 A: Yes. Any language, framework, or domain. Install via plugin (Claude Code), installer script, or manual copy.
 
 **Q: Does this work with OpenCode?**
-A: Yes. Run `./scripts/install.sh --opencode --global` or manually copy `.opencode/` files. Commands use underscore naming (`/forge_debug`, `/forge_evals`, etc.). All 20 commands available.
+A: Yes. Run `./scripts/install.sh --opencode --global` or manually copy `.opencode/` files. Commands use underscore naming (`/forge_debug`, `/forge_evals`, etc.). All 21 commands available.
 
 **Q: Does this work with OpenAI Codex?**
 A: Yes. Run `./scripts/install.sh --codex --global` or copy `.agents/skills/forge/` to `~/.codex/skills/forge`. Invoke via `$forge` mention syntax.

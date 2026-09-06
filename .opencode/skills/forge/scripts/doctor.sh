@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # doctor.sh — environment preflight for the AutoForge build pipeline.
 #
-# Verifies every external tool the 20 commands actually invoke, split by tier:
+# Verifies every external tool the 21 commands actually invoke, split by tier:
 #   CORE      — required for any command to work (bash/node/git/coreutils)
 #   BUILD     — required for the build/feature pipeline's verification gates
 #               (Playwright drives the ux dimension; docker the devops one)
 #   OPTIONAL  — needed only when a spec declares the matching rows
+#   ANDROID   — /forge:android local build + fingerprints (optional: CI builds the bundle either way)
 #
 # Usage:
 #   bash scripts/doctor.sh              # full report; exit 1 if any CORE tool missing
@@ -81,6 +82,20 @@ check opt axe axe             "a11y scans for ux rows (axe CLI)"
 check opt k6 k6               "perf SLO load tests (or autocannon)"
 check opt autocannon autocannon "perf SLO load tests (alternative)"
 check opt gh gh               "release tooling / private marketplace auth"
+
+printf '\nANDROID (/forge:android — local TWA build + certificate fingerprints; CI builds the bundle either way)\n'
+check opt keytool keytool     "android: upload keystore + SHA-256 certificate fingerprints (any JDK)"
+# Bubblewrap is a devDependency of the app being packaged (same rule as Playwright) and keeps its
+# own JDK 17 + Android SDK under ~/.bubblewrap — accept a global binary, a resolvable package, or
+# that config.
+if command -v bubblewrap >/dev/null 2>&1 \
+  || node -e "require.resolve('@bubblewrap/cli/package.json')" >/dev/null 2>&1 \
+  || [[ -f "$HOME/.bubblewrap/config.json" ]]; then
+  row "bubblewrap" "ok" "android: TWA packaging (npx @bubblewrap/cli; JDK 17 + Android SDK in ~/.bubblewrap)"
+else
+  row "bubblewrap" "MISSING" "android: run 'npx @bubblewrap/cli doctor' once in the app to install JDK 17 + the Android SDK"
+fi
+check opt adb adb             "android: optional phone evidence via device-relay (the CI emulator is the gate)"
 
 printf '\n'
 if [[ "$CORE_MISSING" -gt 0 ]]; then

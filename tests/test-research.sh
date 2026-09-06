@@ -346,14 +346,14 @@ grep -q 'score-research\.sh' "$REPO_ROOT/scripts/transform.sh" \
   && pass "transform.sh syncs score-research.sh" || fail "transform.sh missing score-research.sh in runtime set"
 
 # ============================================================================
-printf '\n--- distribution: manifests + routers at 20 commands ---\n'
+printf '\n--- distribution: manifests + routers at 21 commands ---\n'
 # ============================================================================
 
 for mf in "$REPO_ROOT/.claude-plugin/marketplace.json" \
           "$REPO_ROOT/claude-plugin/.claude-plugin/plugin.json" \
           "$REPO_ROOT/plugins/forge/.codex-plugin/plugin.json"; do
   name="${mf#$REPO_ROOT/}"
-  grep -q "20 commands" "$mf" && pass "manifest count 20: $name" || fail "manifest count 20: $name"
+  grep -q "21 commands" "$mf" && pass "manifest count 21: $name" || fail "manifest count 21: $name"
   grep -q "design, research" "$mf" && pass "manifest lists research: $name" || fail "manifest lists research: $name"
 done
 
@@ -361,7 +361,7 @@ for sk in .claude/skills/forge/SKILL.md claude-plugin/skills/forge/SKILL.md \
           .agents/skills/forge/SKILL.md plugins/forge/skills/forge/SKILL.md \
           .opencode/skills/forge/SKILL.md; do
   grep -q 'research' "$REPO_ROOT/$sk" && pass "router lists research: $sk" || fail "router lists research: $sk"
-  grep -q 'version: 3.5.0' "$REPO_ROOT/$sk" && pass "router at 3.5.0: $sk" || fail "router at 3.5.0: $sk"
+  grep -q 'version: 3.6.0' "$REPO_ROOT/$sk" && pass "router at 3.6.0: $sk" || fail "router at 3.6.0: $sk"
 done
 
 grep -q 'forge_research' "$REPO_ROOT/.opencode/skills/forge/SKILL.md" \

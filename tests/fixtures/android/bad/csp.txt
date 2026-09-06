@@ -1,0 +1,1 @@
+default-src 'self'; script-src 'nonce-Zm9yZ2U=' 'strict-dynamic'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'

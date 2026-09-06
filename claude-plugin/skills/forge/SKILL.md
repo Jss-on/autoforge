@@ -1,7 +1,7 @@
 ---
 name: forge
 description: "Autonomous iteration loop: modify, verify, keep/discard against any metric"
-version: 3.5.0
+version: 3.6.0
 ---
 
 # AutoForge — Autonomous Goal-directed Iteration
@@ -50,6 +50,7 @@ Print a banner on every invocation: `[forge] mode: classic | orchestrator | wiza
 | `/forge:test` | Full QA engagement on existing software (ISO 29119/ISTQB-aligned): risk-based plan → RTM → formal test design → execution + defect ledger → exit-criteria verdict | 20 |
 | `/forge:design` | UI/UX designer + design QA: mode-aware direction protocol → machine-readable `DESIGN.md` (`system`); independent audit of a running app — valid captures, mechanical anti-slop floor (`SLOP_GATE`), heuristic critique, personas, defect ledger, `SHIP|FIX|REBUILD` verdict (`audit`); bounded remediation (`--fix`) | 12 (`--fix`) |
 | `/forge:research` | Deep research engagement: decompose questions → multi-modal scholarly + web sweep → deep reading of primary literature → source-anchored claims ledger with graded confidence → cited dossier gated by `DOSSIER_READY|DOSSIER_BLOCKED` verdict | 15 |
+| `/forge:android` | Web app → Android app (Trusted Web Activity): native-needs gate → PWA-ify the deployed app → Digital Asset Links trust → Bubblewrap-signed AAB/APK → live trust + real-emulator gate in CI → release workflow + store pack; `STORE_READY|BLOCKED` verdict, native-only needs reported honestly | 12 |
 
 ## Universal Flags
 
@@ -69,6 +70,7 @@ Print a banner on every invocation: `[forge] mode: classic | orchestrator | wiza
 | `Assets: N\|off` | `build`, `feature`, `design`, `requirements` | Media generation-job budget (default 12 when a media MCP is present; `off` disables) |
 | `Ponytail: lite\|full\|ultra\|off` | `build` | Lazy-senior-dev discipline level — ladder (skip → reuse → stdlib → native → installed dep → one line → minimum), shortest working diff, `ponytail:` debt harvest (default `ultra`) |
 | `--thorough` | `test`, `fix`, `design` | Restores the exhaustive form of every fast-path rule (every PNG opened, full Guard per slice, per-persona walks + blind panel); the default is the fast path per `references/speed-protocol.md` |
+| `Track: none\|internal` | `android` | Play track for the release workflow's upload step (default `none` = artifacts only; `internal` arms the human-gated upload behind a GitHub Environment with required reviewers) |
 
 ## Optional MCP integrations
 

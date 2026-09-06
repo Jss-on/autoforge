@@ -127,6 +127,14 @@ case "$SOURCE" in
     esac
     has_field report || err "missing: report (dossier path — required for research)"
     ;;
+  android)
+    case "$VERDICT" in
+      STORE_READY|BLOCKED) ;;
+      "") err "missing: verdict (STORE_READY|BLOCKED) — required for android" ;;
+      *)  err "verdict not in enum for android: $VERDICT (STORE_READY|BLOCKED)" ;;
+    esac
+    has_field results_tsv || err "missing: results_tsv (android-results.tsv — required for android)"
+    ;;
 esac
 
 if [[ "$ERRORS" -gt 0 ]]; then

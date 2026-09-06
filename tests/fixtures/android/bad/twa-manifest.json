@@ -1,0 +1,16 @@
+{
+  "packageId": "com.example.forgeapp",
+  "host": "https://app.example.com/app",
+  "name": "Forge Example App",
+  "launcherName": "ForgeApp",
+  "themeColor": "#0F766E",
+  "backgroundColor": "#FFFFFF",
+  "startUrl": "index.html",
+  "iconUrl": "https://app.example.com/icons/icon-512.png",
+  "signingKey": {
+    "path": "public/keys/upload.keystore",
+    "alias": "upload"
+  },
+  "appVersionName": "1.2.0",
+  "appVersionCode": "fifty-seven"
+}

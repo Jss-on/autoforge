@@ -1,6 +1,6 @@
 # AutoForge for Codex — v2.3.0
 
-Codex distribution of AutoForge's `forge` engine. Same 20 commands, same flags, same output contracts as the Claude Code version. Entry point: `$forge <command>`.
+Codex distribution of AutoForge's `forge` engine. Same 21 commands, same flags, same output contracts as the Claude Code version. Entry point: `$forge <command>`.
 
 ---
 
@@ -35,7 +35,7 @@ Codex uses `$forge` prefix:
 | `/forge:evals` | `$forge evals` |
 | `/forge:ship` | `$forge ship` |
 
-All 20 commands follow the same pattern: `$forge <command> [flags]`.
+All 21 commands follow the same pattern: `$forge <command> [flags]`.
 
 ---
 
@@ -132,7 +132,7 @@ plugins/forge/                ← Codex plugin package
 └── skills/forge/
     ├── SKILL.md                     ← thin router
     ├── forge.md              ← core loop
-    ├── <command>.md                 ← 19 subcommand files (20 commands total)
+    ├── <command>.md                 ← 20 subcommand files (21 commands total)
     └── references/                  ← on-demand reference files
 
 .agents/                             ← Codex agent tree (same skill, agent layout)

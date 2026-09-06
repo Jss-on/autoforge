@@ -12,7 +12,7 @@ not finished until its handoff validates.
 | Field | Type | Rule |
 |---|---|---|
 | `version` | string | Schema version. Write `"3.1.0"`. Validator accepts `2.1.0`+ (legacy runs readable) but warns below `2.3.1`. |
-| `source` | string | The emitting subcommand, canonical short name: `build`, `feature`, `requirements`, `regression`, `fix`, `test`, `design`, `research`, `debug`, `security`, `ship`, `plan`, `scenario`, `predict`, `learn`, `reason`, `probe`, `improve`, `evals`, `forge`. Never the colon form. |
+| `source` | string | The emitting subcommand, canonical short name: `build`, `feature`, `requirements`, `regression`, `fix`, `test`, `design`, `research`, `android`, `debug`, `security`, `ship`, `plan`, `scenario`, `predict`, `learn`, `reason`, `probe`, `improve`, `evals`, `forge`. Never the colon form. |
 | `status` | enum | `COMPLETE` \| `CONVERGED` \| `BOUNDED` \| `PLATEAU` \| `BLOCKED` \| `USER_INTERRUPT` \| `ERROR` |
 | `timestamp` | string | ISO-8601 with offset. |
 
@@ -27,6 +27,7 @@ not finished until its handoff validates.
 | `test` | `results_tsv` (path). SHOULD also carry `verdict` (`RELEASE_RECOMMENDED` \| `RELEASE_BLOCKED`), `defects_tsv`, and `summary` (path to the test summary report). |
 | `design` | `verdict` (`SHIP` \| `FIX` \| `REBUILD`) **or** `design` (object: `design_md` path + `lint`) — an audit carries the disposition, a `system` run carries the DESIGN.md it wrote. SHOULD also carry `results_tsv` (`design-results.tsv`), `defects_tsv`, `slop` (number), `health` (`N/M`), and `summary` (path to `design-report.md`). |
 | `research` | `verdict` (`DOSSIER_READY` \| `DOSSIER_BLOCKED`) **and** `report` (path to the dossier). SHOULD also carry `claims_tsv`, `sources_tsv`, and `findings` (per-RQ one-line answers + the contested list). |
+| `android` | `verdict` (`STORE_READY` \| `BLOCKED`) **and** `results_tsv` (`android-results.tsv`). SHOULD also carry `package_id`, `host`, `artifacts` (apk/aab paths or release-asset URLs), `repo`, `pr`, `workflow_run` (device-gate run URL), and `native_needs` (the native-only list) when blocked. |
 
 Everything else (`status_reason`, `findings`, `verified_live_this_run`, `phases_completed`,
 `bound_extension`, `repo` — the project's private GitHub output-repo URL, `pr` — the feature PR

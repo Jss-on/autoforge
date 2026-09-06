@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # orchestrate.sh — deterministic seam for the forge orchestrator loop.
 #
-#   classify   <goal-string>   → Goal archetype label (keyword heuristics; 10 archetypes)
+#   classify   <goal-string>   → Goal archetype label (keyword heuristics; 11 archetypes)
 #   next-hop   <state.json>    → Next subcommand from router decision table
 #   units      <results.json>  → Units-remaining scalar (lower_is_better)
 #   plateau    <history.txt>   → Exit 0 if last N computed values are flat-or-worse
@@ -12,7 +12,7 @@
 set -uo pipefail
 
 # ---------------------------------------------------------------------------
-# classify: map a goal string to one of the 10 Goal archetype labels.
+# classify: map a goal string to one of the 11 Goal archetype labels.
 # Priority order matters: higher-stakes archetypes checked first so that
 # "fix and add the broken feature" → fix-broken, not build-feature.
 # ---------------------------------------------------------------------------
@@ -26,6 +26,13 @@ classify() {
   # ("security" does NOT contain "secure", so it needs its own alternative).
   if printf '%s' "$g" | grep -qE '(secure|security|harden|vuln|audit|owasp|cve|lock.?down)'; then
     echo "harden"; return 0
+  fi
+
+  # Android packaging — after harden (security keeps priority), before ship/fix: "publish the
+  # apk", "convert to android", "fix the android build" all belong to the android command, which
+  # owns its own trust/package/device-gate/release loop (single-pass dispatch).
+  if printf '%s' "$g" | grep -qE '(android|\bapk\b|\baab\b|play store|google play|\btwa\b|trusted web activity)'; then
+    echo "package-android"; return 0
   fi
 
   # Ship/release/deploy — checked before fix-broken per the router spec:

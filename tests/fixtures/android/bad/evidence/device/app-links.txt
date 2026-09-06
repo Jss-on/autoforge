@@ -1,0 +1,3 @@
+com.example.forgeapp:
+    Domain verification state:
+      app.example.com: verified

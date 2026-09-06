@@ -1,0 +1,13 @@
+# android-results.tsv — fixture (bad): planted defect — a required gate was skipped instead of proven
+spec	dimension	assertion	weight	status	detail	traces
+forgeapp	pwa	pwa-manifest	2	pass	evidence:evidence/manifest-check.txt	NFR-PWA-1
+forgeapp	pwa	pwa-sw-offline	2	pass	evidence:evidence/offline-check.txt	NFR-PWA-2
+forgeapp	trust	trust-assetlinks-live	2	pass	evidence:evidence/live.txt	NFR-AND-1
+forgeapp	trust	trust-dal-linked	2	skip	DAL API unreachable from the runner; not re-checked	NFR-AND-1
+forgeapp	package	package-signed	2	pass	evidence:evidence/apksigner.txt	NFR-AND-2
+forgeapp	package	package-fingerprint-match	2	pass	evidence:evidence/apksigner.txt	NFR-AND-2
+forgeapp	fidelity	fidelity-mobile-web	2	pass	evidence:evidence/mobile-sheet.txt	NFR-UX-1
+forgeapp	device	device-applinks-verified	2	pass	evidence:evidence/device/app-links.txt	NFR-AND-3
+forgeapp	device	device-launch	2	pass	evidence:evidence/device/launch-screencap.txt	NFR-AND-3
+forgeapp	release	release-workflow	1	pass	evidence:evidence/workflow-run.txt	NFR-REL-1
+forgeapp	release	release-store-pack	1	pass	evidence:evidence/store-pack.txt	NFR-REL-2
