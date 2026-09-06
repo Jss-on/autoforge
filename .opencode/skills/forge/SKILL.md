@@ -1,7 +1,7 @@
 ---
 name: forge
 description: "Autonomous iteration loop: modify, verify, keep/discard against any metric"
-version: 3.2.0
+version: 3.5.0
 ---
 
 # AutoForge — Autonomous Goal-directed Iteration
@@ -65,6 +65,22 @@ Print a banner on every invocation: `[forge] mode: classic | orchestrator | wiza
 | `--max-cycles N` | Orchestrator | Hard ceiling on orchestration cycles (default 50) |
 | `--classic` | Bare `/forge` | Force Classic metric-loop mode |
 | `--auto` | Bare `/forge` | Force Orchestrator mode |
+| `Tracker: github\|linear` | `build`, `feature`, `test`, `design`, `fix` | Tracker of record for projects/phases/defects (default `github`; `linear` arms tracker sync) |
+| `Assets: N\|off` | `build`, `feature`, `design`, `requirements` | Media generation-job budget (default 12 when a media MCP is present; `off` disables) |
+| `Ponytail: lite\|full\|ultra\|off` | `build` | Lazy-senior-dev discipline level — ladder (skip → reuse → stdlib → native → installed dep → one line → minimum), shortest working diff, `ponytail:` debt harvest (default `ultra`) |
+| `--thorough` | `test`, `fix`, `design` | Restores the exhaustive form of every fast-path rule (every PNG opened, full Guard per slice, per-persona walks + blind panel); the default is the fast path per `references/speed-protocol.md` |
+
+## Optional MCP integrations
+
+Three integration families, used when the platform has them connected — probed by capability
+shape, availability-gated, degrading to a named fallback (never a hard dependency, never silent).
+Contract: `references/integrations-protocol.md`.
+
+| Family | Gives the pipeline | Absent → |
+|---|---|---|
+| **Generative media** (Higgsfield-class) | Real pictures, animation loops, 3D props, audio for the product being built — planned slots, DESIGN.md style-contract prompts, batch generation, post-production (upscale/cutout/reframe/outpaint), provenance rows, 12-job cap, pinned once approved | asset sourcing ladder (CC0 → procedural → labeled placeholders) |
+| **Design bridge** (Figma-class) | `Design: <figma-url>` → variables/components/frames normalized into `DESIGN.md`; audit fidelity vs source frames; `--figma-out` review push (human-gated) | catalog / file / `generate` sources |
+| **Tracker sync** (Linear-class) | `Tracker: linear` → engagement = project, phase gates = status updates, defect ledgers = issues (marker-deduped, severity-mapped, fixed→in-review, verified→done) | GitHub issues on the output repo (default) |
 
 ## Orchestrator
 

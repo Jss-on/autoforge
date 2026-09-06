@@ -10,12 +10,18 @@ protocol pins the four places asset-heavy builds fail differently.
 1. **CC0 / public-domain packs first.** Kenney.nl (CC0, thousands of coherent sprites/tiles/audio/UI),
    OpenGameArt + itch.io filtered to CC0, Google Fonts (OFL), CC0 sections of freesound/Pixabay.
    A coherent pack beats mixed sources — one art style, one license, done.
-2. **Procedural / code-generated.** SVG or canvas-drawn sprites, generated tilemaps, WebAudio-
+2. **Generated on brief** (media MCP present — `integrations-protocol.md` §1): sprites, tiles,
+   textures, illustrations, 3D props (image → GLB), SFX/music generated from the DESIGN.md
+   style contract so the whole set shares one world. Discipline is the point: planned slots
+   (`assets/PLAN.md`), the job cap, every asset opened and read, provenance rows
+   (`generated — <service>/<model>` + job id) in `CREDITS.md`, approved assets pinned. Beats a
+   mismatched pack mix when no single pack covers the brief; loses to a coherent CC0 pack that does.
+3. **Procedural / code-generated.** SVG or canvas-drawn sprites, generated tilemaps, WebAudio-
    synthesized SFX (jsfxr-style), CSS/JS particle effects. Tiny, license-free, deterministic, and
    restylable — prefer this for UI chrome, effects, and placeholder-to-final pipelines.
-3. **CC-BY only with the attribution actually rendered** — in-game credits screen + `CREDITS.md`,
+4. **CC-BY only with the attribution actually rendered** — in-game credits screen + `CREDITS.md`,
    not a dead file.
-4. **NEVER:** ripped/extracted assets from shipped games, "found on Google" images, marketplace
+5. **NEVER:** ripped/extracted assets from shipped games, "found on Google" images, marketplace
    assets without a purchase the client made, fonts without a license file. An asset with unknown
    provenance is a defect, not a freebie.
 

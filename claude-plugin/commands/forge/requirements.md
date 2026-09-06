@@ -99,7 +99,11 @@ assume on a scope-defining question — ask it; the client, not the command, mak
 - **Artifact-reaction loop (protocol §5) for design intent:** show 3–5 named design directions and
   collect what they **dislike**; generate 2–3 **throwaway static HTML wireframes** of the 1–2
   highest-traffic screens in the run dir (THROWAWAY banner in-file, never reused by `build`),
-  screenshot via Playwright, present the PNGs, capture reactions per screen. Outcome = the
+  screenshot via Playwright, present the PNGs, capture reactions per screen. With a media MCP
+  present (`references/integrations-protocol.md` §1), ≤4 generated **moodboard images** (one per
+  candidate direction, style-contract prompts, THROWAWAY — provenance rows still written) may join
+  the wireframes as reaction artifacts. A client-shared **Figma link** is read through the design
+  bridge (§2) and its key frames become reaction artifacts too. Outcome = the
   `DESIGN.md` source + density/navigation/states patterns, each traced to a client reaction —
   taste is captured by **selection and correction, never adjectives**.
 - **Round N — close gaps:** surface ambiguities and conflicts back to the client as closed-choice
@@ -176,8 +180,11 @@ sign-off on the playback IS sign-off on the SRS. Check **complete, consistent, t
 unambiguous** — every requirement verifiable, traced, and provenance-tagged with zero `open` items.
 If the user wants changes, loop back to elicitation. Do NOT generate the spec until the user says
 the requirements are final. Close with the **honesty clause** (protocol §8): the built app is the
-best elicitation artifact there is — reactions to v1 land as GitHub issues on the project's own repo
-and re-enter through `feature`/`fix`; the goal here is that nothing *knowable today* is missing.
+best elicitation artifact there is — reactions to v1 land as issues on the tracker of record (the
+project repo's GitHub issues, or Linear when the spec's `tracker:` arms it — integrations-protocol
+§3) and re-enter through `feature`/`fix`; the goal here is that nothing *knowable today* is missing.
+When Linear is the tracker, the signed-off SRS is also attached to the engagement's project as a
+document.
 
 ## Phase 5 — Generate the build spec
 Emit `evals/fullstack/<name>.spec.yaml` for `forge:build`. Schema (consumed by `build` +
@@ -188,6 +195,9 @@ summary: <one line>
 stack: { language: <…>, framework: <…>, datastore: <…> }
 design: { source: catalog|file|url|generate, ref: <slug/path/url>, mode: operate|persuade|read|experience,
           dislikes: [ <reactions the client rejected> ] }   # build adopts as DESIGN.md via the direction protocol
+                                                            # a Figma URL is source: url — build routes it through the design bridge
+tracker: { record: github|linear, team: <team name> }       # optional; linear arms tracker sync (integrations-protocol §3)
+assets: { budget: <N jobs|off> }                            # optional; media-generation cap for build's asset pass (default 12)
 acceptance:
   logic:      [ { id, assert, weight, traces, gate } … ]  # golden cases: input→exact output; gate:true = must-pass
   functional: [ { id, assert, weight, traces } … ]        # incl anti-demo: persist-across-restart, fresh-empty, CRUD, settings

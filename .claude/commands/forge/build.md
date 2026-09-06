@@ -33,7 +33,9 @@ re-reads `requirements.md` and confirms every **goal (G-n) + FR + NFR** is genui
 exercise — not merely traced. **Self-contained** — the SDLC phase-gate table + principles are folded in
 at the end of this doc. Companion contracts: `references/uiux-checklist.md`,
 `references/design-protocol.md` (visitor modes, direction protocol, DESIGN.md schema, craft floor, design QA),
-`references/fullstack-hardening-checklist.md`.
+`references/fullstack-hardening-checklist.md`, `references/integrations-protocol.md` (optional MCP
+families: generative media for real imagery/animation/3D, Figma-class design bridge, Linear-class
+tracker sync — availability-gated, degrade to the named fallback).
 
 ## Seam & reference resolution (read once, applies to every `scripts/…` and `references/…` mention)
 
@@ -75,6 +77,12 @@ Cadence:
   deploying: `ship` stays human-gated.
 - **Found-but-deferred defects become GitHub issues** on the output repo (label `autoforge`),
   not lost notes in the summary.
+- **Tracker sync (optional):** with `Tracker: linear` (argument or spec field) and a Linear-class
+  MCP connected, the tracker of record moves to Linear per `references/integrations-protocol.md`
+  §3 — engagement → project, each phase gate → status update, deferred/unresolved defects →
+  issues carrying the `forge:<run-id>/<defect-id>` marker (dedupe by marker; severity mapped;
+  `fixed` → in-review, `verified` → done). Exactly one tracker of record — never dual-file;
+  no team resolvable unattended → fall back to GitHub and say so. GitHub stays the default.
 - **Releases are `ship`'s job** (human-gated): tag + `gh release create` (`--prerelease` until
   acceptance is fully converged). `build` never tags releases on its own.
 - Record the repo URL in `handoff.json` (`repo` field) and in the run summary.
@@ -92,10 +100,91 @@ product; primitives are not. A hand-rolled implementation of a solved problem is
 diligence: it adds untested surface that the hardening dimension must then re-verify from zero.
 Record each major library choice with a one-line rationale in the HLD (Phase 4 deliverable).
 
+## Ponytail discipline — the lazy senior dev (token + time economy)
+
+Method adopted from [ponytail](https://github.com/dietrichgebert/ponytail) (dietrichgebert; measured
+on a real agent editing `full-stack-fastapi-template`, Haiku 4.5, n=4 × 12 feature tasks: **−54 %
+lines of code, −22 % tokens, −20 % cost, −27 % time, 100 % of validation / error handling / security /
+a11y kept** — vendor benchmark, treat as directional). The best code is the code never written: every
+line the loop does not write is a line it never reads back, tests, hardens, or re-verifies. Works
+**with** the plugin when installed (`/ponytail`, `/ponytail-review`, `/ponytail-debt`,
+`/ponytail-audit`) and **inline** without it — this section is the fallback definition.
+
+**The ladder — run on every implementation, fix and refactor slice; stop at the first rung that holds:**
+1. **Does it need to exist at all?** Speculative need → skip it and say so in one line (YAGNI).
+2. **Already in this codebase?** A helper, type, util or pattern a few files over → reuse it.
+3. **Stdlib does it?** Use it.
+4. **Native platform feature covers it?** `<input type="date">` over a picker lib, CSS over JS, a DB
+   constraint over app code, the framework's built-in over a wrapper.
+5. **Already-installed dependency solves it?** Use it — never add a dependency for what a few lines
+   do (this is the "Reuse before build" rung; the registry check lives there).
+6. **Can it be one line?** One line.
+7. **Only then:** the minimum code that works.
+
+**Lazy about the solution, never about the reading.** The ladder runs *after* the problem is
+understood, never instead of it: read the task and every file the change touches, trace the real
+flow end to end, then climb. A bug report names a symptom — grep every caller before editing; the
+lazy fix IS the root-cause fix (one guard in the shared function beats a guard in each caller — the
+Defect Loop's iron law, restated). Two rungs work → take the higher one and move on.
+
+**Rules (per slice):**
+- **Shortest working diff, fewest files.** No unrequested abstractions (no interface with one
+  implementation, no factory for one product, no config for a value that never changes), no
+  scaffolding "for later", no boilerplate; deletion over addition; boring over clever.
+- **`ponytail:` markers.** A deliberate simplification with a known ceiling (global lock, O(n²) scan,
+  naive heuristic) carries a comment naming the ceiling and the upgrade path —
+  `// ponytail: global lock; per-account locks if throughput matters`. Never a silent shortcut.
+- **One runnable check per non-trivial logic** (a branch, loop, parser, money/security path) — the
+  smallest thing that fails if the logic breaks, in the project's existing runner; no per-function
+  suites, no new framework, no fixtures for a one-liner. The golden cases and the acceptance rows
+  already are that check for the domain — do not duplicate them.
+- **Output pattern** in the iteration log and the summary: `[change] → skipped: [X], add when [Y].`
+  Three lines max per slice; no essays, no feature tours — an explanation longer than the code is
+  complexity smuggled back in as prose. Deliverables the pipeline names (charter, SRS, runbook …)
+  are requested prose: write them in full.
+- **Debt harvest before DONE.** `grep -rn 'ponytail:'` over the Scope → `DEBT.md` (file:line ·
+  ceiling · upgrade path · trigger) + one GitHub issue per row (labels `autoforge`, `ponytail-debt`;
+  Linear when it is the tracker of record) — so later never becomes never. The count prints in the
+  Summary and rides `handoff.json` findings. `/ponytail-debt` does this when installed.
+
+**Token + time mechanics (the measured savings come from here as much as from the code):**
+- Read each file once; `grep` / `sed -n` ranges over whole-file reads past ~300 lines; never re-read
+  what is already in context; never paste a full file or a full test log into the transcript — every
+  verification is tee'd to `evidence/` anyway, so read the tail and the failing lines only.
+- Batch independent commands into one call; fail fast — run the suite the slice touches first, the
+  full guard second (the guard still decides keep/discard; the whole pyramid runs at every phase gate
+  and at the independent verify, not after every one-file change).
+- Browser sweeps and guard cadence follow `references/speed-protocol.md`: one Playwright session per
+  sweep, `design-scan.cjs --sheet` (the contact sheet, not every PNG), `--prev` delta re-scans of
+  unchanged pages, the touched suite per slice + the full Guard at gates; `--thorough` restores the
+  exhaustive form.
+- Narrate the phase and the gate, not the keystrokes: the `iterations.tsv` line is the explanation.
+- Measure it: log `loc_delta` (insertions + deletions of the slice) per iteration; the keep rule's
+  "simplicity wins" compares it. A row turned green with a negative `loc_delta` is the best kind.
+
+**Levels** (`Ponytail: lite|full|ultra|off`, default **ultra**; mirrors `/ponytail <level>`): *lite* —
+ladder advisory, standard prose; *full* — ladder enforced, shortest diff and explanation; *ultra* —
+**YAGNI extremist**: deletion before addition, ship the one-liner and challenge the rest of the
+requirement in the same breath (`skipped: X, add when Y` names what was cut and the trigger that
+brings it back), a **delete-list pass** on every slice's diff before it is measured (`/ponytail-review`
+or inline: delete anything no acceptance row needs) and a **whole-repo pass** at the Phase 8 gate
+(`/ponytail-audit`); *off* — this section is inert. In forge the spec is the requirement: ultra
+challenges a spec row in the summary, it never drops or waters one down. No level ever relaxes the
+Defect Loop or a gate.
+
+**Never lazy about (what the ladder may not cut):** input validation at trust boundaries, error
+handling that prevents data loss, every `hardening` row (security headers, authZ, CSRF/SSRF, rate
+limits, secret hygiene), accessibility basics (the `ux` rows), the real-product / anti-demo
+persistence contract, the golden cases, and anything the Spec / Goal explicitly requests. A user or a
+spec that asks for the full version gets the full version — no re-arguing. The ladder shortens the
+solution, never the reading, never the verification.
+
 ## Asset-heavy targets (games, media-heavy apps)
 When the spec is a game or the target bundles significant assets (sprites, models, audio, fonts,
 large datasets), follow `references/game-assets-protocol.md` from Phase 1 on. Non-negotiables:
-**sourcing ladder** (CC0 packs → procedural/code-generated → CC-BY with rendered attribution; never
+**sourcing ladder** (CC0 packs → **generated-on-brief** via a media MCP when present
+(integrations-protocol §1: planned slots, style-contract prompts, provenance rows, 12-job cap) →
+procedural/code-generated → CC-BY with rendered attribution; never
 unlicensed/ripped assets) with a **license ledger** (`assets/CREDITS.md`, one hardening row asserts
 it covers every asset file); **size discipline** (no file ≥ 50 MB in git, runtime formats only —
 WebP/OGG/GLB/WOFF2, initial-payload budget as a mechanical `devops` row, LFS declared BEFORE the
@@ -113,7 +202,13 @@ Extract from $ARGUMENTS:
 - `Scope:` / `--scope` — directory the build may write into (default: a fresh subdir, never the skill repo).
 - `Stack:` / `--stack` — stack hint (e.g. `node+postgres+react`).
 - `Design:` / `--design` — DESIGN.md source: a catalog slug (getdesign.md / `awesome-design-md`,
-  e.g. `linear`), a file path, a URL, or `generate`. Default: the spec's `design:` block, else generate.
+  e.g. `linear`), a file path, a URL — a **Figma URL** routes through the design bridge
+  (integrations-protocol §2: variables/components/frames → DESIGN.md) — or `generate`. Default:
+  the spec's `design:` block, else generate.
+- `Tracker:` / `--tracker` — `github` (default) | `linear` (arms tracker sync, integrations-protocol §3).
+- `Assets: N|off` — media generation-job budget (default 12 when a media MCP is present; `off` disables).
+- `Ponytail:` / `--ponytail` — `lite | full | ultra | off` (default `ultra`): the lazy-senior-dev
+  discipline level (section above).
 - `Iterations:` / `--iterations` — default 40. "unlimited" for unbounded.
 - `Target-rate:` — pass-rate to stop at (default 1.00).
 - `--evals`, `--evals-interval N`, `--chain <targets>`, `--<subcommand>`
@@ -221,6 +316,13 @@ Design the system **and** the interface before coding:
 - **Tokens FROM DESIGN.md** — translate its typography scale, color palette (with contrast targets),
   spacing, radius, motion, and component states (loading / empty / error / success) into the app's
   style tokens. The UI is built from these tokens, never improvised. Per `references/uiux-checklist.md`.
+- **Asset pass** (media MCP present + the mode requires imagery — integrations-protocol §1): plan
+  the slots (`assets/PLAN.md`: hero, section imagery, empty-state illustrations, textures; video /
+  3D / audio only when the spec scopes them), generate in batches under the `Assets:` cap with
+  style-contract prompts from the committed DESIGN.md, **read every asset** before wiring it,
+  post-produce with the dedicated tools, and record provenance (`assets/CREDITS.md` +
+  `assets/PROMPTS.md`). No media MCP → the sourcing ladder unchanged (CC0 → procedural → labeled
+  placeholder). Approved assets are pinned — fix loops never re-roll imagery.
 - **Archetype rows** — every screen maps to a surface archetype (dashboard, list+CRUD, record,
   form/wizard, POS/kiosk, settings, auth, onboarding/empty, landing …; protocol §2) whose required
   patterns become `ux` acceptance rows now, alongside the seven `design:*` coverage rows.
@@ -233,7 +335,9 @@ token group (`design:type` · `design:color` · `design:spacing` · `design:radi
 ## Phase 5 — Implementation (TDD)
 Build in a **red → green** TDD ladder, one slice per iteration. Pick the lowest-scoring dimension
 first — **but the gating `logic` dimension is attacked before ops/UX polish** while it has red rows,
-since the pass-rate is capped at 0.50 until every golden case is green. Order within a build:
+since the pass-rate is capped at 0.50 until every golden case is green. Every slice climbs the
+**ponytail ladder** before a line is written — shortest working diff, fewest files, `ponytail:`
+markers on deliberate ceilings. Order within a build:
 1. **Scaffold** — skeleton, dependency manifest, linter/formatter, test runner.
 2. **Logic (domain engine first)** — implement the **pure, dependency-free calculation engine** and
    drive **every `logic` golden case** red → green against its exact expected output. Then add one
@@ -294,7 +398,8 @@ IEEE-829-style incident report, right-sized to its `iterations.tsv` line.
 - **Accessibility** — run **axe** against rendered pages via Playwright; zero serious/critical violations.
 - **Design QA (the craft floor + conformance + critique)** — run `/forge:design audit` (protocol
   §7) against the running app: **valid captures** at 1280×800 + 390×844 (settled motion, full-page,
-  every PNG opened and confirmed — a blank/black/wrong-route capture is RECAPTURE, never scored);
+  the `--sheet` contact sheet opened and every cell confirmed, flagged PNGs individually — a
+  blank/black/wrong-route capture is RECAPTURE, never scored);
   `node scripts/design-scan.cjs --url <every primary route> --mode <mode> --design DESIGN.md --shots
   evidence/screens --out evidence/design-scan.json` then `scripts/score-design.sh scan` →
   **`SLOP_GATE: PASS`** is the `design:floor` `ux` row (zero error/warn findings: no emoji icons,
@@ -352,7 +457,9 @@ iteration:
    that still has red rows — **but while any `logic` (golden) row is red, fix it first**: the headline
    pass-rate is capped at 0.50 until the `logic` dimension is 100% green, so logic is the only
    dimension that lifts the ceiling.
-2. **One change** — make ONE focused slice (atomic; if it breaks, you know exactly which change did it).
+2. **One change** — make ONE focused slice: the **shortest working diff** that turns the target row
+   green (ponytail ladder — skip / reuse / stdlib / native / installed dep before new code; fewest
+   files). Atomic: if it breaks, you know exactly which change did it.
 3. **Commit before verify** — `git commit -m "experiment: <dimension> — <slice>"` BEFORE measuring, so
    every attempt is recoverable. Git is the experiment ledger.
 4. **Verify mechanically (run it, don't self-report) — and leave evidence.** Build, boot, probe
@@ -368,10 +475,12 @@ iteration:
 5. **Keep or roll back automatically** —
    - **keep** — pass-rate increased AND guard (existing tests) green.
    - **keep (scaffold)** — floor-guarded scaffold slice that compiles and adds no new failures.
-   - **simplicity wins** — equal pass-rate with less code → keep the simpler version.
+   - **simplicity wins** — equal pass-rate with a smaller `loc_delta` (less code) → keep the simpler version.
    - **discard** — pass-rate flat/lower, a green assertion went red, or build/probe crashed →
      `git revert HEAD --no-edit`. Failures revert instantly; the incumbent is never left worse.
-6. **Log** — append the iteration (change, pass_rate, delta, guard, keep/discard) to `iterations.tsv`.
+6. **Log** — append the iteration (change, pass_rate, delta, guard, keep/discard, `loc_delta` =
+   insertions + deletions from `git diff --shortstat HEAD~1..HEAD`, and the ponytail line
+   `skipped: X, add when Y`) to `iterations.tsv`.
 7. **Repeat** until (`pass-rate --strict-evidence >= Target-rate` **AND** `logic_gate == PASS` **AND**
    `REQ_COVERAGE == 1.00` **AND** `DESIGN_COVERAGE == 1.00` **AND** `SLOP_GATE == PASS` with
    `DESIGN_VERDICT: SHIP` **AND** the requirement-satisfaction audit
@@ -435,7 +544,8 @@ can re-run the scorer on the stored ledger and check every pass row's evidence f
 Print: final pass-rate, **logic_gate (PASS|CAPPED)**, **REQ_COVERAGE + DESIGN_COVERAGE**, **`SLOP` +
 `SLOP_GATE` + `DESIGN_VERDICT`** (the design QA line), per-dimension
 scores (incl **logic** + **ux**), assertions green/total, **requirement-satisfaction audit verdict**,
-phases completed (of the 8 SDLC phases), iterations used, kept vs discarded slices, build output
+phases completed (of the 8 SDLC phases), iterations used, kept vs discarded slices, total `loc_delta`
++ **ponytail debt rows** harvested into `DEBT.md`, build output
 path, and a **deliverables checklist** (charter · SRS + RTM · HLD/LLD + `DESIGN.md` · test summary ·
 release notes · user manual · runbook — each present/missing). List still-red
 assertions — **golden/`logic` failures first** — and any untraced requirements/tokens **plus any FR
@@ -450,7 +560,8 @@ recommend a spec/stack/design rethink. At loop end → `evals-summary.md` in the
 Write handoff.json: version "3.1.0", source "build", timestamp, status
 (COMPLETE|BOUNDED|CONVERGED|BLOCKED|USER_INTERRUPT|ERROR), results_tsv, metric (fullstack_pass_rate),
 coverage{requirements, design}, design{lint, slop, verdict, design_md}, phases_completed, findings = remaining red
-assertions + untraced requirements/tokens + open design defects, config{spec, scope, stack, target_rate}.
+assertions + untraced requirements/tokens + open design defects + ponytail debt rows, config{spec,
+scope, stack, target_rate}.
 The handoff shape is the chain contract — `references/handoff-schema.md`. After writing it, run
 `scripts/validate-handoff.sh <run-dir>/handoff.json build`; on `INVALID`, fix the handoff before
 printing the summary — a run with an invalid handoff is NOT finished.
@@ -518,6 +629,11 @@ living — never heavyweight documents for their own sake.
   dimension measurable beyond axe — a generic, tell-ridden UI is capped exactly like an inaccessible one.
 - **Root cause before fix.** The defect loop forbids symptom patching; a fix references the falsified
   hypothesis.
+- **Lazy senior dev (ponytail).** Every slice climbs the ladder — skip → reuse → stdlib → native →
+  installed dep → one line → minimum — *after* reading the whole flow, never instead of it; shortest
+  working diff, fewest files, `ponytail:` markers harvested into `DEBT.md` before DONE. Less code is
+  fewer tokens read back, tested, hardened and re-verified — the speed comes from what is never
+  written. Validation, data-loss handling, security, a11y and anything requested are never cut.
 - **Comprehensive ≠ "tests pass".** Phase 6 requires the whole pyramid (unit→integration→e2e→a11y→design QA),
   not just unit green. e2e + a11y + the design floor run against the *running* app via Playwright.
 - **Deployment is human-gated.** Phase 7 reuses `ship`; `build` never deploys to production or cuts

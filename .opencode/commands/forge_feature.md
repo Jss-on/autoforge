@@ -51,7 +51,10 @@ route and keep `SLOP` at zero (a `design:floor` `ux` row in the delta) — no em
 cards, placeholder copy, off-token colors/faces. Missing tokens the feature genuinely needs are added to
 `DESIGN.md` (re-lint: `scripts/score-design.sh lint`), never improvised inline. When the feature adds a
 whole new surface archetype (a dashboard to a CRUD app), its required patterns (§2) join the delta rows,
-and `design audit` runs on it before the ratchet.
+and `design audit` runs on it before the ratchet. Imagery the delta genuinely needs follows
+`references/integrations-protocol.md` §1 (media MCP → planned slots in the SAME style contract,
+provenance rows, existing assets pinned; absent → the sourcing ladder); `Tracker: linear` arms
+tracker sync for the delta's defects (§3), GitHub issues stay the default.
 
 ## Phase 3 — Implement (the forge loop)
 Per iteration, exactly as `build`:

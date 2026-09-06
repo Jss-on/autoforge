@@ -197,5 +197,18 @@ assert_eq 1 "$VH_RC" "handoff: test source without results_tsv → INVALID"
 rm -f "$_h"
 
 # ============================================================================
+printf '\n--- v3.5.0 fast path: harvest-first, one browser sweep, touched suite per slice ---\n'
+# ============================================================================
+
+spec_has "Fast path .default."           "spec: fast path section (default)"
+spec_has "speed-protocol"                "spec: references the speed protocol"
+spec_has "Harvest before you write"      "spec: existing suite harvested as execution evidence"
+spec_has "One browser sweep"             "spec: scan + axe in one Playwright session"
+spec_has "touched suite"                 "spec: touched suite per slice, full suite at checkpoints"
+spec_has "findings plateau"              "spec: exploratory sessions end at the plateau"
+spec_has "--thorough"                    "spec: --thorough restores the exhaustive form"
+spec_has "tester independence"           "spec: fast path keeps independence"
+
+# ============================================================================
 printf '\n=== Results: %d/%d passed ===' "$PASS" "$TOTAL"
 if [[ "$FAIL" -gt 0 ]]; then printf ' (%d FAILED)\n' "$FAIL"; exit 1; else printf ' (all passed)\n'; exit 0; fi

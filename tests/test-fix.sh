@@ -148,5 +148,20 @@ EOF
 bash "$VH" "$TMP/handoff-bad.json" fix >/dev/null 2>&1 && fail "handoff: fix without results → INVALID" || pass "handoff: fix without results → INVALID"
 
 # ============================================================================
+printf '\n--- v3.5.0 fast path: root-cause clustering, guard cadence, batched tracker rounds ---\n'
+# ============================================================================
+
+spec_has "Fast path .default."           "spec: fast path section (default)"
+spec_has "speed-protocol"                "spec: references the speed protocol"
+spec_has "One slice = one root cause"    "spec: defects clustered by root cause"
+spec_has "shared caller"                 "spec: fix at the shared caller"
+spec_has "regression test once"          "spec: repro scripted once as the regression test"
+spec_has "touched suite"                 "spec: touched suite per slice"
+spec_has "every 5 kept"                  "spec: full Guard at checkpoints"
+spec_has "bisects the kept batch"        "spec: checkpoint failure bisects"
+spec_has "--thorough"                    "spec: --thorough restores full Guard per slice"
+spec_has "status ceiling"                "spec: independence ceiling untouched"
+
+# ============================================================================
 printf '\n=== Results: %d/%d passed ===' "$PASS" "$TOTAL"
 if [[ "$FAIL" -gt 0 ]]; then printf ' (%d FAILED)\n' "$FAIL"; exit 1; else printf ' (all passed)\n'; exit 0; fi

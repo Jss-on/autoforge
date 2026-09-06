@@ -8,6 +8,11 @@
  *                        [--viewports 1280x800,390x844] [--design DESIGN.md] [--out scan.json]
  *                        [--shots <dir>] [--storage-state state.json] [--ignore rule1,rule2]
  *                        [--engine builtin|impeccable|both] [--settle 600] [--timeout 30000]
+ *                        [--sheet <contact-sheet.png>] [--prev <previous scan.json>]
+ *
+ *   --sheet renders every capture as a labelled, top-cropped cell in ONE image (open the sheet,
+ *   not every PNG); --prev reuses pages whose fingerprint (DOM + stylesheet text + resource sizes,
+ *   per viewport) is unchanged since that scan — findings + screenshot cited, never re-produced.
  *
  *   exit 0  clean (no error/warn findings)   ·  exit 2  findings   ·  exit 1  cannot run
  *
@@ -25,6 +30,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 // ---------------------------------------------------------------------------
 // args
@@ -32,7 +38,7 @@ const path = require('path');
 function parseArgs(argv) {
   const a = { urls: [], viewports: '1280x800,390x844', mode: 'operate', out: 'design-scan.json',
               shots: null, design: null, storageState: null, ignore: [], engine: 'both',
-              settle: 600, timeout: 30000, fullPage: true };
+              settle: 600, timeout: 30000, fullPage: true, sheet: null, prev: null };
   for (let i = 2; i < argv.length; i++) {
     const k = argv[i], v = argv[i + 1];
     switch (k) {
@@ -48,6 +54,8 @@ function parseArgs(argv) {
       case '--settle': a.settle = Number(v); i++; break;
       case '--timeout': a.timeout = Number(v); i++; break;
       case '--no-full-page': a.fullPage = false; break;
+      case '--sheet': a.sheet = v; i++; break;
+      case '--prev': a.prev = v; i++; break;
       case '--help': case '-h': usage(); process.exit(0);
       default:
         if (k.startsWith('--')) { console.error(`unknown flag: ${k}`); usage(); process.exit(1); }
@@ -521,6 +529,16 @@ async function main() {
   if (a.storageState) ctxOpts.storageState = a.storageState;
   const report = { meta: { generatedAt: new Date().toISOString(), mode: a.mode, engine: impPath ? (a.engine === 'impeccable' ? 'impeccable' : 'builtin+impeccable') : 'builtin', design: designSystem ? { file: designSystem.file || a.design, present: !!designSystem.present, fonts: designSystem.fonts || [], colors: (designSystem.colors || []).length, radii: designSystem.radii || [] } : null, viewports: a.viewportList, ignore: a.ignore }, pages: [], summary: { errors: 0, warns: 0, advisory: 0, byRule: {} } };
   const ignore = new Set(a.ignore);
+  // --prev: a page whose fingerprint is unchanged since the previous scan is reused — its findings
+  // and screenshot are cited, not re-produced. A volatile DOM (nonces, timestamps) only costs a
+  // recapture: the failure direction is "verify again", never "assume".
+  // ponytail: an asset swapped for one of identical byte size is invisible to the fingerprint;
+  // run without --prev (the --thorough path) to recapture everything.
+  const prevPages = new Map();
+  if (a.prev) {
+    try { for (const p of JSON.parse(fs.readFileSync(a.prev, 'utf8')).pages || []) if (p.fingerprint) prevPages.set(`${p.url}|${p.viewport}`, p); }
+    catch (e) { process.stderr.write(`design-scan: --prev ${a.prev} unreadable (${String(e && e.message || e).slice(0, 80)}) — scanning everything\n`); }
+  }
 
   for (const url of a.urls) {
     for (const vp of a.viewportList) {
@@ -536,17 +554,27 @@ async function main() {
         await page.waitForTimeout(a.settle);
         // reveal sweep so IntersectionObserver-gated content gets its chance, then back to top
         await page.evaluate(async () => { const step = Math.max(200, Math.floor(innerHeight * 0.7)); const max = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight); for (let y = 0; y <= max; y += step) { scrollTo(0, y); await new Promise(r => setTimeout(r, 40)); } scrollTo(0, 0); await new Promise(r => setTimeout(r, 300)); });
-        if (a.shots) {
+        entry.fingerprint = crypto.createHash('sha1').update(await page.evaluate(() => {
+          let css = '';
+          for (const s of Array.from(document.styleSheets)) { try { css += Array.from(s.cssRules).map(r => r.cssText).join('\n'); } catch { css += s.href || ''; } }
+          const res = performance.getEntriesByType('resource').map(r => `${r.name}:${r.encodedBodySize || 0}`).sort().join('\n');
+          return `${innerWidth}x${innerHeight}\n${document.documentElement.outerHTML.replace(/\s+/g, ' ')}\n${css}\n${res}`;
+        })).digest('hex').slice(0, 16);
+        const prev = prevPages.get(`${url}|${entry.viewport}`);
+        if (prev && prev.fingerprint === entry.fingerprint && (!a.shots || (prev.screenshot && fs.existsSync(prev.screenshot)))) {
+          entry.reused = true; entry.findings = prev.findings || []; entry.screenshot = prev.screenshot || null; entry.meta = prev.meta;
+        }
+        if (!entry.reused && a.shots) {
           const safe = url.replace(/^https?:\/\//, '').replace(/[^a-z0-9]+/gi, '_').replace(/^_|_$/g, '').slice(0, 60) || 'root';
           entry.screenshot = path.join(a.shots, `${safe}--${vp.width}x${vp.height}.png`);
           await page.screenshot({ path: entry.screenshot, fullPage: a.fullPage });
         }
-        if (a.engine !== 'impeccable') {
+        if (!entry.reused && a.engine !== 'impeccable') {
           const res = await page.evaluate(inPageRules, { mode: a.mode, designSystem: designSystem && designSystem.present ? designSystem : null });
           entry.findings.push(...res.findings.map(f => ({ ...f, engine: 'builtin' })));
           entry.meta = res.meta;
         }
-        if (impScript) {
+        if (!entry.reused && impScript) {
           try {
             await page.evaluate((ds) => { window.__IMPECCABLE_CONFIG__ = { autoScan: false, ...(ds ? { designSystem: ds } : {}) }; },
               designSystem && designSystem.present ? { present: true, hasFonts: designSystem.hasFonts, allowedFonts: designSystem.fonts, hasColors: designSystem.hasColors, allowedColors: designSystem.colors, hasRadii: designSystem.hasRadii, allowedRadii: designSystem.radii, hasPillRadius: designSystem.radii.some(r => r >= 999) } : null);
@@ -558,7 +586,7 @@ async function main() {
             }
           } catch (e) { entry.findings.push({ rule: 'impeccable-engine-error', severity: 'advisory', selector: '', detail: String(e.message || e).slice(0, 160), engine: 'impeccable' }); }
         }
-        if (consoleErrors.length) entry.findings.push({ rule: 'console-error', severity: 'error', selector: '', detail: `${consoleErrors.length} console/page error(s)`, snippet: consoleErrors.slice(0, 3).join(' | '), engine: 'builtin' });
+        if (!entry.reused && consoleErrors.length) entry.findings.push({ rule: 'console-error', severity: 'error', selector: '', detail: `${consoleErrors.length} console/page error(s)`, snippet: consoleErrors.slice(0, 3).join(' | '), engine: 'builtin' });
       } catch (e) {
         entry.errors = String(e && e.message || e).slice(0, 300);
         entry.findings.push({ rule: 'page-unreachable', severity: 'error', selector: '', detail: entry.errors, engine: 'builtin' });
@@ -571,8 +599,30 @@ async function main() {
         if (f.severity === 'error') report.summary.errors++; else if (f.severity === 'warn') report.summary.warns++; else report.summary.advisory++;
       }
       report.pages.push(entry);
-      process.stderr.write(`  ${url} @${entry.viewport}: ${entry.findings.filter(f => f.severity !== 'advisory').length} counted, ${entry.findings.filter(f => f.severity === 'advisory').length} advisory${entry.screenshot ? ` → ${entry.screenshot}` : ''}\n`);
+      process.stderr.write(`  ${url} @${entry.viewport}: ${entry.findings.filter(f => f.severity !== 'advisory').length} counted, ${entry.findings.filter(f => f.severity === 'advisory').length} advisory${entry.reused ? ' (reused)' : ''}${entry.screenshot ? ` → ${entry.screenshot}` : ''}\n`);
     }
+  }
+  if (a.sheet) {
+    // Contact sheet: every capture as a labelled, top-cropped cell — one image to open instead of N.
+    // ponytail: capped at 128 cells (Chromium's ~16k px screenshot ceiling); paginate if a run ever exceeds it.
+    const cells = report.pages.filter(p => p.screenshot && fs.existsSync(p.screenshot)).slice(0, 128);
+    const sheetPath = path.resolve(a.sheet);
+    const htmlPath = path.join(path.dirname(sheetPath), 'sheet.html');
+    fs.mkdirSync(path.dirname(sheetPath), { recursive: true });
+    const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const cell = p => {
+      const counted = p.findings.filter(f => f.severity !== 'advisory').length;
+      const rel = path.relative(path.dirname(htmlPath), path.resolve(p.screenshot)).split(path.sep).join('/');
+      return `<figure><figcaption>${esc(p.url.replace(/^https?:\/\//, ''))} @${p.viewport} · ${counted} counted${p.reused ? ' · reused' : ''}${p.errors ? ' · UNREACHABLE' : ''}</figcaption><div><img src="${esc(rel)}" alt=""></div></figure>`;
+    };
+    fs.writeFileSync(htmlPath, `<!doctype html><meta charset="utf-8"><style>body{margin:0;background:#111;color:#eee;font:12px/1.3 monospace}main{display:grid;grid-template-columns:repeat(4,320px);gap:12px;padding:12px}figure{margin:0}figcaption{width:320px;padding:0 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}div{width:320px;height:440px;overflow:hidden;background:#fff}img{width:320px;display:block}</style><main>${cells.map(cell).join('')}</main>`);
+    const ctx = await browser.newContext({ viewport: { width: 1352, height: 900 } });
+    const pg = await ctx.newPage();
+    await pg.goto(require('url').pathToFileURL(htmlPath).href, { waitUntil: 'load', timeout: a.timeout });
+    await pg.screenshot({ path: sheetPath, fullPage: true });
+    await ctx.close().catch(() => {});
+    report.meta.sheet = sheetPath;
+    process.stderr.write(`  contact sheet: ${cells.length} capture(s) → ${sheetPath}\n`);
   }
   await browser.close();
   report.summary.counted = report.summary.errors + report.summary.warns;

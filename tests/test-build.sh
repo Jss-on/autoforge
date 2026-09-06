@@ -356,10 +356,80 @@ spec_has "Output repository" "spec: output-repo transparency contract"
 STALE_PINS=$(grep -rl 'version "2.1.0"' "$REPO_ROOT/.claude/commands/" 2>/dev/null | wc -l | tr -d ' ')
 assert_eq "0" "$STALE_PINS" "no command still pins handoff version 2.1.0"
 
+# ============================================================================
+printf '\n--- v3.3.0 integrations: generative media, design bridge, tracker sync ---\n'
+# ============================================================================
+
+IPROTO="$REPO_ROOT/claude-plugin/skills/forge/references/integrations-protocol.md"
+for tree in .claude claude-plugin .opencode .agents plugins/forge; do
+  f="$REPO_ROOT/$tree/skills/forge/references/integrations-protocol.md"
+  [[ -f "$f" ]] && pass "shipped: $tree integrations-protocol.md" || fail "shipped: $tree missing integrations-protocol.md"
+  diff -q "$REPO_ROOT/.claude/skills/forge/references/integrations-protocol.md" "$f" >/dev/null 2>&1 \
+    && pass "reference parity: $tree integrations-protocol.md" || fail "reference parity: $tree integrations-protocol.md diverged"
+done
+
+# The protocol carries the load-bearing rules.
+grep -q "availability-gated" "$IPROTO" && pass "iproto: availability-gated doctrine" || fail "iproto: no availability-gated doctrine"
+grep -q "12 generation jobs" "$IPROTO" && pass "iproto: media job cap" || fail "iproto: no media job cap"
+grep -qF 'forge:<run-id>/<defect-id>' "$IPROTO" && pass "iproto: tracker dedupe marker" || fail "iproto: no tracker dedupe marker"
+grep -q "Never dual-file" "$IPROTO" && pass "iproto: one tracker of record" || fail "iproto: dual-file rule missing"
+grep -q "pinned" "$IPROTO" && pass "iproto: approved assets pinned" || fail "iproto: no asset pinning rule"
+grep -q "Availability is not approval" "$IPROTO" && pass "iproto: detection never spends" || fail "iproto: spend-arming rule missing"
+grep -qi "fallback" "$IPROTO" && pass "iproto: degradation paths named" || fail "iproto: no degradation paths"
+
+# build.md wires them in.
+spec_has "integrations-protocol" "spec: references integrations protocol"
+spec_has "Tracker:"              "spec: Tracker argument (tracker of record)"
+spec_has "Assets: N\\|off"       "spec: Assets budget argument"
+spec_has "Asset pass"            "spec: Phase 4 asset pass"
+spec_has "generated-on-brief"    "spec: sourcing ladder has the generated rung"
+spec_has "Figma URL"             "spec: Design: accepts a Figma URL via the bridge"
+
+# requirements spec schema carries the optional tracker/assets blocks.
+RSPEC="$REPO_ROOT/claude-plugin/commands/forge/requirements.md"
+grep -q "tracker: { record: github|linear" "$RSPEC" && pass "requirements: spec tracker block" || fail "requirements: no tracker block"
+grep -q "moodboard" "$RSPEC" && pass "requirements: generated moodboards in reaction loop" || fail "requirements: no moodboard option"
+
+# test/fix route defects to the tracker of record.
+grep -q "tracker of record" "$REPO_ROOT/claude-plugin/commands/forge/test.md" \
+  && pass "test: defects to tracker of record" || fail "test: no tracker-of-record rule"
+grep -q "integrations-protocol" "$REPO_ROOT/claude-plugin/commands/forge/fix.md" \
+  && pass "fix: linear discipline referenced" || fail "fix: no tracker discipline"
+
 # Commands must tell the model how to find the seam + references off this machine.
 grep -q "CLAUDE_PLUGIN_ROOT" "$SPEC" && pass "build.md carries path-resolution for installed plugins" \
                                      || fail "build.md lacks CLAUDE_PLUGIN_ROOT path resolution"
 
+
+# ============================================================================
+printf '\n--- v3.4.0 ponytail discipline: ladder, shortest diff, debt harvest, token economy ---\n'
+# ============================================================================
+
+spec_has "Ponytail discipline"            "spec: ponytail discipline section"
+spec_has "dietrichgebert/ponytail"        "spec: method provenance (ponytail repo)"
+spec_has "first rung that holds"          "spec: ladder stops at the first rung"
+spec_has "Does it need to exist at all"   "spec: ladder rung 1 (YAGNI)"
+spec_has "Stdlib does it"                 "spec: ladder rung 3 (stdlib)"
+spec_has "Native platform feature"        "spec: ladder rung 4 (native platform)"
+spec_has "Can it be one line"             "spec: ladder rung 6 (one line)"
+spec_has "never about the reading"        "spec: lazy about solution, never about reading"
+spec_has "Shortest working diff"          "spec: shortest working diff rule"
+spec_has "ponytail:"                      "spec: ponytail: ceiling markers"
+spec_has "DEBT.md"                        "spec: debt harvest into DEBT.md before DONE"
+spec_has "One runnable check"             "spec: one runnable check per non-trivial logic"
+spec_has "skipped: .X., add when .Y."     "spec: terse output pattern"
+spec_has "loc_delta"                      "spec: loc_delta logged + compared by simplicity-wins"
+spec_has "Read each file once"            "spec: token mechanics (read once, ranges, no full pastes)"
+spec_has "fail fast"                      "spec: affected suite first, full guard decides"
+spec_has "Ponytail: lite"                 "spec: Ponytail level argument"
+spec_has "default .ultra..: the lazy"    "spec: Ponytail default level is ultra"
+spec_has "YAGNI extremist"                "spec: ultra = YAGNI extremist (deletion before addition)"
+spec_has "Never lazy about"               "spec: validation/security/a11y/data-loss never cut"
+spec_has "Lazy senior dev"                "spec: principle listed in the phase-gate protocol"
+spec_has "speed-protocol"                 "spec: browser sweeps + guard cadence follow the speed protocol"
+spec_has "contact sheet"                  "spec: Phase 6 design QA opens the contact sheet"
+grep -q "Ponytail: lite" "$REPO_ROOT/claude-plugin/skills/forge/SKILL.md" \
+  && pass "router: Ponytail argument in the shared-argument table" || fail "router: Ponytail argument missing"
 # ============================================================================
 printf '\n=== Results: %d/%d passed ===' "$PASS" "$TOTAL"
 if [[ "$FAIL" -gt 0 ]]; then printf ' (%d FAILED)\n' "$FAIL"; exit 1; else printf ' (all passed)\n'; exit 0; fi

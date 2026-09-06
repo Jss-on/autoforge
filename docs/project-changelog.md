@@ -2,6 +2,45 @@
 
 All notable changes to the forge project are documented here.
 
+## v3.3.0 — MCP integrations: generative media, design bridge, tracker sync (2026-08-26)
+
+**Theme:** built products get real pictures, animation, and 3D instead of placeholder slots;
+design sources get a Figma lane; engagements get first-class project tracking — all optional,
+availability-gated, and degrading to the existing behavior when the MCP family is absent.
+
+**Added:**
+
+- `references/integrations-protocol.md` — the contract for three optional MCP families, probed by
+  capability shape, never a hard dependency: **generative media** (Higgsfield-class), the
+  **design bridge** (Figma-class), and **tracker sync** (Linear-class). Doctrine: detect → gate →
+  degrade → record (`integrations.json` per run; additive `assets`/`tracker` handoff fields).
+- **Asset pass** (`design system` step 8, build Phase 4, protocol §3.11): with a media MCP present
+  and the mode requiring imagery — planned slots (`assets/PLAN.md`), style-contract prompts derived
+  from the committed DESIGN.md (named hex + thesis + material; generic adjectives banned), batch
+  generation under a 12-job default cap (`Assets: N|off`), every asset opened and read before it is
+  kept, dedicated post-production (upscale · `remove_background` real cutouts · reframe · outpaint),
+  provenance rows in `assets/CREDITS.md` + `assets/PROMPTS.md`. Approved assets are **pinned** —
+  fix loops never re-roll imagery. Sourcing ladder gains the **generated-on-brief** rung
+  (CC0 packs → generated → procedural → CC-BY). Vector honesty: raster-in-vector-style ≠ SVG;
+  icons stay one library, one stroke.
+- **Design bridge**: `Design: <figma-url>` on `requirements`/`build`/`design system` — variables /
+  components / frames normalized into the standard DESIGN.md (lint gate unchanged); audit MAY judge
+  fidelity against source frames; `--figma-out` pushes built screens to a NEW review file
+  (human-gated). Requirements' artifact-reaction loop may add ≤4 generated moodboards and reads
+  client Figma links as reaction artifacts.
+- **Tracker sync**: `Tracker: linear` (argument or spec `tracker:` block) moves the tracker of
+  record from GitHub issues to Linear per §3 — engagement → project, phase gates → status updates,
+  defect ledgers → issues (`forge:<run-id>/<defect-id>` marker, search-before-create,
+  severity-mapped, `fixed` → in-review, `verified` → done, never delete, never touch unmarked
+  issues). Exactly one tracker of record — never dual-file; unattended with no team resolvable →
+  GitHub fallback, said out loud. Spec schema gains optional `tracker:` + `assets:` blocks.
+- Audit imagery findings: unlabeled stock-alikes, div-built fake screenshots, and `assets/` files
+  missing provenance rows are defects; a labeled placeholder is a finding only when a media MCP
+  was available to fill it.
+
+Product 3.3.0 (manifests + routers); handoff schema stays 3.1.0 (new fields additive). Suite grown
+with integrations coverage (shipped-in-5-trees + reference parity + load-bearing rule greps).
+
 ## v3.2.0 — Paper formats for /forge:research (2026-08-26)
 
 **Added:** `Format: md|arxiv|ieee` on `/forge:research`. Phase 5 can typeset the dossier as an

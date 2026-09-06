@@ -42,6 +42,30 @@ iteration 15.
 - `Iterations:` / `--iterations` — execution-loop bound, default 20. `Target-rate:` — strict-evidence
   pass-rate threshold for exit (default 0.95; exported as `TEST_TARGET_RATE`).
 - `--chain <targets>` — commonly `fix` (defect remediation) then `test` again (re-engagement). `--evals`.
+- `--thorough` — restore the exhaustive form of every fast-path rule below. Default is the fast path.
+
+## Fast path (default) — `references/speed-protocol.md`
+
+The engagement is fast because it never verifies the same fact twice, not because it tests less:
+- **Harvest before you write** — run the Target's own suite first; a passing existing unit/API test
+  is the execution of the designed case it covers (`evidence:unit@<sha7>.txt#<name>`), never
+  rewritten. New automated cases only for what nothing covers, **one batch per area**, run once.
+- **Intake by structure** — route table / router, schema, SRS, existing test layout; source files
+  are read when a case is designed against them, not upfront.
+- **One browser sweep per NFR pass** — `design-scan.cjs` (captures + floor + conformance; `--sheet`
+  contact sheet, `--prev` to reuse unchanged pages) and axe over the same route list in one
+  Playwright session; the app stays booted across iterations. Open the sheet, not every PNG
+  (individual PNGs only when flagged or when a defect is filed against them).
+- **Cadence** — the **touched suite** per slice; the **full suite** at checkpoints (every 5 kept
+  slices), before the report PR and before the verdict; perf = one bounded run at the declared
+  concurrency; exploratory sessions end at the findings plateau; full 29119 defect anatomy for
+  critical/high, ledger row + 3-line repro for medium/low — every defect still carries a repro and
+  an evidence file.
+- **Seams once per slice** — one `pass-rate --strict-evidence` and one `defects` run, every line
+  parsed from that invocation. Narrate gates, not keystrokes.
+`--thorough` restores every-PNG reading, the full suite per slice and full anatomy for every defect.
+Nothing in the fast path lowers `Target-rate`, the zero critical/high rule, RTM coverage, the
+evidence rule or tester independence.
 
 ## Run directory & deliverables (the 29119-3 set, machine-readable where it counts)
 `forge/test-{YYMMDD}-{HHMM}/` containing:
@@ -172,8 +196,11 @@ Target is its own output repo (per `build`'s Output repository contract), copy `
 rides CI and review. **That report PR merges itself** (`gh pr merge --squash --delete-branch`) once
 its checks are green and it is `MERGEABLE` — the report is evidence, and evidence belongs on the base
 branch whatever the verdict was; a `RELEASE_BLOCKED` verdict blocks the *release*, never the record of
-it. `--no-merge` opts out; branch protection wins if it requires a review. **File every unresolved critical/high defect as a GitHub issue** on the Target's
-repo (label `qa`, body = the full defect report) — deferred findings must live where the fix work
+it. `--no-merge` opts out; branch protection wins if it requires a review. **File every unresolved critical/high defect on the tracker of record** — a GitHub issue
+on the Target's repo (label `qa`, body = the full defect report) by default, or Linear issues on
+the engagement's project when `Tracker: linear` armed it (`references/integrations-protocol.md`
+§3: `forge:<run-id>/<defect-id>` marker, severity mapped, search-before-create, never both
+trackers) — deferred findings must live where the fix work
 happens, not in a summary nobody reopens.
 
 ## Safety Invariants

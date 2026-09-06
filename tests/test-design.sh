@@ -253,6 +253,13 @@ if [[ -n "$PW_CWD" ]]; then
   (cd "$PW_CWD" && node "$SCAN" --url "http://127.0.0.1:$PORT/slop.html" --url "http://127.0.0.1:$PORT/clean.html" \
       --viewports 1280x800,390x844 --mode operate --engine builtin --out "$T/live-scan.json" --shots "$T/shots" >/dev/null 2>"$T/live.err")
   LRC=$?
+  # --sheet + --prev: a second pass against the same static fixture must reuse every page
+  # (fingerprint match) and render the contact sheet from the first pass's captures.
+  if [[ -f "$T/live-scan.json" ]]; then
+    (cd "$PW_CWD" && node "$SCAN" --url "http://127.0.0.1:$PORT/slop.html" --url "http://127.0.0.1:$PORT/clean.html" \
+        --viewports 1280x800,390x844 --mode operate --engine builtin --out "$T/live-scan2.json" --shots "$T/shots" \
+        --sheet "$T/shots/sheet.png" --prev "$T/live-scan.json" >/dev/null 2>"$T/live2.err")
+  fi
   kill "$SRV" >/dev/null 2>&1 || true
   if [[ -f "$T/live-scan.json" ]]; then
     assert_eq 2 "$LRC" "live scan: fixture with tells → exit 2"
@@ -265,6 +272,13 @@ if [[ -n "$PW_CWD" ]]; then
     CLEAN_COUNTED=$(node -e 'const r=require(process.argv[1]);let n=0;for(const p of r.pages) if(/clean/.test(p.url)) for(const f of p.findings) if(f.severity!=="advisory") n++; console.log(n)' "$T/live-scan.json")
     assert_eq "0" "$CLEAN_COUNTED" "live scan: clean fixture has zero counted findings (no false positives)"
     ls "$T/shots"/*1280x800.png >/dev/null 2>&1 && pass "live scan: screenshots written per route × viewport" || fail "live scan: no screenshots"
+    [[ -s "$T/shots/sheet.png" ]] && pass "live scan: --sheet renders the contact sheet" || fail "live scan: no contact sheet ($(head -2 "$T/live2.err" | tr '\n' ' '))"
+    grep -q '"fingerprint"' "$T/live-scan.json" && pass "live scan: pages carry a fingerprint" || fail "live scan: no fingerprint"
+    REUSED=$(node -e 'const r=require(process.argv[1]);console.log(r.pages.filter(p=>p.reused).length+"/"+r.pages.length)' "$T/live-scan2.json" 2>/dev/null)
+    assert_eq "4/4" "$REUSED" "live scan: --prev reuses every unchanged page (fingerprint match)"
+    LIVE_COUNTED=$(node -e 'const r=require(process.argv[1]);console.log(r.summary.counted)' "$T/live-scan.json" 2>/dev/null)
+    REUSED_COUNTED=$(node -e 'const r=require(process.argv[1]);console.log(r.summary.counted)' "$T/live-scan2.json" 2>/dev/null)
+    assert_eq "$LIVE_COUNTED" "$REUSED_COUNTED" "live scan: reused pages keep their findings (gate unchanged)"
   else
     fail "live scan: no output produced ($(head -3 "$T/live.err" | tr '\n' ' '))"
   fi
@@ -388,7 +402,7 @@ for m in "$REPO_ROOT/.claude/commands/forge/design.md" \
 done
 
 for tree in .claude claude-plugin .opencode .agents plugins/forge; do
-  for f in scripts/score-design.sh scripts/design-scan.cjs references/design-protocol.md references/uiux-checklist.md; do
+  for f in scripts/score-design.sh scripts/design-scan.cjs references/design-protocol.md references/uiux-checklist.md references/speed-protocol.md; do
     [[ -f "$REPO_ROOT/$tree/skills/forge/$f" ]] \
       && pass "shipped: $tree $f" || fail "shipped: $tree missing $f"
   done
@@ -416,6 +430,40 @@ for mf in "$REPO_ROOT/.claude-plugin/marketplace.json" \
   grep -q "20 commands" "$mf" && pass "manifest count 20: $name" || fail "manifest count 20: $name"
   grep -q "test, design" "$mf" && pass "manifest lists design: $name" || fail "manifest lists design: $name"
 done
+
+# ============================================================================
+printf '\n--- v3.3.0 integrations: media asset pass, Figma bridge, tracker ---\n'
+# ============================================================================
+
+grep -q "Figma URL" "$SPEC" && pass "design: Design: accepts a Figma URL" || fail "design: no Figma URL source"
+grep -q "Asset pass" "$SPEC" && pass "design: system runs the asset pass" || fail "design: no asset pass step"
+grep -q "assets/CREDITS.md" "$SPEC" && pass "design: provenance rows required" || fail "design: no provenance rule"
+grep -q "pinned" "$SPEC" && pass "design: --fix never re-rolls approved assets" || fail "design: no asset pinning"
+grep -q "integrations-protocol" "$SPEC" && pass "design: integrations protocol referenced" || fail "design: integrations protocol unreferenced"
+grep -q "tracker of record" "$SPEC" && pass "design: defects to tracker of record" || fail "design: no tracker-of-record rule"
+grep -q "integrations-protocol" "$PROTO" && pass "protocol: direction protocol names the asset pass" || fail "protocol: asset pass missing"
+grep -q "Generated on brief" "$REPO_ROOT/claude-plugin/skills/forge/references/game-assets-protocol.md" \
+  && pass "game-assets: ladder has the generated rung" || fail "game-assets: no generated rung"
+grep -q "integrations-protocol" "$REPO_ROOT/claude-plugin/commands/forge/feature.md" \
+  && pass "feature: delta imagery + tracker wired" || fail "feature: integrations unreferenced"
+grep -q "Optional MCP integrations" "$REPO_ROOT/.claude/skills/forge/SKILL.md" \
+  && pass "router: SKILL.md documents the integration families" || fail "router: no integrations section"
+
+# ============================================================================
+printf '\n--- v3.5.0 fast path: contact sheet, delta re-scans, one-pass judgement ---\n'
+# ============================================================================
+
+spec_has "Fast path .default."           "spec: fast path section (default)"
+spec_has "speed-protocol"                "spec: references the speed protocol"
+spec_has "\-\-sheet"                    "spec: contact sheet instead of every PNG"
+spec_has "\-\-prev"                     "spec: delta re-scan of unchanged pages"
+spec_has "Delta audits"                  "spec: --fix / verdict pass are delta audits"
+spec_has "One judgement pass"            "spec: critique + persona walk in one pass"
+spec_has "\-\-thorough"                 "spec: --thorough restores the exhaustive form"
+spec_has "RECAPTURE"                     "spec: capture validity still gates"
+grep -q "speed-protocol" "$REPO_ROOT/claude-plugin/skills/forge/references/design-protocol.md" \
+  && pass "protocol: §7 capture rule points at the speed protocol" || fail "protocol: §7 still demands every PNG"
+grep -q -- "--sheet" "$SCAN" && grep -q -- "--prev" "$SCAN" && pass "design-scan: --sheet + --prev flags" || fail "design-scan: flags missing"
 
 # ============================================================================
 printf '\n=== Results: %d/%d passed ===' "$PASS" "$TOTAL"

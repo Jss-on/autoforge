@@ -50,6 +50,29 @@ Extract from $ARGUMENTS:
   test, type, lint, build. `--evals`, `--evals-interval N`, `--chain <targets>` (commonly `test`).
 - `Merge:` / `--merge` — `auto` (default: squash-merge the PR once CI is green, see the GitHub flow)
   or `manual`. `--no-merge` is shorthand for `Merge: manual`.
+- `--thorough` — restore the exhaustive form of every fast-path rule below (full Guard per slice).
+  Default is the fast path.
+
+## Fast path (default) — `references/speed-protocol.md`
+
+The remediation is fast because it fixes each cause once and verifies each fact once:
+- **One slice = one root cause** — cluster ledger rows that share a root cause (same function, same
+  missing guard, same token) and fix at the **shared caller** (the ladder's rule: one guard where
+  every caller routes through); each DEF row still gets its own red → green repro evidence and its
+  own status change. Grep the callers and read the touched code before reaching for `debug`'s loop.
+- **The repro becomes the regression test once** — on first reproduction, script it as an added test
+  or probe; every later verification runs that, never the manual steps again.
+- **Guard cadence** — per slice the **touched suite** (tests related to the changed files + rows
+  tracing to the same requirement), fail-fast; the **full Guard** at checkpoints (every 5 kept
+  fixes), before the PR opens and before COMPLETE. A checkpoint failure bisects the kept batch
+  (revert the newest kept fix first, re-run, re-queue). In error mode the `Target` command is the
+  metric and still runs per slice; the cadence applies to the separate `Guard`.
+- **App stays booted** across iterations (pidfile); evidence is cited by commit, never re-produced
+  for the same commit.
+- **Tracker rounds batched** — a push per kept fix stays; issue comments post in one pass when the
+  PR opens (or on abort) — same content per defect, one network round.
+`--thorough` restores the full Guard per slice. The iron law, the status ceiling, the no-weakened-
+tests rule and green-CI-before-merge are untouched.
 
 ## Setup (if required context missing)
 If Target, Defects, and Scope all missing:
@@ -114,7 +137,9 @@ recoverable. Git is the experiment ledger.
   regression** — re-run the test rows from `test-results.tsv` that trace to the same requirement(s)
   and anything sharing the touched files.
 - Error mode: run Target → count errors → delta (expected: decreased, nothing new appeared).
-- Run Guard. Guard red → the fix is wrong regardless of the item going green.
+- Run Guard — fast path: the **touched suite** per slice, the **full Guard** at checkpoints (every 5
+  kept fixes), before the PR and before COMPLETE (`--thorough`: full Guard per slice). Guard red →
+  the fix is wrong regardless of the item going green.
 
 ### Phase 7 — Decide
 - **keep** — item green AND metric decreased/held AND guard passes → defect status `open/in-progress
@@ -143,6 +168,11 @@ When the working repo is an output repo (per `build`'s contract), fixes ride the
   fix commit → evidence), one **`Fixes #<issue>`** line per remediated GitHub issue so the `qa`
   issues close on merge. The PR's **CI check must be green** — a red-CI fix branch is not done
   (and when the defect WAS the red CI, the green run is the proof).
+- **Tracker of record other than GitHub** (`Tracker: linear` armed on the originating engagement —
+  integrations-protocol §3): mirror the same discipline onto the Linear issues carrying the
+  `forge:<run-id>/<defect-id>` marker — comment root cause + commit + evidence as each fix lands,
+  move `fixed` items to the team's in-review state (never straight to done; only a re-engagement's
+  `verified` closes), and never touch unmarked issues.
 - **Comment on each `qa` issue** as its fix lands: root cause + commit + evidence path + "awaiting
   independent verification by `/forge:test`".
 Commit the fix run directory to the invoking workspace as usual.

@@ -16,7 +16,9 @@ forge loop (`--fix`). Two truths drive everything: **the visitor mode gates the 
 jobs), and **taste never gates convergence on its own** — the mechanical floor (`SLOP_GATE`), the
 DESIGN.md lint, the ledger and the verdict do. Companion contract: `references/design-protocol.md`
 (modes, archetypes, direction protocol, DESIGN.md schema, craft floor, critique + persona + ledger
-protocol, remediation rules); checklist: `references/uiux-checklist.md`.
+protocol, remediation rules); checklist: `references/uiux-checklist.md`; optional MCP integrations
+(generative media for real imagery/animation, Figma-class design bridge, tracker sync):
+`references/integrations-protocol.md`.
 
 ## Seam & reference resolution (read once)
 Resolve `AR_ROOT` exactly as in `build`: first existing of `${CLAUDE_PLUGIN_ROOT}/skills/forge`,
@@ -43,11 +45,19 @@ Playwright means no captures, no scan, no verdict; say so instead of "reviewing"
 - `Brief:` — text or file for `system` (the SRS `requirements.md`, `charter.md`, the spec, and the
   client's design **dislikes** from `requirements`' artifact-reaction loop are read automatically).
 - `Design:` — for `system`: an existing `DESIGN.md` path (adopt + refresh), a catalog slug
-  (getdesign.md / `awesome-design-md`), a URL/file, or `generate` (default). `--refresh` — rewrite an
-  existing `DESIGN.md` **from the built world** (ground truth) instead of from the brief.
+  (getdesign.md / `awesome-design-md`), a **Figma URL** (design-bridge extract per
+  `references/integrations-protocol.md` §2 — variables/components/frames normalized into DESIGN.md;
+  without the bridge tools, an unreachable source: say so and fall back), a URL/file, or `generate`
+  (default). `--refresh` — rewrite an existing `DESIGN.md` **from the built world** (ground truth)
+  instead of from the brief.
+- `Assets: N|off` — generation-job budget for the media pass (default 12 when a media MCP is
+  present; `off` disables). `--figma-out` — push the reviewed screens into a new Figma file
+  (human-gated; integrations-protocol §2.3).
 - `Iterations:` — bound for `--fix` (default 12). `--fix` — after the audit, run the remediation
   loop on the ledger. `--chain <targets>` — commonly `regression`, `test`, or `design` again for the
   verdict pass. `--evals`.
+- `--thorough` — restore the exhaustive form of every fast-path rule below (every PNG opened, full
+  recapture, per-persona walks + blind panel). Default is the fast path.
 
 ## Setup (if required context missing)
 If neither a Target/Url nor a Brief is given, AskUserQuestion (single batch):
@@ -74,6 +84,34 @@ If a `build`/`feature` invoked this command → derive everything from its run d
 - `design-results.tsv` — `ux` acceptance rows in build's 7-column shape (`traces` carry `design:*`
   tags + FR/NFR IDs) so a `build`/`feature` run can fold them in; `iterations.tsv` (`--fix`),
   `score-log.tsv`, `handoff.json`.
+
+## Fast path (default) — `references/speed-protocol.md`
+
+The audit is fast because it never verifies the same fact twice, not because it looks less:
+- **Contact sheet, not every PNG** — `design-scan.cjs --shots evidence/screens --sheet
+  evidence/screens/sheet.png` renders every capture as a labelled, top-cropped cell (route @
+  viewport · counted findings · `reused`). Open the sheet — one image — to validate captures (right
+  route, no blank/black region, no login wall, no half-loaded state) and to read the look. Open an
+  individual PNG only when its cell or the scan flags it (`page-unreachable`, `http-error`,
+  `console-error`, `horizontal-overflow`, blank/black), when a defect is filed against it (evidence
+  is seen before it is cited), or when a slice touched its route.
+- **Delta audits** — `--prev <previous design-scan.json>` reuses every page whose fingerprint (DOM +
+  stylesheet text + resource sizes, per viewport) is unchanged: findings and screenshot are cited
+  from the previous scan, not re-shot. `--fix` re-verification and the verdict pass are delta audits
+  over the changed pages — the untouched pages' evidence is identical by construction.
+- **One sweep, one session** — captures + floor + conformance (`design-scan.cjs`) and axe over the
+  same route list in one Playwright session; the app is booted once per run; states captured for
+  the primary flow; viewports 1280×800 + 390×844 (tablet / reported width only when the surface
+  calls for it).
+- **One judgement pass** — the heuristic critique and the persona walk come from the same evidence
+  in one pass: walk the primary task once (keyboard, reduced motion), record each failing element,
+  attribute the flags per persona. No per-persona re-walk, no blind assessor panel unless
+  `--thorough` or `Bar: full` names it.
+- **Directions as a table** (`system`) — the 5–7 candidates are rows; only the rolled direction is
+  expanded into prose.
+`--thorough` restores every-PNG reading, full recapture, per-persona walks and the panel. The floor
+(`SLOP_GATE`), the lint, axe zero-serious, the ledger, the verdict seam, capture validity
+(`RECAPTURE`) and reviewer independence are untouched.
 
 ---
 
@@ -116,7 +154,16 @@ If a `build`/`feature` invoked this command → derive everything from its run d
    acceptance rows every build must carry (protocol §2 archetype rows + the 7 `design:*` coverage
    groups incl. `design:floor` = `SLOP_GATE: PASS`) into `design-results.tsv` as `fail` baseline
    rows for `build`/`feature` to fold in.
-8. **`--refresh`** (existing app): scan the incumbent — CSS custom properties, Tailwind theme,
+8. **Asset pass** (media MCP present + the mode requires imagery; integrations-protocol §1):
+   write `assets/PLAN.md` (slots from the surfaces: hero, section imagery, empty-state
+   illustrations, textures; video/3D/audio only when scoped), check balance, generate in batches
+   under the `Assets:` cap (default 12 jobs) with prompts derived from the committed world (the
+   style contract — thesis + named hex + material + scene, never generic adjectives), **open and
+   read every asset** before keeping it, post-produce with the dedicated tools (upscale hero,
+   `remove_background` cutouts, reframe variants), and record provenance rows in
+   `assets/CREDITS.md` + prompts in `assets/PROMPTS.md`. No media MCP → the sourcing ladder
+   (CC0 → procedural → labeled placeholder slots), unchanged.
+9. **`--refresh`** (existing app): scan the incumbent — CSS custom properties, Tailwind theme,
    token files, the main button/input/nav/card/table components, and the **live computed styles**
    via Playwright — then rewrite the frontmatter from what is actually used (descriptive names, one
    canonical value per token, no invented components), confirm the qualitative language (north star,
@@ -136,10 +183,11 @@ DESIGN.md + the app; not the build thread's summary), and never softens the disp
    captures/axe reports for the same commit, cite them instead of re-capturing.
 2. **Phase 1 — capture (validity first)**: `design-scan.cjs` with `--shots evidence/screens` at
    1280×800 + 390×844 (+ 768×1024 for tablet-heavy surfaces, + the user's reported width): motion
-   settled, full-page from the top. **Read every PNG** and confirm it shows what its name claims (no
-   blank/black regions, right route, not a login wall, no half-loaded state) — a malformed capture
-   is `RECAPTURE`, never scored. Also capture the primary flow's key states (empty, filled, error,
-   success, loading if reachable) with the same discipline.
+   settled, full-page from the top, `--sheet evidence/screens/sheet.png`. **Read the contact sheet**
+   and confirm every cell shows what its name claims (no blank/black regions, right route, not a
+   login wall, no half-loaded state) — a malformed capture is `RECAPTURE`, never scored; individual
+   PNGs per the fast path (`--thorough`: read every PNG). Also capture the primary flow's key states
+   (empty, filled, error, success, loading if reachable) with the same discipline.
 3. **Phase 2 — mechanical floor + conformance + a11y**: the same `design-scan.cjs` run writes
    `evidence/design-scan.json` (`--design <target>/DESIGN.md`, `--mode <mode>`; `--engine both`
    adds the impeccable detector when the project has it); `scripts/score-design.sh scan
@@ -147,6 +195,10 @@ DESIGN.md + the app; not the build thread's summary), and never softens the disp
    state → `evidence/axe-*.json` (zero serious/critical is the row). Keyboard-only walk of the primary
    task (focus visible, order logical, dialogs trap + Esc + return focus, nothing obscured by sticky
    bars). Every counted finding becomes a defect row (structural repeats = one systemic defect).
+   Imagery: where the mode requires real imagery, an unlabeled stock-alike, a div-built fake
+   screenshot, or an `assets/` file missing its `CREDITS.md` provenance row is a finding; a
+   **labeled** placeholder slot is a finding only when a media MCP was available to fill it
+   (integrations-protocol §1).
 4. **Phase 3 — heuristic critique**: score Nielsen's ten 0–4 with a key issue each (`na` only where
    the mode cannot apply, renormalized), the cognitive-load eight, and write `design-critique.tsv`;
    `scripts/score-design.sh critique design-critique.tsv` → `DESIGN_HEALTH: N/M (Band)`. Where a
@@ -166,14 +218,19 @@ DESIGN.md + the app; not the build thread's summary), and never softens the disp
 7. **GitHub flow**: commit the run dir; when the Target is its own output repo, copy
    `design-report.md` + `design-defects.tsv` into `<target>/qa/design/` on a `qa/design-<stamp>`
    branch, push, open a PR that merges itself on green CI (`--no-merge` opts out; branch protection
-   wins). File every unresolved critical/high design defect as a GitHub issue (label `design`).
+   wins). File every unresolved critical/high design defect on the **tracker of record** — GitHub
+   issue (label `design`) by default; Linear when `Tracker: linear` armed it (project + status
+   update + issues with the `forge:<run-id>/<defect-id>` marker, integrations-protocol §3) — never
+   both.
 
 # `--fix` — bounded remediation (the builder half)
 
 Runs only on an existing ledger (this run's audit or a prior `design`/`test` run's). Per iteration:
 read `design-defects.tsv` + `git log` of recent `experiment: design/…` commits → pick the highest
 blocking item (order: task-blocking + a11y → missing states → flow/hierarchy → floor tells →
-visual/motion consistency → cleanup) → **one slice** → `git commit -m "experiment: design/<id> —
+visual/motion consistency → cleanup) → **one slice** (approved generated assets are **pinned** —
+never re-rolled in a fix slice; regeneration requires a ledger defect naming what is wrong,
+integrations-protocol §1.8) → `git commit -m "experiment: design/<id> —
 <slice>"` **before** verify → recapture the affected routes + rescan + axe → **keep** iff `SLOP` did
 not rise, no `ux`/functional acceptance row went red (`scripts/score-build.sh pass-rate
 --strict-evidence`), `scripts/score-regression.sh verdict` is `STABLE`, and the row's evidence
@@ -183,7 +240,8 @@ tokens; one-off → shared component; conceptual mismatch → stop and route to 
 local defect → fix locally. Never perfect one corner while the rest sits below the bar. Stop at the
 bound (`scripts/score-build.sh bound iterations.tsv <N>`), at `SLOP: 0` + zero blocking defects, or
 when a round resolves nothing (plateau); two rounds is the unattended ceiling. Then run the **verdict
-pass** as a fresh audit over the new captures (a claimed fix you cannot see is unresolved).
+pass** as a delta audit over the new captures (`--prev` the fix round's scan; `--thorough`: a fresh
+full audit) — a claimed fix you cannot see is unresolved.
 
 ## Safety Invariants
 - **`audit` never modifies app source, config, data, or DESIGN.md** — it adds QA artifacts only;
@@ -202,8 +260,10 @@ Print: mode(s) + surfaces reviewed; `DESIGN_LINT`; **`SLOP: N` + `SLOP_GATE`** w
 axe serious/critical count; **`DESIGN_HEALTH: N/M (Band)`** table (10 rows + cognitive-load fails);
 persona red flags; defects by severity (open/fixed/verified, `[rebuild]` list); `ux` rows green/total;
 **`DESIGN_VERDICT: SHIP | FIX | REBUILD`**; for `--fix`: iterations, kept vs reverted slices, `SLOP`
-before → after, health before → after; deliverables checklist (design-read · DESIGN.md/lint ·
-captures · scan · critique · ledger · report — present/missing); GitHub PR/issue links.
+before → after, health before → after; integrations lines when active (`ASSETS: n kept / cap N`
++ credits when exposed; tracker rows created/updated; bridge pulls); deliverables checklist
+(design-read · DESIGN.md/lint · captures · scan · critique · ledger · report — present/missing);
+tracker-of-record PR/issue links.
 
 ## Eval Checkpoint (--evals)
 Interval: floor(max_iterations / 3), min 1. Print `SLOP` trend, blocking-defect trend, health
@@ -215,7 +275,9 @@ Write handoff.json: version "3.1.0", source "design", timestamp, status
 (COMPLETE|CONVERGED|BOUNDED|BLOCKED|USER_INTERRUPT|ERROR), results_tsv (`design-results.tsv`),
 defects_tsv, verdict (`SHIP|FIX|REBUILD`), design (path to DESIGN.md + `lint` result), slop (count),
 health (`N/M`), summary (path to `design-report.md`), findings = open defects + waived rules,
-config{verb, target, url, routes, mode, iterations}. Validate with
+config{verb, target, url, routes, mode, iterations}; optional additive fields when the
+integrations ran: `assets` {jobs, kept, credits?}, `tracker` (`github|linear` + project/issue ids).
+Validate with
 `scripts/validate-handoff.sh <run>/handoff.json design` before printing the summary. Chain commonly
 `--chain regression` (after `--fix`), `test` (function after form), or `design` again (verdict pass).
 Propagate `--evals`.
