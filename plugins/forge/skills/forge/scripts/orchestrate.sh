@@ -112,12 +112,12 @@ next-hop() {
       const boo = (k) => (typeof j[k] === "boolean" ? String(j[k]) : "");
       console.log([num("errors_remaining"), str("regression_verdict"),
                    num("untested_gaps"), str("archetype"),
-                   boo("pending_verify")].join(String.fromCharCode(31)));
+                   boo("pending_verify"), str("terminal_choice")].join(String.fromCharCode(31)));
     ' "$state_file" 2>/dev/null); then
     echo "ERROR: malformed state file" >&2; return 2
   fi
-  local errors regression gaps archetype pending
-  IFS=$'\x1f' read -r errors regression gaps archetype pending <<< "$parsed"
+  local errors regression gaps archetype pending terminal
+  IFS=$'\x1f' read -r errors regression gaps archetype pending terminal <<< "$parsed"
 
   # Guard: a routable ledger must at least carry its archetype (the same field
   # validate-state requires), so a file that passes validate-state never ERRORs
@@ -148,8 +148,9 @@ next-hop() {
     echo "verify"; return 0
   fi
 
-  # All clear: ship if archetype has ship in the pipeline, else DONE
-  if [[ "$archetype" == "ship-ready" ]]; then
+  # A ship archetype is not permission: only the explicit terminal choice routes
+  # to the human-gated ship workflow. Missing choices stop at verification.
+  if [[ "$archetype" == "ship-ready" && "$terminal" == "proceed-to-ship" ]]; then
     echo "ship"; return 0
   fi
 
@@ -222,12 +223,94 @@ plateau() {
 
 # ---------------------------------------------------------------------------
 # screen-cmd: safety gate for shell strings before execution.
-# Prints "ok" / "refuse". Anchored DB-host allowlist: only localhost,
-# 127.0.0.1, or a plain hostname (no dots) with a _test or _ci dbname suffix.
+# Prints "ok" / "refuse". DB destinations must be loopback/plain container
+# hostnames, or (PostgreSQL/MySQL only) have a _test or _ci database suffix.
 # Bare substring "test" inside words like "latest" or "precision" must NOT qualify.
 # ---------------------------------------------------------------------------
 screen-cmd() {
   local cmd="${1:?usage: screen-cmd <shell-string>}"
+  # Inspect static shell words as data, never eval/source them. Keep command
+  # boundaries and quoted arguments together when checking URL/credential scope.
+  # ponytail: lexical screening cannot resolve expansions, scripts or aliases;
+  # the host sandbox and explicit execution approvals remain the real boundary.
+  if ! cmd=$(MSYS2_ARG_CONV_EXCL='*' node - "$cmd" <<'NODE'
+const raw = process.argv[2];
+const tokenPattern = /(?:[^\s'"\\;&|()]+|\\[^\n]|"(?:\\.|[^"\\])*"|'[^']*')+|&&|\|\||[;&|()\n]/g;
+const tokens = raw.match(tokenPattern) || [];
+const word = (s) => s.replace(/'([^']*)'|"((?:\\.|[^"\\])*)"|\\(.)/gs,
+  (_, single, double, escaped) => single ?? (double === undefined ? escaped : double.replace(/\\([$`"\\])/g, "$1")));
+const base = (s) => (s || "").split("/").pop();
+const allowedPassword = /^(POSTGRES|MYSQL|MARIADB|REDIS|PG)_PASSWORD$/;
+const scheme = /\b(?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|rediss?):\/\/[^\s'"<>;|()]+/gi;
+let segment = [], downloaded = false;
+function checkSegment() {
+  const words = segment.map(word);
+  const executable = words.slice();
+  while (/^(if|then|else|do|while|until|!)$/.test(executable[0] || "")) executable.shift();
+  while (executable.length) {
+    if (/^[A-Za-z_]\w*=/.test(executable[0])) { executable.shift(); continue; }
+    if (!/^(env|command|sudo|timeout|xargs)$/.test(base(executable[0]))) break;
+    const wrapper = base(executable.shift());
+    while (/^-/.test(executable[0] || "")) {
+      const option = executable.shift();
+      if (option === "--") break;
+      if (wrapper === "env" && /^(?:-S|--split-string(?:=|$))/.test(option)) {
+        const value = option.startsWith("-S") && option.length > 2 ? option.slice(2)
+          : option.includes("=") ? option.slice(option.indexOf("=") + 1) : executable.shift();
+        if (value === undefined || /[$`\\]/.test(value)) process.exit(1);
+        const split = value.match(tokenPattern) || [];
+        if (split.some(t => /^(?:&&|\|\||[;&|()\n])$/.test(t))) process.exit(1);
+        executable.unshift(...split.map(word));
+        break;
+      }
+      if (wrapper === "env" && /^(?:-C|--chdir|-u|--unset|-a|--argv0)$/.test(option)) {
+        if (!executable.length) process.exit(1);
+        executable.shift();
+      }
+    }
+    if (wrapper === "timeout") executable.shift();
+  }
+  // Dynamic executable selection cannot be screened without evaluating it.
+  if (!["[", "[["].includes(base(executable[0])) && /[$`*?\[\]{}]/.test(executable[0] || "")) process.exit(1);
+  if (downloaded && /^(sh|bash|zsh|dash|fish|ksh|python[0-9.]*|perl|ruby|node|php)$/.test(base(executable[0]))) process.exit(1);
+  if (/^(curl|wget)$/.test(base(executable[0]))) downloaded = true;
+  const container = /^(docker|docker-compose|podman)$/.test(base(executable[0]));
+  for (const value of words) {
+    for (const m of value.matchAll(/([A-Za-z0-9_]*PASSWORD)\s*=/g))
+      if (!allowedPassword.test(m[1]) || !container) process.exit(1);
+    for (const match of value.matchAll(scheme)) {
+      let url;
+      try { url = new URL(match[0]); } catch { process.exit(1); }
+      const host = url.hostname.toLowerCase();
+      const local = /^(localhost|127\.0\.0\.1|\[::1\]|[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)$/.test(host);
+      let database;
+      try { database = decodeURIComponent(url.pathname.slice(1)); } catch { process.exit(1); }
+      // Connection overrides can replace an apparently local URL destination.
+      if ([...url.searchParams.keys()].some(k => /^(host|hostaddr|service|dbname)$/i.test(k))) process.exit(1);
+      const testDatabase = /^(postgres(?:ql)?|mysql):$/i.test(url.protocol) && /(?:_test|_ci)$/.test(database);
+      if (!local && !testDatabase) process.exit(1);
+    }
+  }
+  segment = [];
+}
+for (const token of tokens) {
+  if (/^(?:&&|\|\||[;&|()\n])$/.test(token)) {
+    checkSegment();
+    if (token !== "|") downloaded = false;
+  }
+  else segment.push(token);
+}
+checkSegment();
+// Normalize static quoted/escaped executable words (r"m", r\m, /bin/"rm").
+// Keep code strings and spaced arguments intact; no shell evaluation occurs.
+process.stdout.write(raw.replace(tokenPattern, token => {
+  const value = word(token);
+  return /^[A-Za-z0-9_./-]+$/.test(value) ? value : token;
+}));
+NODE
+  ); then
+    echo "refuse"; return 1
+  fi
   # Shell operators delimit commands even without whitespace; do not let the
   # optional executable path swallow an operator and hide the next command.
   # ponytail: lexical screening; use host sandboxing for execution isolation.
@@ -254,9 +337,8 @@ screen-cmd() {
     echo "refuse"; return 1
   fi
 
-  # curl/wget routed through xargs into an interpreter. The xargs wrapper sidesteps the
-  # direct pipe matcher above, so a remote payload still reaches a shell.
-  if printf '%s' "$cmd" | grep -qE '(curl|wget)[^|]*\|.*xargs.*[[:space:]]([^[:space:]]*/)?(sh|bash|zsh|dash|ksh|python[0-9.]*|perl|ruby|node|php)([[:space:]]|$)'; then
+  # Common wrappers may still hand the downloaded payload to an interpreter.
+  if printf '%s' "$cmd" | grep -qE '(curl|wget)[^|]*\|.*(xargs|env|command|sudo|timeout).*([[:space:]])([^[:space:]]*/)?(sh|bash|zsh|dash|fish|ksh|python[0-9.]*|perl|ruby|node|php)([[:space:]]|$)'; then
     echo "refuse"; return 1
   fi
 
@@ -320,69 +402,9 @@ screen-cmd() {
     echo "refuse"; return 1
   fi
 
-  # PASSWORD= credential pattern. One carve-out: throwaway dev-database creds for
-  # local containers (build.md mandates "throwaway dev creds via env") — a
-  # {POSTGRES,MYSQL,MARIADB,REDIS,PG}_PASSWORD= assignment is allowed when the same
-  # command clearly targets docker/compose; every other PASSWORD= stays refused.
-  if printf '%s' "$cmd" | grep -qE 'PASSWORD[[:space:]]*='; then
-    if printf '%s' "$cmd" | grep -qE '(^|[[:space:]])(POSTGRES|MYSQL|MARIADB|REDIS|PG)_PASSWORD[[:space:]]*=' \
-       && printf '%s' "$cmd" | grep -qE '(^|[[:space:]])(docker|docker-compose|podman)([[:space:]]|$)|docker[[:space:]]+compose'; then
-      : # local dev-container credential — allowed
-    else
-      echo "refuse"; return 1
-    fi
-  fi
-
   # Private key headers — pattern starts with dashes so pass -- to avoid flag misparse
   if printf '%s' "$cmd" | grep -qE -- 'BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY'; then
     echo "refuse"; return 1
-  fi
-
-  # Database URL safety: extract host and dbname from postgres:// or postgresql:// URIs
-  # Pattern: postgres(ql)://user:pass@HOST/DBNAME or postgres(ql)://HOST/DBNAME
-  if printf '%s' "$cmd" | grep -qE 'postgres(ql)?://'; then
-    # Extract the host portion (after @ or after ://)
-    local db_host db_name
-    db_host=$(printf '%s' "$cmd" \
-      | grep -oE 'postgres(ql)?://[^[:space:]]+' \
-      | sed -E 's|postgres(ql)?://([^@]+@)?([^/:]+)[:/].*|\3|')
-    db_name=$(printf '%s' "$cmd" \
-      | grep -oE 'postgres(ql)?://[^[:space:]]+' \
-      | sed -E 's|postgres(ql)?://[^/]*/([^?[:space:]]+).*|\2|')
-
-    # Allowed hosts: localhost, 127.0.0.1, or a single-label hostname (no dots = container)
-    local host_ok=0
-    if [[ "$db_host" == "localhost" || "$db_host" == "127.0.0.1" ]]; then
-      host_ok=1
-    elif printf '%s' "$db_host" | grep -qvE '\.'; then
-      # No dots = plain container hostname → allowed
-      host_ok=1
-    fi
-
-    if [[ "$host_ok" -eq 0 ]]; then
-      # Non-allowlisted host: dbname must end with _test or _ci (anchored suffix, not substring)
-      if printf '%s' "$db_name" | grep -qE '_test$|_ci$'; then
-        echo "ok"; return 0
-      fi
-      echo "refuse"; return 1
-    fi
-  fi
-
-  # Same host discipline for the other common database URL schemes. postgres gets the
-  # _test/_ci dbname escape above; mysql follows the same rule; mongodb/redis have no
-  # equivalent safe-name convention, so any non-local, dotted host is refused outright.
-  if printf '%s' "$cmd" | grep -qE '(mysql|mongodb(\+srv)?|redis|rediss)://'; then
-    local o_host
-    o_host=$(printf '%s' "$cmd" \
-      | grep -oE '(mysql|mongodb(\+srv)?|redis|rediss)://[^[:space:]]+' | head -1 \
-      | sed -E 's|[a-z+]+://([^@/]+@)?([^/:?]+).*|\2|')
-    if [[ "$o_host" != "localhost" && "$o_host" != "127.0.0.1" ]] \
-       && printf '%s' "$o_host" | grep -qE '\.'; then
-      if printf '%s' "$cmd" | grep -qE 'mysql://[^[:space:]]*/[^[:space:]?]*(_test|_ci)([?[:space:]]|$)'; then
-        echo "ok"; return 0
-      fi
-      echo "refuse"; return 1
-    fi
   fi
 
   echo "ok"; return 0
@@ -399,7 +421,7 @@ verdict() {
     echo "BLOCKED"; echo "ship=no"; return 2
   fi
 
-  local parsed units_val plateau_val ceiling_val pending_val
+  local parsed units_val plateau_val ceiling_val pending_val ship_val
   if ! parsed=$(node -e '
       const fs = require("fs");
       let j;
@@ -409,11 +431,12 @@ verdict() {
       for (const k of ["plateau", "ceiling", "pending_verify"])
         if (k in j && typeof j[k] !== "boolean") process.exit(3);
       const boo = (k) => (typeof j[k] === "boolean" ? String(j[k]) : "");
-      console.log([String(j.units), boo("plateau"), boo("ceiling"), boo("pending_verify")].join(String.fromCharCode(31)));
+      console.log([String(j.units), boo("plateau"), boo("ceiling"), boo("pending_verify"),
+        String(j.archetype === "ship-ready" && j.terminal_choice === "proceed-to-ship")].join(String.fromCharCode(31)));
     ' "$state_file" 2>/dev/null); then
     echo "BLOCKED"; echo "ship=no"; return 2
   fi
-  IFS=$'\x1f' read -r units_val plateau_val ceiling_val pending_val <<< "$parsed"
+  IFS=$'\x1f' read -r units_val plateau_val ceiling_val pending_val ship_val <<< "$parsed"
 
   if [[ -z "$units_val" ]]; then
     echo "BLOCKED"; echo "ship=no"; return 2
@@ -434,7 +457,9 @@ verdict() {
 
   # units==0 with no pending verification or stop signal → converged
   if awk -v u="$units_val" 'BEGIN { exit (u == 0 ? 0 : 1) }'; then
-    echo "CONVERGED"; echo "ship=yes"; return 0
+    echo "CONVERGED"
+    if [[ "$ship_val" == "true" ]]; then echo "ship=yes"; else echo "ship=no"; fi
+    return 0
   fi
 
   # units > 0, no plateau/ceiling signal yet → the loop is mid-flight. This is

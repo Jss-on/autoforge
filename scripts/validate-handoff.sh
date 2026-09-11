@@ -2,7 +2,7 @@
 # validate-handoff.sh — mechanical gate for the chain contract (handoff.json).
 # Schema: skills/forge/references/handoff-schema.md (v3.1.0).
 #
-#   validate-handoff.sh <handoff.json> [expected-source]
+#   validate-handoff.sh <handoff.json> [expected-source] [--require-pass]
 #
 #   exit 0 VALID · exit 1 INVALID (missing fields on stderr) · exit 2 unreadable
 #
@@ -13,6 +13,10 @@ set -uo pipefail
 
 FILE="${1:?usage: validate-handoff.sh <handoff.json> [expected-source]}"
 EXPECT_SRC="${2:-}"
+REQUIRE_PASS="${3:-}"
+if [[ -n "$REQUIRE_PASS" && "$REQUIRE_PASS" != "--require-pass" ]]; then
+  echo "usage: $0 <handoff.json> [expected-source] [--require-pass]" >&2; exit 2
+fi
 
 if [[ ! -f "$FILE" ]]; then
   echo "INVALID"; echo "file not found: $FILE" >&2; exit 2
@@ -46,6 +50,79 @@ PARSED="$(node -e '
   };
   const object = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
   const fraction = (v) => Number.isFinite(v) && v >= 0 && v <= 1;
+  const text = (v) => typeof v === "string" && v.trim().length > 0 && !/[\u0000-\u001f\u007f]/.test(v);
+  const checks = (v) => Array.isArray(v) && v.length > 0 &&
+    v.every(c => object(c) && text(c.id) && ["pass", "fail", "blocked", "not_run"].includes(c.status) && text(c.evidence)) &&
+    new Set(v.map(c => c.id)).size === v.length;
+  const passed = (v) => checks(v) && v.every(c => c.status === "pass");
+  const artifact = (v) => typeof v === "string" && /^(?:git:(?:[a-f0-9]{40}|[a-f0-9]{64})|sha256:[a-f0-9]{64})$/.test(v);
+  const evidence = [];
+  let securityValid = false, shipValid = false, passValid = false;
+  if (s("source") === "security") {
+    const a = j.security;
+    const levels = ["critical", "high", "medium", "low", "info"];
+    securityValid = object(a) && ["PASS", "FAIL", "BLOCKED"].includes(a.verdict) &&
+      levels.includes(a.fail_on) && checks(a.checks) && Array.isArray(a.findings) &&
+      a.findings.every(f => object(f) && text(f.id) && levels.includes(f.severity) &&
+        ["open", "resolved", "accepted"].includes(f.status) && text(f.evidence)) &&
+      new Set(a.findings.map(f => f.id)).size === a.findings.length;
+    if (securityValid) {
+      const blocking = a.findings.some(f => f.status !== "resolved" && levels.indexOf(f.severity) <= levels.indexOf(a.fail_on));
+      const failed = blocking || a.checks.some(c => c.status === "fail");
+      const verdict = failed ? "FAIL" : passed(a.checks) ? "PASS" : "BLOCKED";
+      securityValid = a.verdict === verdict && (a.verdict !== "PASS" || s("status") === "COMPLETE");
+      passValid = securityValid && a.verdict === "PASS";
+      evidence.push(...a.checks.map(c => c.evidence), ...a.findings.map(f => f.evidence));
+    }
+  }
+  if (s("source") === "ship") {
+    const a = j.ship;
+    const bound = (v) => object(v) && v.target === a.target && v.artifact === a.artifact;
+    shipValid = object(a) && ["ship", "rollback", "dry-run", "checklist"].includes(a.action) &&
+      text(a.target) && artifact(a.artifact) && checks(a.readiness) && Array.isArray(a.verification) &&
+      (!a.verification.length || checks(a.verification));
+    if (shipValid) {
+      const preview = ["dry-run", "checklist"].includes(a.action);
+      const success = ["COMPLETE", "ROLLBACK"].includes(s("status"));
+      const receipt = bound(a.receipt) && text(a.receipt.id) && text(a.receipt.evidence);
+      const authorized = object(a.authorization) && ["user", "user-auto"].includes(a.authorization.source) &&
+        a.authorization.action === a.action && bound(a.authorization) && text(a.authorization.evidence);
+      shipValid = !preview || (["DRY_RUN", "ERROR", "BLOCKED"].includes(s("status")) && a.receipt == null && a.verification.length === 0);
+      if (s("status") === "DRY_RUN") shipValid = shipValid && preview;
+      if (s("status") === "ROLLBACK") shipValid = shipValid && a.action === "rollback";
+      if (s("status") === "COMPLETE") shipValid = shipValid && a.action === "ship";
+      if (success) shipValid = shipValid && passed(a.readiness) && receipt && authorized && passed(a.verification);
+      if (a.action === "rollback" && success) {
+        const r = a.rollback;
+        shipValid = shipValid && object(r) && r.reversible === true && object(r.from) && object(r.observed) &&
+          ["receipt", "target", "artifact"].every(k => text(r.from[k]) && r.from[k] === r.observed[k]) &&
+          r.from.target === a.target && artifact(r.from.artifact) && text(r.evidence);
+        if (object(r)) evidence.push(r.evidence);
+      }
+      passValid = shipValid && success;
+      evidence.push(...a.readiness.map(c => c.evidence), ...a.verification.map(c => c.evidence));
+      if (receipt) evidence.push(a.receipt.evidence);
+      if (authorized) evidence.push(a.authorization.evidence);
+    }
+  }
+  if (process.argv[2] === "--require-pass") {
+    // Evidence is data under this run directory, never a shell command or a remote URL.
+    const path = require("path");
+    try {
+      const root = fs.realpathSync(path.dirname(path.resolve(process.argv[1])));
+      passValid = passValid && evidence.length > 0 && evidence.every(p => {
+        if (!text(p) || path.isAbsolute(p) || /[\\:]/.test(p) || p.split("/").some(x => !x || x === "." || x === "..")) return false;
+        const file = fs.realpathSync(path.resolve(root, p));
+        const relative = path.relative(root, file);
+        const stat = fs.statSync(file);
+        return relative !== ".." && !relative.startsWith(".." + path.sep) && !path.isAbsolute(relative) && stat.isFile() && stat.size > 0;
+      });
+    } catch { passValid = false; }
+  }
+  const legacy = /^2\./.test(s("version"));
+  if (legacy && !("security" in j)) securityValid = true;
+  if (legacy && !("ship" in j)) shipValid = true;
+  if (legacy) passValid = false;
   const h = (k) => {
     const v = j[k];
     let valid;
@@ -67,15 +144,15 @@ PARSED="$(node -e '
   console.log([s("version"), s("source"), s("status"), s("timestamp"), s("verdict"),
                h("results_tsv"), h("metric"), h("config"), h("coverage"),
                h("spec"), h("srs"), h("generated_spec"), h("errors_remaining"), h("design"),
-               h("report")]
+               h("report"), securityValid ? "1" : "0", shipValid ? "1" : "0", passValid ? "1" : "0"]
               .join(String.fromCharCode(31)));
-' "$FILE" 2>/dev/null)"
+' "$FILE" "$REQUIRE_PASS" 2>/dev/null)"
 
 if [[ "$PARSED" == "__PARSE_ERROR__" || -z "$PARSED" ]]; then
   echo "INVALID"; echo "not valid JSON: $FILE" >&2; exit 1
 fi
 IFS=$'\x1f' read -r VERSION SOURCE STATUS TS VERDICT \
-  H_RESULTS H_METRIC H_CONFIG H_COVERAGE H_SPEC H_SRS H_GENSPEC H_ERRREM H_DESIGN H_REPORT <<< "$PARSED"
+  H_RESULTS H_METRIC H_CONFIG H_COVERAGE H_SPEC H_SRS H_GENSPEC H_ERRREM H_DESIGN H_REPORT H_SECURITY H_SHIP H_PASS <<< "$PARSED"
 
 has_field() { # reads the pre-parsed presence-and-type flags
   case "$1" in
@@ -111,6 +188,7 @@ esac
 if [[ -n "$STATUS" ]]; then
   case "$STATUS" in
     COMPLETE|CONVERGED|BOUNDED|PLATEAU|BLOCKED|USER_INTERRUPT|ERROR) ;;
+    DRY_RUN|ROLLBACK) [[ "$SOURCE" == "ship" ]] || err "status $STATUS is only valid for ship" ;;
     *) err "status not in enum: $STATUS" ;;
   esac
 fi
@@ -120,6 +198,12 @@ if [[ -n "$EXPECT_SRC" && -n "$SOURCE" && "$SOURCE" != "$EXPECT_SRC" ]]; then
 fi
 
 case "$SOURCE" in
+  security)
+    [[ "$H_SECURITY" == "1" ]] || err "missing or invalid: security (typed checks, findings and derived verdict required)"
+    ;;
+  ship)
+    [[ "$H_SHIP" == "1" ]] || err "missing or invalid: ship (bound target, artifact, readiness and verified execution required)"
+    ;;
   build|feature)
     has_field results_tsv || err "missing: results_tsv (required for $SOURCE)"
     has_field metric      || err "missing: metric (required for $SOURCE)"
@@ -176,6 +260,10 @@ case "$SOURCE" in
     has_field results_tsv || err "missing: results_tsv (android-results.tsv — required for android)"
     ;;
 esac
+
+if [[ "$REQUIRE_PASS" == "--require-pass" && "$H_PASS" != "1" ]]; then
+  err "passing security/ship disposition with readable in-run evidence required"
+fi
 
 if [[ "$ERRORS" -gt 0 ]]; then
   echo "INVALID"; exit 1

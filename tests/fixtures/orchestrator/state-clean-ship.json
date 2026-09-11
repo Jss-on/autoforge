@@ -1,5 +1,6 @@
 {
   "archetype": "ship-ready",
+  "terminal_choice": "proceed-to-ship",
   "errors_remaining": 0,
   "regression_verdict": "STABLE",
   "untested_gaps": 0

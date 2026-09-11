@@ -2,7 +2,16 @@
 
 Comprehensive security audit using STRIDE threat modeling, OWASP Top 10, and 4 red-team adversarial personas. Default: 15 iterations. Every finding requires code evidence (file:line + attack scenario). No theoretical vulnerabilities — confirmed findings only.
 
-Loads `references/security-checklist.md` automatically for STRIDE/OWASP coverage tracking.
+Loads `references/security-checklist.md` for STRIDE/OWASP coverage tracking. Pin the scoped check
+list before execution and report PASS, FAIL or BLOCKED separately from audit completion.
+PASS requires every planned check to pass and zero unresolved findings at/above `--fail-on`
+(default high). A clean audit can pass with zero findings; accepting a risk does not resolve it.
+
+Write the typed `security` record from `references/handoff-schema.md` and save redacted check
+outputs/retest proof under the run directory. Before claiming readiness or chaining beyond
+remediation, run `scripts/validate-handoff.sh <run>/handoff.json security --require-pass`.
+FAIL/BLOCKED can chain only to authorized fixes; re-audit afterward. Historical reports remain
+readable but cannot substitute for current evidence.
 
 ---
 
@@ -162,45 +171,28 @@ Iterations: 12
 
 ## CI/CD Integration
 
-```yaml
-# .github/workflows/security-audit.yml
-name: Security Audit
-on:
-  pull_request:
-    branches: [main]
-  schedule:
-    - cron: '0 2 * * 1'  # Weekly Monday 2am
+Run the audit in a job without deployment credentials or write permissions. Pin checkout/tool
+versions to reviewed immutable identities. Audit untrusted pull-request code without privileged
+secrets; do not grant a privileged workflow access merely to make a check run.
 
-jobs:
-  security-audit:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+The runner records the exact audit directory in `AUDIT_RUN`; gate that run rather than selecting
+the newest unrelated report or trusting an agent process exit code:
 
-      - name: Run Security Audit
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            claude -p "/forge:security --diff --fail-on critical --iterations 5"
-          else
-            claude -p "/forge:security --fail-on high --iterations 15"
-          fi
-
-      - name: Upload Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: security-report
-          path: security/
-          retention-days: 90
+```bash
+scripts/validate-handoff.sh "$AUDIT_RUN/handoff.json" security --require-pass
 ```
+
+The gate rejects missing/empty/outside-run evidence, failed or skipped checks and unresolved
+findings at the selected threshold. A completed failing audit is a valid report with a failing
+readiness gate. Archive the redacted run directory; never upload credentials.
+
 
 ---
 
 ## Output Structure
 
 ```
-security/{YYMMDD}-{HHMM}-{slug}/
+forge/security-{YYMMDD}-{HHMM}/
 ├── overview.md                 Executive summary + links
 ├── threat-model.md             STRIDE analysis per asset + trust boundaries
 ├── attack-surface-map.md       Entry points, data flows, abuse paths

@@ -28,13 +28,25 @@ The `next-hop` subcommand of `scripts/orchestrate.sh` reads `orchestrator-state.
 | regression verdict `UNSTABLE` | handoff.json `verdict` | `regression` |
 | `untested_gaps` flagged | handoff.json or units output | `debug` |
 | `pending_verify` true | orchestrator-state.json | `verify` (fresh independent acceptance check) |
-| predicate met | Success predicate command exit/output | `DONE` (exit loop) |
+| predicate met | Success predicate command exit/output | `DONE`; only a `ship-ready` state with explicit `terminal_choice: proceed-to-ship` may route to human-gated `ship` |
 | hop outcome `blocked` or `failed`, no retry route | orchestrator-state.json | `BLOCKED` (checkpoint + stop) |
 | plateau detected | `scripts/orchestrate.sh plateau` | `PLATEAU` (stop + report) |
 | archetype pipeline has remaining steps | preset pipeline sequence | next preset step |
 | all preset steps exhausted, predicate not met | — | `regression` (convergence re-check) |
 
 State signals are cheap reads — last `handoff.json` plus the regression verdict field and error count. No re-run of the full suite just to route.
+
+`stop` and `stop-at-verified` never authorize shipping. Missing terminal choices also
+produce `ship=no`; convergence alone is not permission. The `ship=yes` verdict means
+the ship workflow may be entered, and never waives its approval and deployment checks.
+
+`screen-cmd` screens each database URI independently: one local/test destination cannot
+waive another production destination. The dev-container password exception applies only
+to approved DB variable names on the same docker/podman command. Static quoted/escaped
+executable names and common interpreter wrappers are screened too; dynamic executable
+selection is refused. This is lexical screening, not
+a shell interpreter or sandbox; runtime expansion, aliases and script contents require
+the host's execution isolation and explicit authorization checks.
 
 ## Independent Verify & Overfit Guard
 

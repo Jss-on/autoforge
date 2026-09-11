@@ -1,281 +1,132 @@
 #!/usr/bin/env bash
-# Release script for forge plugin.
-# Creates a release branch, bumps versions, prompts for doc review,
-# creates a detailed PR, and merges only after confirmation.
-#
-# Usage: ./scripts/release.sh <version> [--title "Release title"]
-# Example: ./scripts/release.sh 1.7.0 --title "New Feature X"
-#
-# Versioning:
-#   v2.1.X  — patch: bugfixes, small updates
-#   v2.X.0  — minor: new features, significant changes
-#   vX.0.0  — major: breaking changes, full rewrites
-
+# Release from a clean Jss-on/autoforge product checkout, with verified PR evidence.
+# Usage: bash scripts/release.sh <X.Y.Z> [--title "Release title"]
 set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/publish-autoforge.sh"
 
-# --- Parse arguments ---
-VERSION=""
-TITLE=""
+VERSION="" TITLE=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --title) TITLE="$2"; shift 2 ;;
-    *) VERSION="${VERSION:-$1}"; shift ;;
+    --title) [[ $# -ge 2 && -n "$2" && -z "$TITLE" ]] || { echo 'ERROR: --title needs one value.' >&2; exit 1; }; TITLE="$2"; shift 2 ;;
+    -*) echo "ERROR: unknown argument $1" >&2; exit 1 ;;
+    *) [[ -z "$VERSION" ]] || { echo 'ERROR: only one version is accepted.' >&2; exit 1; }; VERSION="${1#v}"; shift ;;
   esac
 done
+[[ "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || { echo 'Usage: bash scripts/release.sh <X.Y.Z> [--title "Release title"]' >&2; exit 1; }
+cd "$(git rev-parse --show-toplevel)"
+command -v gh >/dev/null || { echo 'ERROR: gh CLI is required.' >&2; exit 1; }
+[[ -z "$(git status --porcelain)" ]] || { echo 'ERROR: working tree must be clean.' >&2; exit 1; }
+[[ "$(git branch --show-current)" == master ]] || { echo 'ERROR: run from the product master branch.' >&2; exit 1; }
+HEAD_BEFORE=$(git rev-parse HEAD)
+autoforge_tree_check "$HEAD_BEFORE^{tree}"
+autoforge_remote
+BASE="$AUTOFORGE_BASE"
+[[ "$HEAD_BEFORE" == "$BASE" ]] || { echo 'ERROR: use a product checkout at autoforge/master; source history must not enter the release branch.' >&2; exit 1; }
+REPO=Jss-on/autoforge
+TAG="v$VERSION"
+BRANCH="release/$VERSION"
+TAG_STATUS=0
+git ls-remote --exit-code --tags "$AUTOFORGE_FETCH_URL" "refs/tags/$TAG" >/dev/null || TAG_STATUS=$?
+[[ "$TAG_STATUS" == 2 ]] || { echo 'ERROR: release tag exists or remote lookup failed.' >&2; exit 1; }
+CURRENT=$(node -p "require('./claude-plugin/.claude-plugin/plugin.json').version")
+node - "$CURRENT" "$VERSION" <<'JS'
+const [old,next]=process.argv.slice(2).map(v=>v.split('.').map(BigInt));
+const difference=next.findIndex((n,i)=>n!==old[i]);
+if(difference<0 || next[difference]<old[difference]) { console.error('ERROR: release version must increase.'); process.exit(1); }
+JS
 
-if [[ -z "$VERSION" ]]; then
-  echo "Usage: ./scripts/release.sh <version> [--title \"Release title\"]"
-  echo ""
-  echo "Versioning guide:"
-  echo "  v2.1.X  — patch: bugfixes, small updates"
-  echo "  v2.X.0  — minor: new features, significant changes"
-  echo ""
-  echo "Example: ./scripts/release.sh 2.2.0 --title \"New Feature\""
-  exit 1
-fi
-
-# Strip leading 'v' if provided
-VERSION="${VERSION#v}"
-TAG="v${VERSION}"
-BRANCH="release/${VERSION}"
-PLUGIN_JSON="claude-plugin/.claude-plugin/plugin.json"
-MARKETPLACE_JSON=".claude-plugin/marketplace.json"
-
-# --- Preflight checks ---
-if [[ ! -f "$PLUGIN_JSON" ]]; then
-  echo "Error: $PLUGIN_JSON not found. Run from repo root."
-  exit 1
-fi
-
-if ! command -v gh &>/dev/null; then
-  echo "Error: gh CLI not found. Install: https://cli.github.com"
-  exit 1
-fi
-
-if [[ -n "$(git status --porcelain)" ]]; then
-  echo "Error: Working tree is dirty. Commit or stash changes first."
-  exit 1
-fi
-
-# Ensure we're on master
-CURRENT_BRANCH=$(git branch --show-current)
-if [[ "$CURRENT_BRANCH" != "master" ]]; then
-  echo "Error: Must be on master branch. Currently on: $CURRENT_BRANCH"
-  exit 1
-fi
-
-git pull origin master --quiet
-
-# Check if tag already exists
-if git tag -l "$TAG" | grep -q "$TAG"; then
-  echo "Error: Tag $TAG already exists. Choose a different version."
-  exit 1
-fi
-
-# Read current version
-CURRENT=$(grep -o '"version": "[^"]*"' "$PLUGIN_JSON" | cut -d'"' -f4)
-echo ""
-echo "=== forge release ==="
-echo "  Current version: $CURRENT"
-echo "  New version:     $VERSION"
-echo "  Tag:             $TAG"
-echo "  Branch:          $BRANCH"
-echo ""
-
-# --- Create release branch ---
-echo "[1/7] Creating release branch: $BRANCH"
 git checkout -b "$BRANCH"
+# Keep every shipped version in step without rewriting unrelated distribution content.
+node - "$VERSION" <<'JS'
+const fs=require('node:fs'),v=process.argv[2];
+for(const f of ['.claude-plugin/marketplace.json','claude-plugin/.claude-plugin/plugin.json','plugins/forge/.codex-plugin/plugin.json']) {
+  if(!fs.existsSync(f)) continue;
+  const j=JSON.parse(fs.readFileSync(f,'utf8')); j.version=f.includes('.codex-plugin')?v+'-codex.0':v;
+  if(Array.isArray(j.plugins)) for(const p of j.plugins) if(p.name==='forge') p.version=v;
+  fs.writeFileSync(f,JSON.stringify(j,null,2)+'\n');
+}
+for(const root of ['.claude','claude-plugin','.agents','.opencode','plugins/forge']) {
+  const f=root+'/skills/forge/SKILL.md';
+  if(fs.existsSync(f)) fs.writeFileSync(f,fs.readFileSync(f,'utf8').replace(/^version: .*$/m,'version: '+v));
+}
+for(const f of ['README.md','guide/README.md']) if(fs.existsSync(f)) fs.writeFileSync(f,fs.readFileSync(f,'utf8').replace(/version-\d+\.\d+\.\d+-blue/g,'version-'+v+'-blue'));
+JS
 
-# --- Bump version in plugin.json and marketplace.json ---
-echo "[2/7] Bumping versions: $CURRENT → $VERSION"
-for JSON_FILE in "$PLUGIN_JSON" "$MARKETPLACE_JSON"; do
-  if [[ -f "$JSON_FILE" ]]; then
-    echo "    Updating $JSON_FILE"
-    if [[ "$(uname)" == "Darwin" ]]; then
-      sed -i '' "s/\"version\": \"$CURRENT\"/\"version\": \"$VERSION\"/g" "$JSON_FILE"
-    else
-      sed -i "s/\"version\": \"$CURRENT\"/\"version\": \"$VERSION\"/g" "$JSON_FILE"
-    fi
-  fi
+echo "Release $TAG: review README.md, guide/, CONTRIBUTING.md and COMPARISON.md now."
+read -rp "Press ENTER after review (or 'abort' to stop before publishing): " DOC_RESPONSE
+[[ "$DOC_RESPONSE" != abort ]] || { echo 'Stopped; local release changes are available for review.'; exit 0; }
+[[ "$(git rev-parse HEAD)" == "$HEAD_BEFORE" ]] || { echo 'ERROR: source commit changed during document review.' >&2; exit 1; }
+# The pause allows document edits, never arbitrary files to be swept into a release.
+RELEASE_PATHS=(.claude-plugin/marketplace.json claude-plugin/.claude-plugin/plugin.json plugins/forge/.codex-plugin/plugin.json .claude/skills/forge/SKILL.md claude-plugin/skills/forge/SKILL.md .agents/skills/forge/SKILL.md .opencode/skills/forge/SKILL.md plugins/forge/skills/forge/SKILL.md README.md guide CONTRIBUTING.md COMPARISON.md)
+for RELEASE_PATH in "${RELEASE_PATHS[@]}"; do
+  if [[ -e "$RELEASE_PATH" ]] || git ls-files --error-unmatch -- "$RELEASE_PATH" >/dev/null 2>&1; then git add -- "$RELEASE_PATH"; fi
 done
+node - <<'JS'
+const {execFileSync}=require('node:child_process');
+const allowed=new Set(['.claude-plugin/marketplace.json','claude-plugin/.claude-plugin/plugin.json','plugins/forge/.codex-plugin/plugin.json',...['.claude','claude-plugin','.agents','.opencode','plugins/forge'].map(p=>p+'/skills/forge/SKILL.md'),'README.md','CONTRIBUTING.md','COMPARISON.md']);
+const files=execFileSync('git',['diff','--cached','--name-only','-z']).toString().split('\0').filter(Boolean);
+if(files.some(f=>!allowed.has(f)&&!f.startsWith('guide/'))) {console.error('ERROR: staged files outside release/documentation scope.');process.exit(1);}
+JS
+git diff --quiet -- || { echo 'ERROR: unrelated tracked edits appeared during review.' >&2; exit 1; }
+git commit -m "chore: prepare release $TAG"
+REVIEWED_HEAD=$(git rev-parse HEAD)
+REVIEWED_TREE=$(git rev-parse HEAD^{tree})
+autoforge_tree_check "$REVIEWED_TREE"
+autoforge_gates "$REVIEWED_HEAD"
+autoforge_remote
+[[ "$AUTOFORGE_BASE" == "$BASE" ]] || { echo 'ERROR: product master moved during preparation; rebuild the release on the new base.' >&2; exit 1; }
+autoforge_stable "$REVIEWED_HEAD"
+autoforge_remote_urls
+git push --no-follow-tags "$AUTOFORGE_PUSH_URL" "$REVIEWED_HEAD:refs/heads/$BRANCH"
+BODY_FILE=$(mktemp)
+trap 'rm -f -- "$BODY_FILE"' EXIT
+cat > "$BODY_FILE" <<EOF
+Release $TAG updates the plugin manifests, skill versions and documentation from $CURRENT to $VERSION.
 
-# --- Bump version in distribution SKILL.md ---
-DIST_SKILL="claude-plugin/skills/forge/SKILL.md"
-if [[ -f "$DIST_SKILL" ]] && grep -q "^version:" "$DIST_SKILL"; then
-  echo "    Updating $DIST_SKILL"
-  if [[ "$(uname)" == "Darwin" ]]; then
-    sed -i '' "s/^version: .*/version: $VERSION/" "$DIST_SKILL"
-  else
-    sed -i "s/^version: .*/version: $VERSION/" "$DIST_SKILL"
-  fi
-fi
-
-# --- Bump version in SKILL.md frontmatter ---
-SKILL_FILE=".claude/skills/forge/SKILL.md"
-if [[ -f "$SKILL_FILE" ]] && grep -q "^version:" "$SKILL_FILE"; then
-  echo "    Updating $SKILL_FILE"
-  if [[ "$(uname)" == "Darwin" ]]; then
-    sed -i '' "s/^version: .*/version: $VERSION/" "$SKILL_FILE"
-  else
-    sed -i "s/^version: .*/version: $VERSION/" "$SKILL_FILE"
-  fi
-fi
-
-# --- Bump version badges in README.md and guide/README.md ---
-for DOC_FILE in README.md guide/README.md; do
-  if [[ -f "$DOC_FILE" ]] && grep -q "version-.*-blue" "$DOC_FILE"; then
-    echo "    Updating version badge in $DOC_FILE"
-    if [[ "$(uname)" == "Darwin" ]]; then
-      sed -i '' "s/version-[0-9]*\.[0-9]*\.[0-9]*-blue/version-${VERSION}-blue/" "$DOC_FILE"
-    else
-      sed -i "s/version-[0-9]*\.[0-9]*\.[0-9]*-blue/version-${VERSION}-blue/" "$DOC_FILE"
-    fi
-  fi
-done
-
-# --- Sync distribution files from .claude/ to claude-plugin/ ---
-echo ""
-echo "[3/7] Syncing distribution files to claude-plugin/"
-if [[ -d ".claude/commands/forge" ]]; then
-  cp .claude/commands/forge.md claude-plugin/commands/forge.md
-  cp .claude/commands/forge/*.md claude-plugin/commands/forge/
-  echo "    Synced claude-plugin/commands/forge/"
-fi
-if [[ -d ".claude/skills/forge" ]]; then
-  cp .claude/skills/forge/SKILL.md claude-plugin/skills/forge/SKILL.md
-  cp .claude/skills/forge/references/*.md claude-plugin/skills/forge/references/
-  echo "    Synced claude-plugin/skills/forge/"
-fi
-
-# --- Doc review prompt ---
-echo ""
-echo "[4/7] Documentation review"
-echo "────────────────────────────────────────"
-echo "  Before continuing, review these files for accuracy:"
-echo ""
-echo "  README.md        — version refs, command table, feature descriptions"
-echo "  guide/           — individual command guides, examples, advanced patterns"
-echo "  guide/scenario/  — scenario guide, domain examples, edge case patterns"
-echo "  CONTRIBUTING.md  — repo structure, file table, sub-command steps"
-echo "  COMPARISON.md    — subcommand count, feature comparison table"
-echo ""
-
-# Show what changed since last tag
-LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-if [[ -n "$LAST_TAG" ]]; then
-  echo "  Changes since $LAST_TAG:"
-  git log "$LAST_TAG"..HEAD --oneline --no-decorate | sed 's/^/    /'
-  echo ""
-fi
-
-echo "  If any docs need updates, edit them now"
-echo "  in another terminal, then come back here and continue."
-echo ""
-read -rp "  Press ENTER when docs are ready (or 'skip' to continue as-is): " DOC_RESPONSE
-
-if [[ "$DOC_RESPONSE" != "skip" ]]; then
-  # Check if README or EXAMPLES were modified
-  if [[ -n "$(git status --porcelain -- README.md guide/ CONTRIBUTING.md COMPARISON.md)" ]]; then
-    echo "    Staging doc updates..."
-    git add README.md guide/ CONTRIBUTING.md COMPARISON.md 2>/dev/null || true
-  fi
-fi
-
-# --- Commit all release changes ---
-echo ""
-echo "[5/7] Committing release changes"
-git add -A
-if git diff --cached --quiet; then
-  echo "    No changes to commit."
-else
-  git commit -m "chore: prepare release $TAG"
-fi
-
-# --- Push branch and create PR ---
-echo ""
-echo "[6/7] Pushing branch and creating PR"
-git push -u origin "$BRANCH"
-
-# Build PR body with changelog
-CHANGELOG=""
-if [[ -n "$LAST_TAG" ]]; then
-  CHANGELOG=$(git log "$LAST_TAG"..HEAD --oneline --no-decorate | sed 's/^/- /')
-fi
-
-PR_TITLE="${TITLE:-"Release $TAG"}"
-if [[ ${#PR_TITLE} -gt 70 ]]; then
-  PR_TITLE="Release $TAG"
-fi
-
-PR_URL=$(gh pr create \
-  --base master \
-  --head "$BRANCH" \
-  --title "$PR_TITLE" \
-  --body "$(cat <<EOF
-## Release $TAG
-
-**Version bump:** \`$CURRENT\` → \`$VERSION\`
-
-### Changes since $LAST_TAG
-${CHANGELOG:-"No previous tag found — initial release."}
-
-### Checklist
-- [x] plugin.json version bumped to $VERSION
-- [x] marketplace.json version bumped to $VERSION
-- [x] README.md version badge updated
-- [x] guide/README.md version badge updated
-- [ ] README.md content reviewed for accuracy
-- [ ] guide/ reviewed — command guides, examples, chains
-- [ ] guide/scenario/ reviewed — scenario guides, domain examples
-- [ ] CONTRIBUTING.md reviewed — repo structure, file table
-- [ ] COMPARISON.md reviewed — subcommand count, feature table
-- [ ] All tests passing
-
-### Files changed
-$(git diff --name-only master..."$BRANCH" 2>/dev/null | sed 's/^/- /' || echo "- (branch just created)")
+All harness test suites and the seam smoke passed for $REVIEWED_HEAD. Merge requires passing required CI checks on this exact head.
 EOF
-)")
-
-echo ""
-echo "  PR created: $PR_URL"
-echo ""
-
-# --- Wait for merge confirmation ---
-echo "[7/7] Waiting for merge confirmation"
-echo "────────────────────────────────────────"
-echo "  Review the PR: $PR_URL"
-echo ""
-read -rp "  Type 'merge' to merge, tag, and release (or 'abort' to cancel): " MERGE_RESPONSE
-
-if [[ "$MERGE_RESPONSE" != "merge" ]]; then
-  echo ""
-  echo "  Aborted. The PR remains open at: $PR_URL"
-  echo "  To merge later: gh pr merge $PR_URL --merge --delete-branch"
-  echo "  To clean up:    git checkout master && git branch -D $BRANCH"
-  exit 0
-fi
-
-# --- Merge, tag, and release ---
-echo ""
-echo "  Merging PR..."
-gh pr merge "$PR_URL" --merge --delete-branch
-
-echo "  Switching to master and pulling..."
-git checkout master
-git pull origin master --quiet
-
-echo "  Creating tag $TAG..."
-git tag -a "$TAG" -m "Release $TAG"
-git push origin "$TAG"
-
-echo "  Creating GitHub release..."
-RELEASE_TITLE="${TAG}"
-if [[ -n "$TITLE" ]]; then
-  RELEASE_TITLE="$TAG — $TITLE"
-fi
-gh release create "$TAG" --title "$RELEASE_TITLE" --generate-notes
-
-echo ""
-echo "=== Released $TAG ==="
-echo "  GitHub release: https://github.com/$(gh repo view --json nameWithOwner -q .nameWithOwner)/releases/tag/$TAG"
-echo "  Plugin version: $VERSION"
+PR_URL=$(gh pr create --repo "$REPO" --base master --head "$BRANCH" --title "${TITLE:-Release $TAG}" --body-file "$BODY_FILE")
+echo "Review $PR_URL ($REVIEWED_HEAD)."
+read -rp "Type 'merge' to merge this verified PR and create $TAG (anything else leaves the PR open): " MERGE_RESPONSE
+[[ "$MERGE_RESPONSE" == merge ]] || { echo "PR left open: $PR_URL"; exit 0; }
+gh pr checks "$PR_URL" --repo "$REPO" --watch --fail-fast
+gh api "repos/$REPO/commits/$REVIEWED_HEAD/check-runs?per_page=100" > "$BODY_FILE"
+node - "$BODY_FILE" "$REVIEWED_HEAD" <<'JS'
+const checks=JSON.parse(require('node:fs').readFileSync(process.argv[2],'utf8'));
+const rows=checks.check_runs,head=process.argv[3];
+if(!Array.isArray(rows)||!rows.length||checks.total_count!==rows.length||rows.some(r=>r.head_sha!==head||r.status!=='completed'||!['success','skipped','neutral'].includes(r.conclusion))||!rows.some(r=>r.name==='Harness test suites'&&r.app?.slug==='github-actions'&&r.conclusion==='success')) {
+  console.error('ERROR: successful Harness test suites CI is required on the reviewed head.'); process.exit(1);
+}
+JS
+gh pr view "$PR_URL" --repo "$REPO" --json headRefOid,baseRefName,state,isCrossRepository,isDraft,mergeStateStatus,reviewDecision > "$BODY_FILE"
+node - "$BODY_FILE" "$REVIEWED_HEAD" <<'JS'
+const p=JSON.parse(require('node:fs').readFileSync(process.argv[2],'utf8'));
+if(p.headRefOid!==process.argv[3] || p.baseRefName!=='master' || p.state!=='OPEN' || p.isCrossRepository!==false) {console.error('ERROR: PR identity changed after verification.');process.exit(1);}
+if(p.isDraft!==false || p.mergeStateStatus!=='CLEAN' || !['','APPROVED'].includes(p.reviewDecision)) {console.error('ERROR: PR readiness requires a clean, non-draft PR with no blocking reviews.');process.exit(1);}
+JS
+autoforge_remote
+[[ "$AUTOFORGE_BASE" == "$BASE" ]] || { echo 'ERROR: product master moved; update and reverify the PR.' >&2; exit 1; }
+autoforge_stable "$REVIEWED_HEAD"
+# The fixed parents make a concurrent base update fail the ordinary push.
+MERGE_COMMIT=$(git commit-tree "$REVIEWED_TREE" -p "$BASE" -p "$REVIEWED_HEAD" -m "Merge $PR_URL for release $TAG")
+autoforge_remote_urls
+git push --no-follow-tags "$AUTOFORGE_PUSH_URL" "$MERGE_COMMIT:refs/heads/master"
+RECEIPT_OK=0
+for ATTEMPT in 1 2 3 4 5; do
+  gh pr view "$PR_URL" --repo "$REPO" --json state,mergeCommit > "$BODY_FILE"
+  if node - "$BODY_FILE" "$MERGE_COMMIT" <<'JS'
+const p=JSON.parse(require('node:fs').readFileSync(process.argv[2],'utf8'));
+process.exit(p.state==='MERGED' && p.mergeCommit?.oid===process.argv[3] ? 0 : 1);
+JS
+  then RECEIPT_OK=1; break; fi
+  [[ "$ATTEMPT" == 5 ]] || sleep 2
+done
+[[ "$RECEIPT_OK" == 1 ]] || { echo 'ERROR: merge pushed, but GitHub PR receipt is unconfirmed; tagging stopped.' >&2; exit 1; }
+autoforge_remote
+git merge-base --is-ancestor "$MERGE_COMMIT" "$AUTOFORGE_BASE"
+# Tag the verified merge, not whichever commit master happens to reach next.
+autoforge_remote_urls
+git push --no-follow-tags "$AUTOFORGE_PUSH_URL" "$MERGE_COMMIT:refs/tags/$TAG"
+gh release create "$TAG" --repo "$REPO" --verify-tag --target "$MERGE_COMMIT" --title "${TITLE:-Release $TAG}" --generate-notes
+echo "Released $TAG at $MERGE_COMMIT: https://github.com/$REPO/releases/tag/$TAG"

@@ -1,131 +1,85 @@
-# Release Process
+# Release and product publication
 
-## Versioning Scheme
+`scripts/publish-autoforge.sh` publishes a verified source tree as one commit on the
+`Jss-on/autoforge` product lineage. It does not publish local source history.
+`scripts/release.sh` prepares a versioned PR and creates a release after review.
+Both scripts use the `autoforge` remote and validate its effective fetch and push
+URLs against the product repository. `origin` is never a publication destination.
 
-| Type | Pattern | When to use | Example |
-|------|---------|-------------|---------|
-| **Patch** | `v2.1.X` | Bugfixes, typos, small updates, dependency bumps | `v2.1.1` |
-| **Minor** | `v2.X.0` | New features, new commands, significant changes | `v2.2.0` |
-| **Major** | `vX.0.0` | Breaking changes, full rewrites | `v3.0.0` |
-
-## Quick Reference
+## Publish source changes
 
 ```bash
-# Patch release (bugfix)
-./scripts/release.sh 2.1.1 --title "Fix scenario timeout handling"
-
-# Minor release (new feature)
-./scripts/release.sh 2.2.0 --title "New Feature Name"
+bash scripts/publish-autoforge.sh "publish: describe the product change"
 ```
 
-## What the Script Does
+Commit the intended source changes first. Publication requires:
 
-```
-[1/7] Create release branch (release/X.Y.Z)
-[2/7] Bump versions:
-      → claude-plugin/.claude-plugin/plugin.json  (version field)
-      → .claude-plugin/marketplace.json           (version fields — top-level + plugins array)
-      → .claude/skills/forge/SKILL.md      (version frontmatter)
-      → README.md                                 (version badge)
-      → guide/README.md                           (version badge)
-[3/7] Sync distribution files:
-      → Copies .claude/commands/forge/ → claude-plugin/commands/forge/
-      → Copies .claude/skills/forge/  → claude-plugin/skills/forge/
-      → Ensures claude-plugin/ distribution matches .claude/ source of truth
-[4/7] Pause for doc review:
-      → Shows changelog since last tag
-      → Prompts you to review README.md, guide/, CONTRIBUTING.md
-      → You can edit in another terminal, then continue
-[5/7] Commit all release changes
-[6/7] Push branch + create PR against master
-[7/7] Wait for your "merge" confirmation:
-      → Merges PR
-      → Tags the merge commit
-      → Creates GitHub release with auto-generated notes
-```
+- A successful fresh fetch of product `master`, whose tree appears in the local
+  source ancestry. This supports squash publication while refusing to overwrite
+  product-only changes. Reconcile those changes into source before retrying.
+- No tracked client run directories, environment secrets, credential artifacts,
+  or PEM private keys. `.env.example`, `.env.sample`, and `.env.template` files
+  are allowed; actual credentials must never be placed in those templates.
+- Every `tests/test-*.sh` suite and `scripts/smoke-seam.sh` passing against one
+  unchanged source commit, index, and tracked working tree. Verification cannot
+  be bypassed with `AUTOFORGE_SKIP_TESTS`.
+- A checked product destination immediately before publication. An unexpected
+  remote update makes the normal, non-forced push fail.
 
-## Pre-Release Checklist
+The first publish for a marketplace version creates its tag atomically with the
+product commit. Existing version tags are preserved; unrelated local tags are
+never followed, even when `push.followTags` is enabled. Fetch, tag lookup, push,
+and post-push verification errors are fatal. A fresh product repository must be
+initialized separately; this script requires an existing product `master`.
 
-Before running the script, verify:
+The credential gate checks filenames and PEM private-key headers; it does not
+replace a dedicated secret scanner or a review of the intended tracked tree.
 
-- [ ] All tests pass
-- [ ] No uncommitted changes in working tree
-- [ ] You're on the `master` branch
-- [ ] `gh` CLI is authenticated
+## Create a versioned release
 
-## Doc Review Guide
+Use a clean **product checkout** at the freshly fetched `autoforge/master` commit,
+with `master` checked out and `gh` authenticated. Source checkouts with a separate
+private history must use the publisher first and then release from the product
+checkout.
 
-At step [4/7], the script pauses and shows the changelog. Review these files:
-
-### README.md
-- **Version badge** (auto-updated by script)
-- **Commands table** — any new commands added?
-- **Quick Decision Guide** — new use cases?
-- **Repository Structure** — new files in the tree?
-- **FAQ** — new questions from issues/discussions?
-
-### guide/
-- **guide/README.md** — version badge (auto-updated by script)
-- **Individual command guides** — any new commands or flags?
-- **guide/examples-by-domain.md** — new domain examples to add?
-- **guide/chains-and-combinations.md** — new chain patterns possible?
-- **guide/advanced-patterns.md** — new verify commands, MCP patterns, FAQ?
-
-### guide/scenario/
-- **guide/scenario/README.md** — scenario guide chain suggestions updated?
-- **Domain-specific guides** — new scenario domains or patterns?
-
-### CONTRIBUTING.md
-- **Repository Structure** — does the tree reflect new files?
-- **What Each File Does** — any new files to document?
-- **Adding a New Sub-Command** — steps still accurate?
-- **High-Value Contributions** — new contribution types?
-
-### COMPARISON.md
-- **Subcommand count** — does it match the current number?
-- **Feature comparison table** — any new capabilities to add?
-
-### Tips
-- Edit docs in another terminal while the script is paused
-- Type `skip` at the prompt to continue without doc changes
-- The script stages any doc changes automatically (README.md, guide/, CONTRIBUTING.md, COMPARISON.md)
-
-## Distribution Sync
-
-The `claude-plugin/` directory is the **distribution package** — what Claude Code downloads when users install the plugin. The `.claude/` versions are the development source of truth.
-
-**Why `claude-plugin/` and not root?** Claude Code's plugin caching downloads the `source` directory. If `source` is `"./"` (the entire repo), the cached plugin contains its own `.claude-plugin/marketplace.json`, causing Claude Code to recursively cache the plugin inside itself — hitting macOS's 1024-char path limit (`ENAMETOOLONG`). Pointing `source` to `./claude-plugin` (an isolated distribution directory without `marketplace.json`) breaks this recursion.
-
-**Before every release**, the script syncs `claude-plugin/` from `.claude/`:
 ```bash
-# What the sync step does:
-cp .claude/commands/forge.md claude-plugin/commands/forge.md
-cp .claude/commands/forge/*.md claude-plugin/commands/forge/
-cp .claude/skills/forge/SKILL.md claude-plugin/skills/forge/SKILL.md
-cp .claude/skills/forge/references/*.md claude-plugin/skills/forge/references/
+bash scripts/release.sh 3.6.1 --title "Release title"
 ```
 
-If you add a new subcommand during development, it goes into `.claude/` first. The release script ensures `claude-plugin/` stays in sync.
+The version must increase and use `X.Y.Z` with no leading zeros; a leading `v` is
+accepted. Unknown or duplicate arguments are rejected before remote work.
 
-## Abort and Resume
+The script updates the three manifests, all five skill versions, and version
+badges, then pauses for document review. Review `README.md`, `guide/`,
+`CONTRIBUTING.md`, and `COMPARISON.md`. It stages only those release/documentation
+paths and rejects unrelated staged or tracked edits. It does not regenerate or
+silently overwrite distribution content.
 
-If you type `abort` at the merge prompt:
-```bash
-# The PR stays open. Merge later with:
-gh pr merge <PR_URL> --merge --delete-branch
+After the full test and seam gates pass, the script pushes the exact verified
+commit and creates a PR against product `master`. Enter `merge` to continue;
+anything else leaves the PR open. It waits for CI, requires a successful
+`Harness test suites` job from GitHub Actions on that exact PR head, and rejects
+missing, failed, cancelled, or skipped mandatory checks. The manual model smoke
+may be skipped. A changed PR head or base requires fresh verification.
+The PR must also be non-draft, report a clean merge state, and have no outstanding
+required or blocking review decision before publication.
 
-# Or clean up:
-git checkout master && git branch -D release/X.Y.Z
-```
+The script constructs a merge commit containing the verified tree, with the
+reviewed base and PR head as its two parents. A normal, non-forced push publishes
+that commit to product `master`; a concurrent base advance rejects the push
+before it changes `master`. Existing repository permissions and branch rules
+remain enforced. A denied push stops without a tag or release; the script never
+changes settings or bypasses remote policy.
 
-## Troubleshooting
+The PR head becomes an ancestor of `master`, allowing GitHub to recognize the
+merge. Before tagging, the script verifies the merge remains in current remote
+ancestry and waits up to five receipt reads (two seconds apart) for GitHub to
+confirm that exact merge commit. It then tags the constructed merge commit,
+even if `master` has advanced again. The release branch remains available.
 
-| Issue | Fix |
-|-------|-----|
-| "Working tree is dirty" | Commit or stash changes first |
-| "Must be on master branch" | `git checkout master` |
-| "gh CLI not found" | Install from https://cli.github.com |
-| PR merge conflicts | Resolve on the PR, then re-run merge step manually |
-| Forgot to update docs | Edit on the PR branch, push, then merge |
-| "Tag already exists" | Choose a different version number |
-| ENAMETOOLONG on install | Ensure `marketplace.json` has `"source": "./claude-plugin"` (not `"./"`) |
+## Stops and retries
+
+A failed gate leaves local changes or the open PR available for inspection;
+there is no automatic reset, force-push, branch deletion, or test bypass. An
+abort during document review keeps only local changes. An abort after PR creation
+leaves the PR open. Reverify any changed candidate before merging or tagging it.

@@ -13,7 +13,7 @@ not finished until its handoff validates.
 |---|---|---|
 | `version` | string | Numeric three-part schema version. Write `"3.1.0"`. Validator accepts `2.1.0`+ (legacy runs readable) but warns below `2.3.1`. |
 | `source` | string | The emitting subcommand, canonical short name: `build`, `feature`, `requirements`, `regression`, `fix`, `test`, `design`, `research`, `android`, `debug`, `security`, `ship`, `plan`, `scenario`, `predict`, `learn`, `reason`, `probe`, `improve`, `evals`, `forge`. `loop` is accepted as the existing core-loop alias. Unknown sources and colon forms are invalid. |
-| `status` | enum | `COMPLETE` \| `CONVERGED` \| `BOUNDED` \| `PLATEAU` \| `BLOCKED` \| `USER_INTERRUPT` \| `ERROR` |
+| `status` | enum | `COMPLETE` \| `CONVERGED` \| `BOUNDED` \| `PLATEAU` \| `BLOCKED` \| `USER_INTERRUPT` \| `ERROR`; `ship` additionally permits `DRY_RUN` and `ROLLBACK`. |
 | `timestamp` | string | A valid calendar date and time in ISO-8601 with `Z` or an explicit offset; relative dates and placeholder strings are invalid. |
 
 ## Required per source
@@ -28,6 +28,8 @@ not finished until its handoff validates.
 | `design` | `verdict` (`SHIP` \| `FIX` \| `REBUILD`) **or** `design` (object: `design_md` path + `lint`) — an audit carries the disposition, a `system` run carries the DESIGN.md it wrote. SHOULD also carry `results_tsv` (`design-results.tsv`), `defects_tsv`, `slop` (number), `health` (`N/M`), and `summary` (path to `design-report.md`). |
 | `research` | `verdict` (`DOSSIER_READY` \| `DOSSIER_BLOCKED`) **and** `report` (path to the dossier). SHOULD also carry `claims_tsv`, `sources_tsv`, and `findings` (per-RQ one-line answers + the contested list). |
 | `android` | `verdict` (`STORE_READY` \| `BLOCKED`) **and** `results_tsv` (`android-results.tsv`). SHOULD also carry `package_id`, `host`, `artifacts` (apk/aab paths or release-asset URLs), `repo`, `pr`, `workflow_run` (device-gate run URL), and `native_needs` (the native-only list) when blocked. |
+| `security` | Current 3.x+ writers require the typed `security` record below. COMPLETE describes report completion, not a passing security disposition. |
+| `ship` | Current 3.x+ writers require the typed `ship` record below; COMPLETE/ROLLBACK require bound execution and passing readiness/verification. |
 
 Everything else (`status_reason`, `findings`, `verified_live_this_run`, `phases_completed`,
 `bound_extension`, `repo` — the project's private GitHub output-repo URL, `pr` — the feature PR
@@ -40,6 +42,71 @@ Required paths must be nonempty strings; required objects cannot be null or arra
 numbers in [0,1]; a converged build cannot claim incomplete coverage.
 
 ## Validation
+
+### Security and shipping readiness
+
+Both records use checks shaped as `{id, status, evidence}`. IDs are nonempty and unique within each
+list; status is `pass|fail|blocked|not_run`. Evidence is a nonempty path relative to this run directory.
+Pin the nonempty planned list before execution; a skipped or unavailable check stays in that list.
+For a finding, evidence contains the file/line proof and any successful retest. Never include secret values.
+
+```json
+{
+  "security": {
+    "verdict": "PASS",
+    "fail_on": "high",
+    "checks": [{"id": "auth-boundary", "status": "pass", "evidence": "evidence/auth.txt"}],
+    "findings": []
+  }
+}
+```
+
+`fail_on` is `critical|high|medium|low|info` (writers default to high). Findings are
+`{id, severity, status, evidence}`, with unique nonempty IDs, severity from the same list and status
+`open|resolved|accepted`. Accepted findings remain unresolved at the blocking threshold.
+The verdict is derived: FAIL when any check fails or an unresolved finding meets/exceeds the threshold;
+otherwise PASS when every planned check passes, otherwise BLOCKED. PASS requires core status COMPLETE.
+A clean audit needs no findings. COMPLETE+FAIL is an honest finished audit and cannot satisfy a readiness gate.
+
+```json
+{
+  "ship": {
+    "action": "ship",
+    "target": "repository/account/environment",
+    "artifact": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "readiness": [{"id": "required-ci", "status": "pass", "evidence": "evidence/ci.txt"}],
+    "authorization": {"source": "user", "action": "ship", "target": "repository/account/environment", "artifact": "sha256:2222222222222222222222222222222222222222222222222222222222222222", "evidence": "evidence/authorization.txt"},
+    "receipt": {"id": "observed provider receipt", "target": "repository/account/environment", "artifact": "sha256:2222222222222222222222222222222222222222222222222222222222222222", "evidence": "evidence/receipt.json"},
+    "verification": [{"id": "live-smoke", "status": "pass", "evidence": "evidence/smoke.txt"}]
+  }
+}
+```
+
+`artifact` is `git:<40-or-64-lowercase-hex>` or `sha256:<64-lowercase-hex>`; mutable branch/tag/latest labels are refused. Hash content/package artifacts.
+`action` is `ship|rollback|dry-run|checklist`. COMPLETE requires action ship; ROLLBACK requires
+action rollback. Both require nonempty all-passing readiness/verification lists, a nonempty receipt ID,
+and matching receipt/authorization target and artifact. Authorization source is `user|user-auto` and
+its action must match too. It records existing session authorization; a stored record cannot grant
+permission. Do not propagate an orchestrator's `--auto` into a ship authorization.
+
+DRY_RUN requires action dry-run/checklist, an absent/null receipt and empty verification list. It is
+a preview, never delivery. ERROR/BLOCKED can report unsuccessful execution without a success receipt.
+Rollback additionally carries `rollback: {reversible: true, from: {receipt, target, artifact},
+observed: {receipt, target, artifact}, evidence}`. The selected prior receipt and freshly observed
+current deployment must agree in all three identity fields and target must match the intended destination.
+The outer artifact names the revision being restored. Missing reversibility or a changed current
+deployment blocks restoration. Obtain the observed identity before mutation, then save the new receipt.
+
+`validate-handoff.sh <handoff.json> security|ship --require-pass` additionally requires successful
+disposition and every referenced evidence file to exist, be nonempty and regular, and resolve inside
+the run directory (including symlinks). Absolute paths, URLs and traversal are refused. This checks
+record consistency and evidence presence; consumers must independently read the evidence and verify
+the current target/artifact before external action. It does not execute receipts or prove that a
+self-reported result is true. Preview, failed and blocked records never pass this gate.
+
+Historical 2.x security/ship records without these objects remain readable via the shape gate, but
+cannot pass `--require-pass`. Other sources retain their existing contracts. A security FAIL/BLOCKED
+may chain only to authorized remediation (`fix`); re-audit before delivery. Ship previews/failures stop chaining.
 
 ### Optional asset and motion evidence
 
@@ -59,7 +126,7 @@ Unknown provider model, service job ID or cost remains null/unknown, never inven
 ### Handoff shape gate
 
 ```
-scripts/validate-handoff.sh <handoff.json> [expected-source]
+scripts/validate-handoff.sh <handoff.json> [expected-source] [--require-pass]
 ```
 
 - exit 0 `VALID` — core + per-source fields present, status in enum, version parseable.

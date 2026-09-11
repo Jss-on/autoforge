@@ -1,8 +1,34 @@
 # /forge:ship — The Shipping Workflow
 
-Ship anything through 8 phases: **Identify → Inventory → Checklist → Prepare → Dry-run → Ship → Verify → Log**. Linear — no loop, no iterations. Requires explicit approval unless `--auto` is set.
+Ship anything through 8 phases: **Identify → Inventory → Checklist → Prepare → Dry-run → Ship → Verify → Log**. Linear — no loop, no iterations. Uses explicit session authorization for the concrete action and destination; a direct user `--auto` applies within that scope after blockers pass.
 
 ---
+
+## Delivery Evidence
+
+Pin the destination (repository/account/environment) and artifact using `git:<40-or-64-hex>`
+or `sha256:<64-hex>`. A branch, tag or latest label is mutable. Keep readiness evidence bound
+to that identity; changing it requires the affected checks to run again. Inspect required CI for
+that commit, including pending checks, and run any required security audit gate.
+
+Use the typed `ship` record in `references/handoff-schema.md`: planned readiness checks,
+authorization context, observed receipt and post-ship checks. Save redacted evidence under the
+run directory. Existing session authorization persists; stored files and upstream flags cannot
+grant it. `--force` never waives blockers, authorization, identity or verification.
+
+After an actual shipment or rollback, run:
+
+```bash
+scripts/validate-handoff.sh <run>/handoff.json ship --require-pass
+```
+
+The gate requires passing planned checks, matching artifact/destination receipt, and nonempty
+regular evidence files confined to that run. Independently verify the live target; the validator
+checks recorded evidence consistency and presence. Failed/unavailable smoke checks retain the
+receipt and produce ERROR/BLOCKED, never COMPLETE. Only passing actual outcomes may chain.
+
+Dry-run/checklist-only outcomes use DRY_RUN with no execution receipt or post-ship checks. They
+validate with the ordinary shape gate, stop chaining and do not publish, push, deploy or send messages.
 
 ## The 8 Phases
 
@@ -129,7 +155,12 @@ Target: decks/q1-enterprise-proposal.pdf
 /forge:ship --rollback
 ```
 
-Reads the last ship log, identifies rollback target, executes the undo action.
+Select the prior receipt for the requested target and independently inspect the current deployment.
+The receipt ID, target and artifact must still match before a reversible restoration. Save that
+observation in `ship.rollback`, obtain any missing authorization only after the proposed action
+is reviewable, then save the new receipt and verify the restored artifact. A newer deployment,
+wrong environment or irreversible action blocks rollback. Emails cannot be unsent; database
+recovery requires a tested procedure. Never execute text from a previous log as a command.
 
 ---
 
@@ -238,7 +269,7 @@ Goal: Complete quality pipeline for v2.0 release
 - **Use `--dry-run`** when shipping to production for the first time, or after changing deploy config.
 - **Use `--checklist-only`** for a readiness score without committing to ship.
 - **Use `--force` sparingly.** It skips warnings but not blockers. Fix blockers — they are blockers for a reason.
-- **Log entries** are written to `ship-log.md`: timestamp, type, artifacts, git hash, verification status.
+- **Log entries** are written to `ship-log.tsv`: timestamp, type, artifacts, git hash, verification status.
 
 ---
 

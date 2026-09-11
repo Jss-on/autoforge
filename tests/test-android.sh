@@ -2,7 +2,7 @@
 # Test harness for /forge:android — score-android.sh (manifest, assetlinks, twa, csp,
 # fingerprint, live, verdict), the android.md engagement spec, the android protocol,
 # handoff wiring, orchestrator routing, doctor rows, mirror parity, manifests + routers
-# at 3.6.0, docs.
+# in version sync, docs.
 #
 # FROZEN SCORER. This suite is the Metric of the forge loop that ships the capability
 # (forge/loop-260906-1629): Verify reads the footer "=== N/M ..." as N/M. Rows are
@@ -449,7 +449,7 @@ grep -q 'score-android\.sh' "$REPO_ROOT/scripts/transform.sh" \
   && pass "transform.sh syncs score-android.sh" || fail "transform.sh missing score-android.sh in runtime set"
 
 # ============================================================================
-printf '\n--- distribution: manifests + routers at 21 commands / 3.6.0 ---\n'
+printf '\n--- distribution: manifests + routers at 21 commands / current version ---\n'
 # ============================================================================
 
 for mf in "$REPO_ROOT/.claude-plugin/marketplace.json" \
@@ -459,18 +459,20 @@ for mf in "$REPO_ROOT/.claude-plugin/marketplace.json" \
   grep -q "21 commands" "$mf" && pass "manifest count 21: $name" || fail "manifest count 21: $name"
   grep -q "research, android" "$mf" && pass "manifest lists android: $name" || fail "manifest lists android: $name"
 done
-grep -q '"version": "3.6.0"' "$REPO_ROOT/.claude-plugin/marketplace.json" \
-  && pass "marketplace at 3.6.0" || fail "marketplace not at 3.6.0"
-grep -q '"version": "3.6.0"' "$REPO_ROOT/claude-plugin/.claude-plugin/plugin.json" \
-  && pass "claude plugin at 3.6.0" || fail "claude plugin not at 3.6.0"
-grep -q '"version": "3.6.0-codex.0"' "$REPO_ROOT/plugins/forge/.codex-plugin/plugin.json" \
-  && pass "codex plugin at 3.6.0-codex.0" || fail "codex plugin not at 3.6.0-codex.0"
+PRODUCT_VERSION=$(node -p 'require(process.argv[1]).version' "$REPO_ROOT/.claude-plugin/marketplace.json")
+[[ "$PRODUCT_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] \
+  && pass "marketplace has a valid release version" || fail "invalid marketplace release version"
+[[ "$(node -p 'require(process.argv[1]).version' "$REPO_ROOT/claude-plugin/.claude-plugin/plugin.json")" == "$PRODUCT_VERSION" ]] \
+  && pass "claude plugin matches marketplace version" || fail "claude plugin version drift"
+[[ "$(node -p 'require(process.argv[1]).version' "$REPO_ROOT/plugins/forge/.codex-plugin/plugin.json")" == "$PRODUCT_VERSION-codex.0" ]] \
+  && pass "codex plugin matches marketplace version" || fail "codex plugin version drift"
 
 for sk in .claude/skills/forge/SKILL.md claude-plugin/skills/forge/SKILL.md \
           .agents/skills/forge/SKILL.md plugins/forge/skills/forge/SKILL.md \
           .opencode/skills/forge/SKILL.md; do
   grep -q 'android' "$REPO_ROOT/$sk" && pass "router lists android: $sk" || fail "router lists android: $sk"
-  grep -q 'version: 3.6.0' "$REPO_ROOT/$sk" && pass "router at 3.6.0: $sk" || fail "router at 3.6.0: $sk"
+  [[ "$(sed -n 's/^version: //p' "$REPO_ROOT/$sk" | tr -d '\r')" == "$PRODUCT_VERSION" ]] \
+    && pass "router version matches marketplace: $sk" || fail "router version drift: $sk"
 done
 grep -q '/forge:android' "$REPO_ROOT/.claude/skills/forge/SKILL.md" \
   && pass "claude router uses colon naming" || fail "claude router missing /forge:android"
