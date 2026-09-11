@@ -158,54 +158,27 @@ next-hop() {
 
 # ---------------------------------------------------------------------------
 # units: compute Units-remaining scalar from a results JSON file.
-# Formula: failing_tests + open_hard_regressions + (metric_delta / metric_target)
+# Formula: failing_tests + open_hard_regressions + max(0, metric_delta / metric_target)
 # Prints "unknown" and exits 2 when inputs are missing or uncomputable.
 # ---------------------------------------------------------------------------
 units() {
   local results_file="${1:?usage: units <results.json>}"
-  if [[ ! -f "$results_file" ]]; then
-    echo "unknown"; return 2
-  fi
-
-  local ft regressions delta target
-  # node JSON parse (see next-hop for rationale + delimiter note) — numbers
-  # only, negatives handled natively by the real parser.
-  local parsed
-  if ! parsed=$(node -e '
+  # Validate and calculate in the same parser: metric overshoot cannot cancel
+  # hard failures, and invalid numeric inputs never become a completion signal.
+  if node -e '
       const fs = require("fs");
       let j;
       try { j = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); }
       catch { process.exit(3); }
-      const num = (k) => (typeof j[k] === "number" ? String(j[k]) : "");
-      console.log([num("failing_tests"), num("open_hard_regressions"),
-                   num("metric_delta"), num("metric_target")].join(String.fromCharCode(31)));
-    ' "$results_file" 2>/dev/null); then
-    echo "unknown"; return 2
-  fi
-  IFS=$'\x1f' read -r ft regressions delta target <<< "$parsed"
-
-  if [[ -z "$ft" || -z "$regressions" || -z "$delta" || -z "$target" ]]; then
-    echo "unknown"; return 2
-  fi
-
-  # Integer check: metric_target must be non-zero to avoid divide-by-zero
-  if [[ "$target" == "0" || "$target" == "0.0" ]]; then
-    echo "unknown"; return 2
-  fi
-
-  # awk handles floating point; strip trailing .0 for clean integer output.
-  # A net-negative value (metric already past target) means no remaining work,
-  # not negative work — clamp to 0 so the caller reads "converged", never a
-  # nonsense negative unit count.
-  awk -v ft="$ft" -v r="$regressions" -v d="$delta" -v t="$target" '
-    BEGIN {
-      val = ft + r + (d / t)
-      if (val < 0) val = 0
-      # Strip unnecessary trailing zeros (e.g. 4.500 → 4.5, 0.000 → 0)
-      if (val == int(val)) printf "%d\n", val
-      else printf "%g\n", val
-    }
-  '
+      for (const k of ["failing_tests", "open_hard_regressions"])
+        if (!Number.isSafeInteger(j[k]) || j[k] < 0) process.exit(3);
+      const ratio = j.metric_delta / j.metric_target;
+      if (![j.metric_delta, j.metric_target, ratio].every(Number.isFinite)) process.exit(3);
+      const remaining = j.failing_tests + j.open_hard_regressions + Math.max(0, ratio);
+      if (!Number.isFinite(remaining)) process.exit(3);
+      console.log(remaining);
+    ' "$results_file" 2>/dev/null; then return 0; fi
+  echo "unknown"; return 2
 }
 
 # ---------------------------------------------------------------------------
@@ -255,12 +228,16 @@ plateau() {
 # ---------------------------------------------------------------------------
 screen-cmd() {
   local cmd="${1:?usage: screen-cmd <shell-string>}"
+  # Shell operators delimit commands even without whitespace; do not let the
+  # optional executable path swallow an operator and hide the next command.
+  # ponytail: lexical screening; use host sandboxing for execution isolation.
+  local command_start='(^|[[:space:];&|()])([^[:space:];&|()]*/)?'
 
   # rm with recursive AND force, in any flag arrangement: bundled (-rf/-Rf/-fr),
   # separate (-r -f), or long (--recursive --force). Both flags must be present.
   # The optional path prefix catches path-qualified invocations (/bin/rm, ./rm,
   # /usr/local/bin/rm) that a bare command-name anchor would miss.
-  if printf '%s' "$cmd" | grep -qE '(^|[[:space:]])([^[:space:]]*/)?rm([[:space:]]|$)'; then
+  if printf '%s' "$cmd" | grep -qE "${command_start}rm([[:space:]]|$)"; then
     local rm_rec=0 rm_force=0
     printf '%s' "$cmd" | grep -qE -- '(^|[[:space:]])-[a-zA-Z]*[rR]|--recursive' && rm_rec=1
     printf '%s' "$cmd" | grep -qE -- '(^|[[:space:]])-[a-zA-Z]*[fF]|--force'     && rm_force=1
@@ -297,26 +274,26 @@ screen-cmd() {
 
   # Filesystem format destroys everything on a partition. Optional path prefix catches a
   # path-qualified invocation (/sbin/mkfs.ext4) that a bare-name anchor would miss.
-  if printf '%s' "$cmd" | grep -qE '(^|[[:space:]])([^[:space:]]*/)?(mkfs|mke2fs)'; then
+  if printf '%s' "$cmd" | grep -qE "${command_start}(mkfs|mke2fs)"; then
     echo "refuse"; return 1
   fi
 
   # find ... -delete mass-removes matched files. Both tokens required so a plain find
   # search (no -delete) is not refused; optional path prefix catches /usr/bin/find.
-  if printf '%s' "$cmd" | grep -qE '(^|[[:space:]])([^[:space:]]*/)?find([[:space:]]|$)' \
+  if printf '%s' "$cmd" | grep -qE "${command_start}find([[:space:]]|$)" \
      && printf '%s' "$cmd" | grep -qE '[[:space:]]-delete([[:space:]]|$)'; then
     echo "refuse"; return 1
   fi
 
   # shred overwrites then unlinks — irrecoverable.
-  if printf '%s' "$cmd" | grep -qE '(^|[[:space:]])([^[:space:]]*/)?shred([[:space:]]|$)'; then
+  if printf '%s' "$cmd" | grep -qE "${command_start}shred([[:space:]]|$)"; then
     echo "refuse"; return 1
   fi
 
   # truncate to zero size destroys file contents in place. Non-zero sizes are allowed.
   # Optional path prefix catches /usr/bin/truncate; size matcher covers -s 0, -s0,
   # --size 0, and --size=0.
-  if printf '%s' "$cmd" | grep -qE '(^|[[:space:]])([^[:space:]]*/)?truncate([[:space:]]|$)' \
+  if printf '%s' "$cmd" | grep -qE "${command_start}truncate([[:space:]]|$)" \
      && printf '%s' "$cmd" | grep -qE '(-s[[:space:]]*0|--size[[:space:]]*=?[[:space:]]*0)([[:space:]]|$)'; then
     echo "refuse"; return 1
   fi
@@ -324,7 +301,7 @@ screen-cmd() {
   # Recursive chmod to a zero mode locks an entire tree out of access. Scoped to the
   # zero lock-out (000/00/0 octal short forms) so ordinary recursive permission changes
   # are not refused; optional path prefix catches /bin/chmod.
-  if printf '%s' "$cmd" | grep -qE '(^|[[:space:]])([^[:space:]]*/)?chmod([[:space:]]|$)' \
+  if printf '%s' "$cmd" | grep -qE "${command_start}chmod([[:space:]]|$)" \
      && printf '%s' "$cmd" | grep -qE '(-R|--recursive)([[:space:]]|$)' \
      && printf '%s' "$cmd" | grep -qE '(^|[[:space:]])(000|00|0)([[:space:]]|$)'; then
     echo "refuse"; return 1
@@ -413,7 +390,7 @@ screen-cmd() {
 
 # ---------------------------------------------------------------------------
 # verdict: synthesize a convergence verdict from state JSON.
-# Reads: units, plateau, ceiling fields. Prints verdict + ship-gate line.
+# Reads: units, plateau, ceiling, pending_verify. Prints verdict + ship-gate line.
 # Exit 0 = CONVERGED; exit 1 = not converged; exit 2 = error.
 # ---------------------------------------------------------------------------
 verdict() {
@@ -422,19 +399,21 @@ verdict() {
     echo "BLOCKED"; echo "ship=no"; return 2
   fi
 
-  local parsed units_val plateau_val ceiling_val
+  local parsed units_val plateau_val ceiling_val pending_val
   if ! parsed=$(node -e '
       const fs = require("fs");
       let j;
       try { j = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); }
       catch { process.exit(3); }
-      const num = (k) => (typeof j[k] === "number" ? String(j[k]) : "");
+      if (!Number.isFinite(j.units) || j.units < 0) process.exit(3);
+      for (const k of ["plateau", "ceiling", "pending_verify"])
+        if (k in j && typeof j[k] !== "boolean") process.exit(3);
       const boo = (k) => (typeof j[k] === "boolean" ? String(j[k]) : "");
-      console.log([num("units"), boo("plateau"), boo("ceiling")].join(String.fromCharCode(31)));
+      console.log([String(j.units), boo("plateau"), boo("ceiling"), boo("pending_verify")].join(String.fromCharCode(31)));
     ' "$state_file" 2>/dev/null); then
     echo "BLOCKED"; echo "ship=no"; return 2
   fi
-  IFS=$'\x1f' read -r units_val plateau_val ceiling_val <<< "$parsed"
+  IFS=$'\x1f' read -r units_val plateau_val ceiling_val pending_val <<< "$parsed"
 
   if [[ -z "$units_val" ]]; then
     echo "BLOCKED"; echo "ship=no"; return 2
@@ -448,7 +427,12 @@ verdict() {
     echo "CEILING"; echo "ship=no"; return 1
   fi
 
-  # units==0 with no plateau/ceiling → converged
+  # The progress metric cannot waive the independent verification step.
+  if [[ "$pending_val" == "true" ]]; then
+    echo "RUNNING"; echo "ship=no"; return 1
+  fi
+
+  # units==0 with no pending verification or stop signal → converged
   if awk -v u="$units_val" 'BEGIN { exit (u == 0 ? 0 : 1) }'; then
     echo "CONVERGED"; echo "ship=yes"; return 0
   fi
@@ -462,7 +446,7 @@ verdict() {
 # ---------------------------------------------------------------------------
 # validate-state: schema gate for orchestrator-state.json. The ledger is the
 # loop's evidence trail; a malformed one must not be trusted to route from.
-# Prints "valid" exit 0 | "invalid" exit 2. Grep/sed only — no jq dependency.
+# Prints "valid" exit 0 | "invalid" exit 2. Uses Node for JSON validation.
 # ---------------------------------------------------------------------------
 validate-state() {
   local state_file="${1:?usage: validate-state <state.json>}"
@@ -479,11 +463,20 @@ validate-state() {
       let j;
       try { j = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); }
       catch { process.exit(2); }
-      for (const f of ["goal", "archetype", "predicate", "terminal_choice", "cycle"])
-        if (!(f in j)) process.exit(2);
+      if (!j || typeof j !== "object" || Array.isArray(j)) process.exit(2);
+      for (const f of ["goal", "archetype", "predicate", "terminal_choice"])
+        if (typeof j[f] !== "string" || !j[f].trim()) process.exit(2);
+      if (!["ship-ready", "optimize-metric", "fix-broken", "harden", "build-feature", "explore",
+            "polish-ui", "document", "what-to-build", "decide-design", "package-android"].includes(j.archetype))
+        process.exit(2);
+      // "stop" is the existing short form in persisted state fixtures.
+      if (!["stop-at-verified", "proceed-to-ship", "stop"].includes(j.terminal_choice)) process.exit(2);
       if (!Array.isArray(j.units_remaining) || !Array.isArray(j.pipeline_log)) process.exit(2);
-      if (typeof j.predicate !== "string" || j.predicate === "") process.exit(2);
-      if (typeof j.cycle !== "number" || !Number.isInteger(j.cycle) || j.cycle < 0) process.exit(2);
+      if (!Number.isSafeInteger(j.cycle) || j.cycle < 0) process.exit(2);
+      if ("pending_verify" in j && typeof j.pending_verify !== "boolean") process.exit(2);
+      for (const f of ["errors_remaining", "untested_gaps"])
+        if (f in j && (!Number.isSafeInteger(j[f]) || j[f] < 0)) process.exit(2);
+      if ("regression_verdict" in j && !["STABLE", "UNSTABLE"].includes(j.regression_verdict)) process.exit(2);
     ' "$state_file" 2>/dev/null; then
     echo "valid"; return 0
   fi

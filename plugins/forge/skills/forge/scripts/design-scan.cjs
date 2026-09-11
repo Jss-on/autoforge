@@ -9,6 +9,7 @@
  *                        [--shots <dir>] [--storage-state state.json] [--ignore rule1,rule2]
  *                        [--engine builtin|impeccable|both] [--settle 600] [--timeout 30000]
  *                        [--sheet <contact-sheet.png>] [--prev <previous scan.json>]
+ *                        [--assets <project-root>] (validate manifest, content hashes and declared UI motion)
  *
  *   --sheet renders every capture as a labelled, top-cropped cell in ONE image (open the sheet,
  *   not every PNG); --prev reuses pages whose fingerprint (DOM + stylesheet text + resource sizes,
@@ -38,7 +39,7 @@ const crypto = require('crypto');
 function parseArgs(argv) {
   const a = { urls: [], viewports: '1280x800,390x844', mode: 'operate', out: 'design-scan.json',
               shots: null, design: null, storageState: null, ignore: [], engine: 'both',
-              settle: 600, timeout: 30000, fullPage: true, sheet: null, prev: null };
+              settle: 600, timeout: 30000, fullPage: true, sheet: null, prev: null, assets: null };
   for (let i = 2; i < argv.length; i++) {
     const k = argv[i], v = argv[i + 1];
     switch (k) {
@@ -56,6 +57,7 @@ function parseArgs(argv) {
       case '--no-full-page': a.fullPage = false; break;
       case '--sheet': a.sheet = v; i++; break;
       case '--prev': a.prev = v; i++; break;
+      case '--assets': if (!v || v.startsWith('--')) throw new Error('--assets requires a project root'); a.assets = v; i++; break;
       case '--help': case '-h': usage(); process.exit(0);
       default:
         if (k.startsWith('--')) { console.error(`unknown flag: ${k}`); usage(); process.exit(1); }
@@ -512,8 +514,75 @@ function resolveImpeccable() {
 // ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
+async function auditMotion(browser, url, viewport, ctxOpts, motions, args) {
+  const report = { profiles: [], cases: [], findings: [] };
+  const applicable = motions.filter(m => !m.route || m.route === new URL(url).pathname || m.route === url);
+  if (!applicable.length) return report;
+  for (const profile of ['no-preference', 'reduce']) {
+    report.profiles.push(profile);
+    for (const motion of applicable) {
+      const context = await browser.newContext({ ...ctxOpts, viewport, reducedMotion: profile });
+      const page = await context.newPage();
+      const item = { id: motion.id, profile, passed: false, observed: [], screenshot: null };
+      const errors = [];
+      page.on('pageerror', e => errors.push(String(e.message || e)));
+      page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+      const before = report.findings.length;
+      const fail = (rule, detail) => report.findings.push({ rule, severity: 'error', selector: motion.selector, detail: `${motion.id} (${profile}): ${detail}`, engine: 'builtin' });
+      try {
+        page.setDefaultTimeout(Math.min(args.timeout, 5000));
+        const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: args.timeout });
+        if (response && response.status() >= 400) throw new Error('HTTP ' + response.status());
+        const target = page.locator(motion.selector);
+        await target.waitFor({ state: 'attached' });
+        const trigger = motion.trigger.type === 'load' ? null : page.locator(motion.trigger.selector);
+        if (motion.trigger.type === 'click') await trigger.click();
+        else if (motion.trigger.type === 'hover') await trigger.hover();
+        else if (motion.trigger.type === 'focus') await trigger.focus();
+        // ponytail: CSS/Web Animations are observable here; canvas/custom JS timelines
+        // require application-owned acceptance tests instead of an invented passing signal.
+        item.observed = await target.evaluate(el => el.getAnimations().filter(a => a.playState === 'running' || a.pending).map(a => {
+          const frames = a.effect.getKeyframes(), timing = a.effect.getComputedTiming();
+          const properties = [...new Set(frames.flatMap(Object.keys))].filter(p => !['offset', 'computedOffset', 'easing', 'composite'].includes(p) &&
+            new Set(frames.map(f => f[p]).filter(v => v !== undefined)).size > 1);
+          return { properties, duration: Number.isFinite(timing.endTime) ? timing.endTime : null, infinite: !Number.isFinite(timing.endTime) };
+        }));
+        const properties = item.observed.flatMap(a => a.properties);
+        const wanted = motion.properties.map(p => p.replace(/-([a-z])/g, (_, c) => c.toUpperCase()));
+        if (profile === 'no-preference' && !wanted.every(p => properties.includes(p))) fail('motion-missing', 'Declared animation was not observed after its trigger');
+        if (profile === 'reduce' && motion.reduced !== 'preserve' && properties.some(p => motion.reduced !== 'opacity' || p !== 'opacity'))
+          fail('reduced-motion-active', 'Animation exceeds the declared reduced-motion behavior');
+        if (item.observed.some(a => a.infinite || a.duration > motion.maxDurationMs)) fail('motion-duration', 'Animation timing exceeds its declared duration budget');
+        const settled = await target.evaluate(async (el, timeout) => {
+          let timer;
+          try {
+            return await Promise.race([
+              Promise.all(el.getAnimations().filter(a => a.playState === 'running' || a.pending).map(a => a.finished.catch(() => {}))).then(() => true),
+              new Promise(resolve => { timer = setTimeout(() => resolve(false), timeout); })
+            ]);
+          } finally { clearTimeout(timer); }
+        }, Math.min(motion.maxDurationMs, args.timeout));
+        if (!settled) fail('motion-duration', 'Animation did not settle within its declared duration budget');
+        item.endVisible = await target.isVisible();
+        if (args.shots) {
+          const id = crypto.createHash('sha256').update(url + '\n' + motion.id).digest('hex').slice(0, 12);
+          item.screenshot = path.join(args.shots, `motion-${id}--${viewport.width}x${viewport.height}--${profile}.png`);
+          await page.screenshot({ path: item.screenshot, fullPage: args.fullPage });
+        }
+        if (errors.length) fail('motion-console-error', errors.slice(0, 3).join(' | ').slice(0, 240));
+        item.passed = report.findings.length === before;
+      } catch (error) { fail('motion-unverifiable', String(error.message || error).slice(0, 240)); }
+      finally { await context.close().catch(() => {}); }
+      report.cases.push(item);
+    }
+  }
+  return report;
+}
+
 async function main() {
   const a = parseArgs(process.argv);
+  const assetReport = a.assets ? require('./asset-check.cjs').check(a.assets) : null;
+  if (assetReport && !assetReport.valid) throw new Error('Asset validation failed: ' + JSON.stringify(assetReport.errors));
   let chromium;
   try { ({ chromium } = require(require.resolve('playwright', { paths: [process.cwd()] }))); }
   catch { try { ({ chromium } = require('playwright')); } catch { console.error('playwright not resolvable from cwd — `npm i -D playwright && npx playwright install --with-deps chromium` in the project'); process.exit(1); } }
@@ -529,11 +598,12 @@ async function main() {
   if (a.storageState) ctxOpts.storageState = a.storageState;
   const report = { meta: { generatedAt: new Date().toISOString(), mode: a.mode, engine: impPath ? (a.engine === 'impeccable' ? 'impeccable' : 'builtin+impeccable') : 'builtin', design: designSystem ? { file: designSystem.file || a.design, present: !!designSystem.present, fonts: designSystem.fonts || [], colors: (designSystem.colors || []).length, radii: designSystem.radii || [] } : null, viewports: a.viewportList, ignore: a.ignore }, pages: [], summary: { errors: 0, warns: 0, advisory: 0, byRule: {} } };
   const ignore = new Set(a.ignore);
+  if (assetReport) report.meta.assets = { projectRoot: assetReport.root, manifestSha256: assetReport.manifestSha256, files: assetReport.files };
   // --prev: a page whose fingerprint is unchanged since the previous scan is reused — its findings
   // and screenshot are cited, not re-produced. A volatile DOM (nonces, timestamps) only costs a
   // recapture: the failure direction is "verify again", never "assume".
-  // ponytail: an asset swapped for one of identical byte size is invisible to the fingerprint;
-  // run without --prev (the --thorough path) to recapture everything.
+  // ponytail: unregistered resources with unchanged sizes are invisible to the legacy fingerprint;
+  // use --assets for validated content hashes, or omit --prev to recapture everything.
   const prevPages = new Map();
   if (a.prev) {
     try { for (const p of JSON.parse(fs.readFileSync(a.prev, 'utf8')).pages || []) if (p.fingerprint) prevPages.set(`${p.url}|${p.viewport}`, p); }
@@ -559,9 +629,9 @@ async function main() {
           for (const s of Array.from(document.styleSheets)) { try { css += Array.from(s.cssRules).map(r => r.cssText).join('\n'); } catch { css += s.href || ''; } }
           const res = performance.getEntriesByType('resource').map(r => `${r.name}:${r.encodedBodySize || 0}`).sort().join('\n');
           return `${innerWidth}x${innerHeight}\n${document.documentElement.outerHTML.replace(/\s+/g, ' ')}\n${css}\n${res}`;
-        })).digest('hex').slice(0, 16);
+        })).update(assetReport ? assetReport.manifestSha256 : '').digest('hex').slice(0, 16);
         const prev = prevPages.get(`${url}|${entry.viewport}`);
-        if (prev && prev.fingerprint === entry.fingerprint && (!a.shots || (prev.screenshot && fs.existsSync(prev.screenshot)))) {
+        if (prev && !assetReport?.manifest.motion.length && prev.fingerprint === entry.fingerprint && (!a.shots || (prev.screenshot && fs.existsSync(prev.screenshot)))) {
           entry.reused = true; entry.findings = prev.findings || []; entry.screenshot = prev.screenshot || null; entry.meta = prev.meta;
         }
         if (!entry.reused && a.shots) {
@@ -587,6 +657,11 @@ async function main() {
           } catch (e) { entry.findings.push({ rule: 'impeccable-engine-error', severity: 'advisory', selector: '', detail: String(e.message || e).slice(0, 160), engine: 'impeccable' }); }
         }
         if (!entry.reused && consoleErrors.length) entry.findings.push({ rule: 'console-error', severity: 'error', selector: '', detail: `${consoleErrors.length} console/page error(s)`, snippet: consoleErrors.slice(0, 3).join(' | '), engine: 'builtin' });
+        if (assetReport?.manifest.motion.length) {
+          const motion = await auditMotion(browser, url, vp, ctxOpts, assetReport.manifest.motion, a);
+          entry.motion = { profiles: motion.profiles, cases: motion.cases };
+          entry.findings.push(...motion.findings);
+        }
       } catch (e) {
         entry.errors = String(e && e.message || e).slice(0, 300);
         entry.findings.push({ rule: 'page-unreachable', severity: 'error', selector: '', detail: entry.errors, engine: 'builtin' });

@@ -1,97 +1,205 @@
-# Integrations Protocol — generative media, design bridge, tracker sync
+# Integrations Protocol — assets, native image tools, design bridge, tracker sync
 
-Companion to `build` / `feature` / `design` / `requirements` / `test` / `fix` for the three
-**optional MCP integration families** the pipeline can exploit when the running platform has them
-connected: **generative media** (Higgsfield-class — real pictures, animation, 3D, audio for the
-product being built), the **design bridge** (Figma-class — design files as machine-readable
-DESIGN.md sources and review targets), and **tracker sync** (Linear-class — the engagement's
-projects, phases and defect ledgers mirrored where the client's team already works).
-
-Everything here is **availability-gated**: probe, use what is present, degrade to the named
-fallback when absent — never a hard dependency, never a silent skip. The acceptance model is
-unchanged; these integrations feed it (real assets into `ux` rows, real tracker rows out of defect
-ledgers), they never replace a gate.
+Companion to `build` / `feature` / `design` / `requirements` / `test` / `fix`.
+Asset management covers scoped images, icons and UI motion whether generation is available or
+not. Generative media uses **Codex-native image tools first for raster work**, then available media
+MCP tools. The other optional families are the Figma-class design bridge and Linear-class tracker.
+All integrations are **availability-gated**; record a named fallback when absent. Required acceptance
+rows remain unmet until their actual requirements are satisfied. Existing workflow gates still apply.
 
 ## 0. Doctrine — detect, gate, degrade, record
 
-| Family | Capability probe (by tool shape, not server name) | Fallback when absent |
+| Family | Capability probe (tool shape, not server name) | Fallback when absent |
 |---|---|---|
-| **Media** | image/video/audio generation tools (e.g. `generate_image`, `generate_image_batch`, `jobs_wait`, `upscale_image`, `remove_background` — Higgsfield-class) | the asset sourcing ladder (`game-assets-protocol.md` §1): CC0 packs → procedural → labeled placeholder slots |
-| **Design bridge** | design-file context tools (e.g. `get_design_context`, `get_variable_defs`, `get_screenshot` — Figma-class) | `Design:` catalog slug / file / `generate`; a Figma URL without the bridge is an unreachable source — say so |
-| **Tracker** | issue/project tools (e.g. `save_issue`, `save_project`, `save_status_update` — Linear-class) | GitHub issues on the output repo (the standing default) |
+| **Media** | Session-native `image_gen` / `imagegen` for raster creation/edits; media MCP generation tools for each supported kind | Reuse verified assets, licensed sources, code-native vectors/motion, then named optional placeholders |
+| **Design bridge** | Design context, variables and screenshot tools | `Design:` catalog / file / `generate`; an unreadable Figma URL is an unreachable source |
+| **Tracker** | Issue/project tools | GitHub issues on the output repo |
 
-- **Probe once per run** (platform tool search / tool listing; a server that fails to load is
-  absent). Match by capability shape — server names vary across installs.
-- **Record the decision**: `integrations.json` in the run dir — per family: `present` (bool),
-  `server`, `enabled` (bool + why), `budget`/`spent` (media), `tracker` choice. Handoff carries the
-  optional `tracker` and `assets` fields (additive; schema unchanged otherwise).
-- **Availability is not approval.** Detection alone never triggers spend or outward writes. Each
-  family names its own arming rule below (mode-required imagery arms media; `Tracker: linear` arms
-  tracker sync; `--figma-out` arms outbound design push).
-- **Cost is real.** Media generation spends account credits; tracker and design-file writes are
-  visible to the client's team. Budgets, caps and dedupe rules below are contract, not advice.
+- Probe once per run using session tool discovery. A server that fails to load is absent. A shell
+  doctor cannot establish whether a session-native image tool exists; never gate it on MCP presence.
+- Record observed capabilities in run-local `integrations.json`: native image availability, media
+  MCP kinds, chosen provider and reason, enabled status, budget/spent, tracker choice and bridge.
+  Do not infer video, audio or 3D support from an image tool.
+- **Availability is not approval.** A scoped generation need or mode-required imagery arms the
+  bounded media pass; mere tool detection does not. Honor existing user authorization. An API key
+  alone does not authorize an API fallback or a switch away from an explicitly requested provider.
+- Keep actual receipts and report attempts/cap. Report model, service job ID, balance and cost as
+  unknown when the tool does not expose them; do not invent values or require a native balance API.
+  Tracker and outbound design writes retain their arming rules below.
 
-## 1. Generative media (Higgsfield-class) — real pictures, animation, 3D, audio
+## 1. Assets and media — one lifecycle in every workflow
 
-The craft floor already demands it: Persuade surfaces require **real imagery** (gen tool → real
-photo → labeled placeholder slot — protocol §1), and div-built fake screenshots are a tell. This
-section is the "gen tool" rung made concrete.
+### 1.1 Scope and provider selection
 
-### 1.1 When it arms
-- **On by default** (media present) for surfaces whose mode requires imagery: Persuade heroes and
-  section imagery, Experience showcase material, empty-state illustration sets, and asset-heavy
-  targets (sprites, tiles, textures) per `game-assets-protocol.md`.
-- **Only when scoped** (spec/brief/user names it): video loops and motion imagery, 3D props
-  (`generate_3d` → GLB), audio (SFX/music), character sets. Expensive media is never a reflex.
-- **Never**: UI icons (icons stay one library, one stroke), real-person likeness, real-brand logos
-  or marks, replacing client-supplied brand assets, laundering third-party media through
-  regeneration. `Assets: off` disables the family for the run.
+Read the brief, `DESIGN.md`, existing assets and icon imports first. Preserve client brand assets;
+do not fabricate likenesses or regenerate third-party work to disguise its source. For an asset slot:
 
-### 1.2 Asset plan before any job
-Write `assets/PLAN.md` first: one row per slot — slot name · surface/route · subject · tool +
-model · candidates (2–4 for key slots, 1 for minor) · post-production steps. Check the account
-balance before executing; the run's job cap is **12 generation jobs** by default (`Assets: N`
-overrides). **Reuse first**: search existing generations (the service's library) and `assets/`
-before creating anything new. Plan exceeds cap → cut minor slots to labeled placeholders, say so.
+1. Reuse an approved, locally verified asset or the project's existing icon family.
+2. Use SVG/code for icons and diagrams; CSS or the Web Animations API for UI interaction motion.
+   Keep one icon family, stroke and size system. A generated raster cannot claim to be SVG.
+3. For raster generation/editing, prefer the available **Codex-native image tool**, following the
+   installed imagegen skill and the current tool schema. Next use a media MCP supporting that kind.
+   Use an API generation path only when explicitly chosen/authorized; never silently switch providers.
+4. Use licensed sources or procedural assets where suitable. An optional placeholder must name its
+   reason; a required image/animation remains a failing acceptance row even during an outage.
 
-### 1.3 Prompt discipline — the world writes the prompt
-Derive one **style contract** paragraph from `DESIGN.md` — thesis, named colors (the actual hex
-values), material family, scene light, mood — and reuse it verbatim in every prompt, plus a
-per-slot subject line. Generic prompt adjectives ("professional, modern, clean, high quality") are
-banned; the direction's own vocabulary is the prompt. Recurring subjects (mascot, product hero,
-game protagonist) go through the service's character/consistency workflow so every appearance is
-the same subject. Unsure which model fits → use the service's recommend/explore call, don't guess.
+Video loops, 3D and audio arm only when explicitly scoped and a matching provider exists. An
+Operate screen needs no decorative hero just because a generator is present. `Assets: off` disables
+new generation; it does not disable local asset checks, checked reuse, icons or CSS motion.
 
-### 1.4 Execution
-Batch independent jobs (`generate_*_batch` + the wait call), then fetch results once. **Open and
-read every generated asset** before wiring it in — reject on: text artifacts or pseudo-lettering,
-anatomy defects, palette outside the DESIGN.md world, watermark-like traces, wrong aspect for the
-slot. A rejected candidate is re-rolled within the slot's candidate budget, never patched around.
-Record kept job ids in `assets/PLAN.md`.
+The shared, read-only selector is `node scripts/asset-check.cjs select <request.json>`:
 
-### 1.5 Post-production (dedicated tools over regeneration)
-Upscale the hero/marquee assets (2K web, 4K only for print-class needs) · `remove_background` for
-real cutouts (this replaces the geometric-mask fake-cutout tell) · `reframe` for aspect variants of
-one approved asset · `outpaint` to extend composition — never stretch or crop-and-pray.
+```json
+{
+  "kind": "image", "required": true, "existing": null,
+  "budget": { "jobs": 12, "spent": 0 },
+  "capabilities": { "nativeImage": true, "mediaMcp": [], "apiImage": false },
+  "apiApproved": false, "requestedProvider": "auto"
+}
+```
 
-### 1.6 Delivery discipline (existing budgets stand)
-Images → WebP (PNG only where alpha is needed), sized per slot with `srcset` where responsive.
-Video → ≤10 s seamless loop, muted, WebM + MP4, poster frame, `prefers-reduced-motion` swaps to
-the poster, lazy-load below the fold. 3D → GLB (Draco when large). Audio → OGG/M4A. The repo and
-payload budgets from `game-assets-protocol.md` §2 are unchanged (no file ≥ 50 MB, initial payload
-budget as a mechanical `devops` row) — generated media obeys them like any other asset.
+Supply observed booleans and MCP kinds, not guesses. `existing`, when supplied, contains
+`approved`, project-relative `path`, and an actual checked `sha256`. Kinds include `image`, `svg`,
+`icon`, `diagram`, `ui-motion`, `font`, `video`, `audio`, `model`, `data`; explicit providers are
+`codex-native`, `media-mcp`, `openai-api`, or `auto`. Output action is `reuse`, `code`, `generate`,
+`placeholder` or `blocked`, with provider and reason. This command never invokes a provider.
 
-### 1.7 Vector honesty
-Generation outputs are **raster**. A flat "vector-style" illustration is a raster illustration —
-fine for imagery slots, never a substitute for SVG where scaling or theming demands true vectors
-(icons, logos, diagrams). Icons remain the icon-library path; diagrams remain code/SVG.
+### 1.2 Plan and budget before any job
+
+Write project-local `assets/manifest.json` and a concise `assets/PLAN.md` view: slot, route/selector,
+subject, dimensions/aspect, required/optional, reuse decision, provider, candidate count and byte caps.
+Default cap: **12 generation jobs** per engagement (`Assets: N` overrides). Start with one candidate
+per slot unless the brief needs variants. Count **every attempt**, including retries, edits, failures
+and rejected candidates; record pending before dispatch, then its real terminal outcome. Never
+launch work beyond the remaining cap. Check account balance only if the chosen tool exposes it.
+
+On resume, keep the existing manifest, receipts and spent count. Do not reset the cap, erase failed
+jobs or re-roll approved assets. `Assets: off` on a resumed engagement sets the selector's job budget
+to `off` while retaining the manifest's historical budget/receipts. A new manifest whose budget is
+`off` permits zero generation jobs; it can still hold authored/sourced assets.
+
+### 1.3 Prompt, execute, inspect
+
+Store the DESIGN.md style contract and per-slot instructions in `assets/PROMPTS.md`: subject,
+composition, aspect, materials, scene light, actual colors, text and preservation constraints.
+Generic adjectives do not substitute for the brief. Use real reference files when editing; inspect
+local references first and follow the tool's reference mechanism. Do not invent tool parameters,
+model names, edit capabilities or provider job IDs.
+
+For Codex, call the available native `image_gen` / `imagegen` tool directly. Follow its actual output
+contract: **copy the generated file into the target project**, retain the original when instructed,
+then inspect the copied raster before approving it. An image displayed in chat or saved only in a
+global generator directory is not a delivered application asset. Reject artifacts, wrong subject,
+unwanted text, watermark traces or a crop that misses the slot's purpose. If the provider exposes no
+job ID, assign an explicitly local receipt ID tied to the observed tool result; record model as null.
+
+### 1.4 Delivery
+
+Reuse dedicated edit/cutout/reframe/upscale tools only when available and needed; extra attempts
+still count. Prefer slot-sized WebP/AVIF for photos, PNG for transparency or a justified fixture,
+SVG for true vectors; never rename an extension to claim conversion. Set intrinsic dimensions,
+responsive sizes/srcset where useful, informative alt text or decorative empty alt, and eager/lazy
+loading by placement. Verify actual image decoding and layout in the browser, including mobile.
+
+Videos need a poster, muted playback where appropriate, controls/pause when required, and a reduced
+motion alternative; audio and 3D keep their scoped formats and loading rules. No file ≥50 MB in git;
+specify project-specific file, total shipped and initial-payload budgets. The checker measures local
+file/total bytes; a separate `devops` row measures initial network payload from the running build.
+
+### 1.5 Machine-readable inventory
+
+`assets/manifest.json` **version 1** is the single inventory. PLAN/CREDITS are readable views;
+PROMPTS stores generation instructions. Example empty inventory (create its declared runtime root):
+
+```json
+{
+  "version": 1,
+  "assetRoots": ["public/assets"],
+  "budget": { "jobs": 12, "maxFileBytes": 2500000, "maxTotalBytes": 5000000 },
+  "jobs": [], "assets": [], "motion": []
+}
+```
+
+| Record | Required fields and meaning |
+|---|---|
+| Asset | Unique `id`; `kind` = image/svg/font/video/audio/model/data; `state` = planned/generated/approved/rejected/blocked; boolean `required`; nonempty `usage` of `{route, selector}` |
+| Delivered file | Project-relative POSIX `path` inside a declared `assetRoots` directory, actual `bytes` and SHA-256 `sha256`, `loading` eager/lazy. Every runtime file under those roots must be registered; links may not escape the project |
+| Image/SVG | Positive `width`/`height`, boolean `decorative`, `alt` (empty only when decorative). SVG and raster kinds must match their actual format |
+| Authored source | `source: {type: "authored", creator, license}` using actual ownership/license |
+| Sourced source | `source: {type: "sourced", creator, license, url}` with source URL and any required attribution rendered in the app |
+| Generated source | `source: {type: "generated", provider, model, receipt, prompt}`; model is an exposed name or null, receipt refers to a job, prompt is a nonempty project file (optional section anchor) |
+| Job | Unique `id`, `status` pending/complete/failed/cancelled; retain provider/tool and the actual result or local receipt pointer when available |
+| Optional unfinished slot | May omit path only while unapproved and `required: false`; retain its `reason` and intended usage |
+| Replacement | `replacement: {previousSha256, defect}` or `{previousSha256, request}` names the old approved hash and the authorized reason |
+
+Required slots must be approved to pass; approved generations need completed receipts. A planning
+manifest with unresolved required slots is intentionally not delivery-valid. During requirements or
+design planning, emit failing future acceptance rows instead of pretending the application is built.
+
+### 1.6 UI motion and browser evidence
+
+Implement normal/reduced behavior together. Prefer transform/opacity for brief state feedback;
+preserve keyboard focus, content and the task when motion is suppressed. No blanket animation-off
+rule that leaves the result hidden. Avoid decorative page-load motion on Operate surfaces.
+
+Each bounded CSS/Web Animation has a manifest `motion` record:
+
+```json
+{
+  "id": "details-reveal", "route": "/", "selector": "#details",
+  "trigger": { "type": "click", "selector": "#toggle" },
+  "properties": ["transform", "opacity"], "maxDurationMs": 500,
+  "essential": false, "reduced": "none"
+}
+```
+
+Triggers: click/hover/focus with a selector, or load. Route is a pathname or full URL; omitted means
+all scanned routes. Duration is a positive ceiling ≤60000 ms. Reduced behavior is `none`, `opacity`
+or `preserve`; preserve requires a justified `essential: true`. The scan triggers each record in
+fresh `no-preference` and `reduce` contexts at every applicable viewport. It requires the declared
+normal properties, enforces reduced behavior and duration, and fails on trigger/runtime errors.
+With `--shots`, it records captures after settling. Motion always reruns even with `--prev`.
+
+This seam observes bounded CSS/Web Animations, not canvas, custom JS frame loops or full product
+semantics. Those need application-owned tests. The `design:motion` row also asserts the actual task
+outcome and focus by keyboard in both preferences, with normal/reduced captures opened and checked.
+Essential continuous media needs its own pause/control tests; a frozen screenshot is not proof.
+
+### 1.7 Completion gates in the existing workflow
+
+From the target project, with `AR_ROOT` resolved by the command's existing seam rules:
+
+```bash
+node "$AR_ROOT/scripts/asset-check.cjs" check . --previous "<run>/assets-before.json"
+bash "$AR_ROOT/scripts/score-design.sh" assets . > "<run>/evidence/assets.json"
+node "$AR_ROOT/scripts/design-scan.cjs" --assets . --url http://localhost:3000/ \
+  --viewports 1280x800,390x844 --design DESIGN.md --shots "<run>/evidence/screens" \
+  --out "<run>/evidence/design-scan.json"
+bash "$AR_ROOT/scripts/score-design.sh" verdict "<run>/design-defects.tsv" \
+  "<run>/evidence/design-scan.json" DESIGN.md "<run>/design-critique.tsv" .
+```
+
+Omit `--previous` on first adoption; snapshot the approved manifest before any resumed work.
+Checker stdout is JSON; exits: 0 valid, 1 unmet, 2 unreadable/usage. Run it fresh before accepting
+delivery. `--assets` binds capture fingerprints to validated manifest/content hashes; same-size file
+changes invalidate cached evidence. The optional fifth verdict argument reruns the asset gate and
+requires both motion profiles with matching manifest evidence at every scanned applicable viewport.
+Existing projects without a scoped manifest retain the legacy command forms and gates.
+
+Map proof into the existing six dimensions: `ux` for images/icons/motion and task outcomes,
+`hardening` for provenance, `devops` for file and payload budgets. Retain all seven design coverage
+tags, SLOP_GATE, lint, axe and regression checks. Tool outage or a pending job never turns a required
+row green. Record providers, attempts/cap, kept assets, failed/optional slots and proof paths in the
+summary and optional handoff `assets` object.
 
 ### 1.8 Provenance + pinning
-Every kept asset gets a `assets/CREDITS.md` row: file(s) · `generated — <service>/<model>` ·
-job id · date · prompt pointer (`assets/PROMPTS.md` holds the style contract + per-slot prompts).
-The existing hardening row (ledger covers every file under `assets/`) now covers generated files
-too. **Approved assets are pinned**: `fix` / `design --fix` iterations never re-roll imagery;
-regeneration happens only through a ledger defect naming what is wrong with the current asset.
+
+Every kept file appears in `assets/CREDITS.md` with source/creator/license or generated provider,
+actual receipt, prompt pointer and date. **Approved assets are pinned** by path and SHA-256.
+`fix`, `design --fix` and feature resumes use `check --previous`; replacements require a named
+defect or explicit request and the previous hash. Required slots cannot disappear or become
+optional to pass. Preserve existing icon families and do not spend on unchanged approved media.
+
 
 ## 2. Design bridge (Figma-class) — design files in, review files out
 
@@ -160,7 +268,7 @@ change workspace/team membership or visibility. Unattended runs write to the tra
   they never substitute for `*-defects.tsv` (the TSV stays the source of truth in the run dir).
 - **Spend is reported.** The run summary prints per-family lines: media jobs used/cap + credits
   spent when the balance call exposes it; tracker rows created/updated; bridge pulls/pushes.
-- **Failures degrade, not block.** A media job that errors after one retry → the slot falls back
-  down the ladder (labeled placeholder at worst) and the run continues; a tracker write that fails
-  → the GitHub fallback fires and the miss is named in the summary; a bridge pull that fails → the
-  source is treated as absent. An integration outage is never a reason a build stops.
+- **Failures retain acceptance truth.** Record failed media attempts and select a suitable fallback
+  within the remaining cap. Optional slots may use named placeholders; required slots stay unmet
+  until delivered. Continue independent work and report BLOCKED when an unmet requirement cannot
+  proceed. Tracker/bridge failures retain their named fallback and are reported in the summary.

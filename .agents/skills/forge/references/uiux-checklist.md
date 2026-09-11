@@ -32,6 +32,8 @@ system (Phase 4), the audit (Phase 6 / any existing app) and the bounded remedia
 - [ ] **Radius** — one radius system (`rounded:`), applied consistently
 - [ ] **Motion** — durations + easing declared (exponential ease-out; no bounce), one authored moment
       at most, `prefers-reduced-motion` honored with feedback preserved
+- [ ] Scoped bounded UI motion is recorded in `assets/manifest.json` (trigger/selector, properties,
+      duration ceiling, essentiality and reduced behavior); native CSS/Web Animations are preferred
 - [ ] **Component states** — every interactive family specifies default / hover / focus / active /
       disabled / **loading / empty / error / success**
 - [ ] `scripts/score-design.sh lint DESIGN.md` → `DESIGN_LINT: VALID` (schema + contrast pairs)
@@ -59,6 +61,9 @@ system (Phase 4), the audit (Phase 6 / any existing app) and the bounded remedia
 - [ ] The primary flow works click-by-click in a real browser via Playwright (create → see →
       edit → reload persists → delete)
 - [ ] No console errors during the flow
+- [ ] The same keyboard task completes in `no-preference` and `reduce`: content, feedback and focus
+      survive suppression. `design-scan.cjs --assets <target>` exercises declared motion in both;
+      inspect both captures and assert product outcomes separately (`design:motion`)
 - [ ] Empty, loading, and error states render correctly when exercised (no data; failed request;
       slow network)
 
@@ -74,6 +79,11 @@ system (Phase 4), the audit (Phase 6 / any existing app) and the bounded remedia
       unless the brief chose it
 - [ ] Visual hierarchy clear; alignment + spacing consistent; interactions feel responsive
       (feedback < 100 ms, no layout shift on action); no lorem / unstyled defaults / clashing styles
+- [ ] Scoped images/icons have valid `assets/manifest.json` entries (`score-design.sh assets <target>`):
+      actual bytes/hashes, required approval, provenance, prompt/receipt for generated media;
+      browser decoding, dimensions, alt/decorative meaning and loading verified on mobile + desktop
+- [ ] Codex-native raster tools are preferred when generation is needed; icons reuse the established
+      vector family. Attempts (including failures/edits) and payloads stay within their declared caps
 
 ## 6. DESIGN.md conformance + design QA (Phase 6)
 
@@ -86,6 +96,9 @@ system (Phase 4), the audit (Phase 6 / any existing app) and the bounded remedia
       `scripts/score-design.sh verdict …` → **`DESIGN_VERDICT: SHIP`** (or FIX rounds until it is)
 - [ ] The screenshots were actually **viewed** (Read the PNGs) — green gates have hidden error
       overlays, wrong-color renders and blank regions before
+- [ ] With scoped assets/motion, scan uses `--assets <target>` and verdict receives `<target>` as
+      its fifth argument. Missing/stale motion proof or invalid files cannot produce SHIP. Resumed
+      fixes pass `asset-check.cjs check <target> --previous <snapshot>`; approved assets stay pinned
 
 **Design coverage (no orphan tokens).** Each DESIGN.md token group is a stable trace tag the build's
 `ux` acceptance rows must reference, so nothing in the design is left unbuilt:

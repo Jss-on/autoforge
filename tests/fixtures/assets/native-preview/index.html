@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Asset preview</title>
+<style>
+  body { margin: 0; background: #f8f8f8; color: #222; font: 18px/1.5 system-ui, sans-serif; }
+  main { max-width: 880px; margin: auto; padding: 24px; }
+  h1 { font-size: 32px; line-height: 1.2; }
+  #photo { display: block; width: min(100%, 440px); height: auto; margin-bottom: 24px; }
+  button { display: inline-flex; align-items: center; gap: 12px; min-height: 48px; padding: 12px 20px; font: inherit; color: #fff; background: #204060; border: 0; cursor: pointer; }
+  button:focus-visible { outline: 3px solid #204060; outline-offset: 4px; }
+  #details.revealed { animation: appear 240ms linear; }
+  @keyframes appear { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { #details.revealed { animation: none; } }
+</style>
+<main>
+  <h1>Asset preview</h1>
+  <img id="photo" src="/public/assets/ceramic-cup.png" width="1254" height="1254" loading="eager" alt="Speckled ceramic cup on a light gray tabletop">
+  <button id="toggle" aria-expanded="false" aria-controls="details"><img src="/public/assets/details.svg" width="24" height="24" loading="eager" alt=""><span>Show details</span></button>
+  <section id="details" hidden>
+    <h2>Ceramic cup</h2>
+    <p>Speckled glaze, a curved handle, and soft daylight on a light gray tabletop.</p>
+  </section>
+</main>
+<script>
+  document.querySelector('#toggle').addEventListener('click', event => {
+    const button = event.currentTarget, details = document.querySelector('#details');
+    details.hidden = !details.hidden;
+    details.classList.toggle('revealed', !details.hidden);
+    button.setAttribute('aria-expanded', String(!details.hidden));
+    button.querySelector('span').textContent = details.hidden ? 'Show details' : 'Hide details';
+  });
+</script>
+</html>

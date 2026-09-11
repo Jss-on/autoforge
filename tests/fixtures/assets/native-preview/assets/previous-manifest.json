@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "assetRoots": [
+    "public/assets"
+  ],
+  "budget": {
+    "jobs": 12,
+    "maxFileBytes": 3000000,
+    "maxTotalBytes": 5000000
+  },
+  "jobs": [
+    {
+      "id": "native-smoke-1",
+      "status": "complete",
+      "provider": "codex-native",
+      "tool": "image_gen.imagegen",
+      "receiptFile": "assets/native-receipt.json"
+    }
+  ],
+  "motion": [
+    {
+      "id": "details-reveal",
+      "route": "/",
+      "selector": "#details",
+      "trigger": {
+        "type": "click",
+        "selector": "#toggle"
+      },
+      "properties": [
+        "transform",
+        "opacity"
+      ],
+      "maxDurationMs": 500,
+      "essential": false,
+      "reduced": "none"
+    }
+  ],
+  "assets": [
+    {
+      "id": "ceramic-cup",
+      "path": "public/assets/ceramic-cup.png",
+      "kind": "image",
+      "state": "approved",
+      "required": true,
+      "bytes": 1856705,
+      "sha256": "e5fe1af88b68ccd9e9587c3d6fc1918ec2c47f0e92d43e2ffc755086ff019dc8",
+      "width": 1254,
+      "height": 1254,
+      "source": {
+        "type": "generated",
+        "provider": "codex-native",
+        "model": null,
+        "receipt": "native-smoke-1",
+        "prompt": "assets/PROMPTS.md"
+      },
+      "usage": [
+        {
+          "route": "/",
+          "selector": "#photo"
+        }
+      ],
+      "decorative": false,
+      "alt": "Speckled ceramic cup on a light gray tabletop",
+      "loading": "eager"
+    },
+    {
+      "id": "details-icon",
+      "path": "public/assets/details.svg",
+      "kind": "svg",
+      "state": "approved",
+      "required": true,
+      "bytes": 168,
+      "sha256": "15ddd0ef9a2e9c01e6c22709fa12bc4f22f7b88d333a778b066611c1a71fe050",
+      "width": 24,
+      "height": 24,
+      "source": {
+        "type": "authored",
+        "creator": "AutoForge fixture",
+        "license": "Repository license"
+      },
+      "usage": [
+        {
+          "route": "/",
+          "selector": "#toggle img"
+        }
+      ],
+      "decorative": true,
+      "alt": "",
+      "loading": "eager"
+    }
+  ]
+}

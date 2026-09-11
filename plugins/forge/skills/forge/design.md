@@ -16,8 +16,8 @@ forge loop (`--fix`). Two truths drive everything: **the visitor mode gates the 
 jobs), and **taste never gates convergence on its own** — the mechanical floor (`SLOP_GATE`), the
 DESIGN.md lint, the ledger and the verdict do. Companion contract: `references/design-protocol.md`
 (modes, archetypes, direction protocol, DESIGN.md schema, craft floor, critique + persona + ledger
-protocol, remediation rules); checklist: `references/uiux-checklist.md`; optional MCP integrations
-(generative media for real imagery/animation, Figma-class design bridge, tracker sync):
+protocol, remediation rules); checklist: `references/uiux-checklist.md`; native image generation and
+optional MCP integrations (media, Figma-class design bridge, tracker sync):
 `references/integrations-protocol.md`.
 
 ## Seam & reference resolution (read once)
@@ -50,8 +50,8 @@ Playwright means no captures, no scan, no verdict; say so instead of "reviewing"
   without the bridge tools, an unreachable source: say so and fall back), a URL/file, or `generate`
   (default). `--refresh` — rewrite an existing `DESIGN.md` **from the built world** (ground truth)
   instead of from the brief.
-- `Assets: N|off` — generation-job budget for the media pass (default 12 when a media MCP is
-  present; `off` disables). `--figma-out` — push the reviewed screens into a new Figma file
+- `Assets: N|off` — generation-attempt budget (default 12 with suitable native/MCP tools;
+  `off` preserves checked reuse, SVG icons, asset checks and UI motion). `--figma-out` — push the reviewed screens into a new Figma file
   (human-gated; integrations-protocol §2.3).
 - `Iterations:` — bound for `--fix` (default 12). `--fix` — after the audit, run the remediation
   loop on the ledger. `--chain <targets>` — commonly `regression`, `test`, or `design` again for the
@@ -99,6 +99,8 @@ The audit is fast because it never verifies the same fact twice, not because it 
   stylesheet text + resource sizes, per viewport) is unchanged: findings and screenshot are cited
   from the previous scan, not re-shot. `--fix` re-verification and the verdict pass are delta audits
   over the changed pages — the untouched pages' evidence is identical by construction.
+  With scoped assets, `--assets <target>` adds validated manifest/content hashes to the fingerprint;
+  same-byte-size replacements invalidate it. Declared motion always reruns in both preferences.
 - **One sweep, one session** — captures + floor + conformance (`design-scan.cjs`) and axe over the
   same route list in one Playwright session; the app is booted once per run; states captured for
   the primary flow; viewports 1280×800 + 390×844 (tablet / reported width only when the surface
@@ -154,15 +156,15 @@ The audit is fast because it never verifies the same fact twice, not because it 
    acceptance rows every build must carry (protocol §2 archetype rows + the 7 `design:*` coverage
    groups incl. `design:floor` = `SLOP_GATE: PASS`) into `design-results.tsv` as `fail` baseline
    rows for `build`/`feature` to fold in.
-8. **Asset pass** (media MCP present + the mode requires imagery; integrations-protocol §1):
-   write `assets/PLAN.md` (slots from the surfaces: hero, section imagery, empty-state
-   illustrations, textures; video/3D/audio only when scoped), check balance, generate in batches
-   under the `Assets:` cap (default 12 jobs) with prompts derived from the committed world (the
-   style contract — thesis + named hex + material + scene, never generic adjectives), **open and
-   read every asset** before keeping it, post-produce with the dedicated tools (upscale hero,
-   `remove_background` cutouts, reframe variants), and record provenance rows in
-   `assets/CREDITS.md` + prompts in `assets/PROMPTS.md`. No media MCP → the sourcing ladder
-   (CC0 → procedural → labeled placeholder slots), unchanged.
+8. **Asset pass** (scoped assets or mode-required imagery; integrations-protocol §1): adopt/write
+   `assets/manifest.json` and `assets/PLAN.md` for images, icons and declared UI motion. Reuse existing
+   approved files/icon families first. `asset-check.cjs select` prefers Codex-native imagegen for
+   raster work, matching media MCP when needed, and code for SVG/icons/motion. Follow the current
+   tool schema and `Assets:` attempt cap; keep prompts in `assets/PROMPTS.md`, **open and read every
+   asset**, copy outputs into the Target, then record actual receipts/provenance in the manifest and
+   `assets/CREDITS.md`. No balance/model exposed means unknown, not blocked. Required unfinished
+   slots remain failing rows for build; system planning does not claim application delivery.
+   Define normal/reduced motion together and preserve task feedback and focus in both.
 9. **`--refresh`** (existing app): scan the incumbent — CSS custom properties, Tailwind theme,
    token files, the main button/input/nav/card/table components, and the **live computed styles**
    via Playwright — then rewrite the frontmatter from what is actually used (descriptive names, one
@@ -196,9 +198,13 @@ DESIGN.md + the app; not the build thread's summary), and never softens the disp
    task (focus visible, order logical, dialogs trap + Esc + return focus, nothing obscured by sticky
    bars). Every counted finding becomes a defect row (structural repeats = one systemic defect).
    Imagery: where the mode requires real imagery, an unlabeled stock-alike, a div-built fake
-   screenshot, or an `assets/` file missing its `CREDITS.md` provenance row is a finding; a
-   **labeled** placeholder slot is a finding only when a media MCP was available to fill it
-   (integrations-protocol §1).
+   screenshot, or a runtime file missing manifest/provenance is a finding. With a scoped manifest,
+   run `scripts/score-design.sh assets <target>` fresh and scan with `--assets <target>`; this validates
+   files and triggers declared motion in `no-preference` and `reduce` at every applicable viewport.
+   Verify actual image decoding and loading, open normal/reduced captures, and assert the keyboard
+   task outcome in both profiles. A required placeholder is a finding even if generation is absent;
+   optional slots retain a named reason (integrations-protocol §1). Audit reports defects and never
+   generates or replaces app assets; remediation owns those changes.
 4. **Phase 3 — heuristic critique**: score Nielsen's ten 0–4 with a key issue each (`na` only where
    the mode cannot apply, renormalized), the cognitive-load eight, and write `design-critique.tsv`;
    `scripts/score-design.sh critique design-critique.tsv` → `DESIGN_HEALTH: N/M (Band)`. Where a
@@ -211,6 +217,8 @@ DESIGN.md + the app; not the build thread's summary), and never softens the disp
    `design-results.tsv` (`ux` rows: floor, conformance, axe, archetype patterns, states — pass only
    with `evidence:`), then
    `scripts/score-design.sh verdict design-defects.tsv evidence/design-scan.json <target>/DESIGN.md design-critique.tsv`
+   (append `<target>` as the fifth argument when assets/motion are scoped, binding fresh validation
+   and both motion profiles to the verdict)
    → **`DESIGN_VERDICT: SHIP | FIX | REBUILD`**. `REBUILD` = the world/contract failed wholesale
    (`[rebuild]` defect or health band Poor/Critical): route to `system --refresh` or a redesign, do not
    patch. Write `design-report.md` (protocol §7.7) — the report is the deliverable; print it, don't
@@ -229,8 +237,9 @@ Runs only on an existing ledger (this run's audit or a prior `design`/`test` run
 read `design-defects.tsv` + `git log` of recent `experiment: design/…` commits → pick the highest
 blocking item (order: task-blocking + a11y → missing states → flow/hierarchy → floor tells →
 visual/motion consistency → cleanup) → **one slice** (approved generated assets are **pinned** —
-never re-rolled in a fix slice; regeneration requires a ledger defect naming what is wrong,
-integrations-protocol §1.8) → `git commit -m "experiment: design/<id> —
+never re-rolled in a fix slice; replacement requires a named defect or explicit request,
+integrations-protocol §1.8; snapshot `assets/manifest.json` before the slice and run
+`asset-check.cjs check <target> --previous <snapshot>` afterward) → `git commit -m "experiment: design/<id> —
 <slice>"` **before** verify → recapture the affected routes + rescan + axe → **keep** iff `SLOP` did
 not rise, no `ux`/functional acceptance row went red (`scripts/score-build.sh pass-rate
 --strict-evidence`), `scripts/score-regression.sh verdict` is `STABLE`, and the row's evidence
@@ -276,7 +285,8 @@ Write handoff.json: version "3.1.0", source "design", timestamp, status
 defects_tsv, verdict (`SHIP|FIX|REBUILD`), design (path to DESIGN.md + `lint` result), slop (count),
 health (`N/M`), summary (path to `design-report.md`), findings = open defects + waived rules,
 config{verb, target, url, routes, mode, iterations}; optional additive fields when the
-integrations ran: `assets` {jobs, kept, credits?}, `tracker` (`github|linear` + project/issue ids).
+integrations ran: `assets` {manifest, report, previous?, providers, jobs, budget, kept, motion?, credits?},
+`tracker` (`github|linear` + project/issue ids). Report unknown provider cost/model as unknown.
 Validate with
 `scripts/validate-handoff.sh <run>/handoff.json design` before printing the summary. Chain commonly
 `--chain regression` (after `--fix`), `test` (function after form), or `design` again (verdict pass).

@@ -182,7 +182,7 @@ solution, never the reading, never the verification.
 ## Asset-heavy targets (games, media-heavy apps)
 When the spec is a game or the target bundles significant assets (sprites, models, audio, fonts,
 large datasets), follow `references/game-assets-protocol.md` from Phase 1 on. Non-negotiables:
-**sourcing ladder** (CC0 packs → **generated-on-brief** via a media MCP when present
+**sourcing ladder** (checked reuse/CC0 packs → **generated-on-brief** via Codex-native image tools or a matching media MCP
 (integrations-protocol §1: planned slots, style-contract prompts, provenance rows, 12-job cap) →
 procedural/code-generated → CC-BY with rendered attribution; never
 unlicensed/ripped assets) with a **license ledger** (`assets/CREDITS.md`, one hardening row asserts
@@ -206,7 +206,8 @@ Extract from $ARGUMENTS:
   (integrations-protocol §2: variables/components/frames → DESIGN.md) — or `generate`. Default:
   the spec's `design:` block, else generate.
 - `Tracker:` / `--tracker` — `github` (default) | `linear` (arms tracker sync, integrations-protocol §3).
-- `Assets: N|off` — media generation-job budget (default 12 when a media MCP is present; `off` disables).
+- `Assets: N|off` — generation-attempt budget (default 12 when suitable native/MCP tools are available;
+  `off` disables new generation, preserving asset validation, checked reuse, SVG icons and UI motion).
 - `Ponytail:` / `--ponytail` — `lite | full | ultra | off` (default `ultra`): the lazy-senior-dev
   discipline level (section above).
 - `Iterations:` / `--iterations` — default 40. "unlimited" for unbounded.
@@ -316,13 +317,21 @@ Design the system **and** the interface before coding:
 - **Tokens FROM DESIGN.md** — translate its typography scale, color palette (with contrast targets),
   spacing, radius, motion, and component states (loading / empty / error / success) into the app's
   style tokens. The UI is built from these tokens, never improvised. Per `references/uiux-checklist.md`.
-- **Asset pass** (media MCP present + the mode requires imagery — integrations-protocol §1): plan
-  the slots (`assets/PLAN.md`: hero, section imagery, empty-state illustrations, textures; video /
-  3D / audio only when the spec scopes them), generate in batches under the `Assets:` cap with
-  style-contract prompts from the committed DESIGN.md, **read every asset** before wiring it,
-  post-produce with the dedicated tools, and record provenance (`assets/CREDITS.md` +
-  `assets/PROMPTS.md`). No media MCP → the sourcing ladder unchanged (CC0 → procedural → labeled
-  placeholder). Approved assets are pinned — fix loops never re-roll imagery.
+- **Asset pass** (scoped assets or mode-required imagery — integrations-protocol §1): adopt the
+  existing inventory or write `assets/manifest.json` plus `assets/PLAN.md`. Reuse approved files and
+  the existing icon family first; `asset-check.cjs select` chooses code for SVG/icons/UI motion and
+  prefers Codex-native imagegen for raster work, with an available media MCP fallback. API generation
+  requires explicit authorization. Keep the DESIGN.md style contract in `assets/PROMPTS.md`, count
+  every attempt under the `Assets:` cap, **read every asset**, copy kept output into the project,
+  and record actual provenance in the manifest + `assets/CREDITS.md`. Model/cost may be unknown.
+  Approved hashes are pinned; snapshot the manifest before fix/resume and run `asset-check.cjs check
+  <target> --previous <snapshot>` after changes. Missing required assets stay failing acceptance
+  rows; optional placeholders name their reason. Declare bounded motion and its reduced behavior
+  in the same manifest; native CSS/Web Animations own UI feedback, not raster generation.
+  If the spec supplies `assets.manifest`, read it as planning input, preserve its required slots,
+  and resolve paths into the Target. Throwaway moodboards are direction evidence, not automatically
+  approved product assets. Carry the manifest/report paths, providers, attempts/cap, kept count and
+  motion evidence in the optional handoff `assets` object (handoff-schema.md).
 - **Archetype rows** — every screen maps to a surface archetype (dashboard, list+CRUD, record,
   form/wizard, POS/kiosk, settings, auth, onboarding/empty, landing …; protocol §2) whose required
   patterns become `ux` acceptance rows now, alongside the seven `design:*` coverage rows.
@@ -409,6 +418,12 @@ IEEE-829-style incident report, right-sized to its `iterations.tsv` line.
   (`DESIGN_HEALTH`), the persona walk and the ledger; `scripts/score-design.sh verdict …` →
   `DESIGN_VERDICT: SHIP`. `FIX` routes the ledger back into the loop (`design --fix` semantics);
   `REBUILD` means the world failed — re-run `design system --refresh`, don't patch.
+  For scoped assets/motion, run `scripts/score-design.sh assets <target>` fresh, add `--assets <target>`
+  to the scan and pass `<target>` as the fifth verdict argument after defects, scan, DESIGN.md and
+  critique. Require both motion profiles on every applicable route × viewport, and a keyboard e2e
+  assertion of the actual task outcome (`design:motion`). Inspect normal/reduced captures and verify
+  image decoding, intrinsic dimensions, alt text and loading. Map provenance to `hardening` and
+  actual file/initial-payload budgets to `devops`; preserve the six dimensions and seven design tags.
 - **Performance** — run a **load test** (k6 / autocannon / locust) asserting the p95 latency SLO and
   **zero N+1** on the primary flows; check frontend bundle budget + Core Web Vitals via Playwright.
 - **Security** — an **OWASP Top 10** pass (reuse `/forge:security`): headers, input validation,

@@ -411,6 +411,17 @@ assert_eq "ok" "$SC_OUT" "screen-cmd: chmod -R 0755 (leading-zero mode) still ok
 run_screen "truncate --size=4096 file.bin"
 assert_eq "ok" "$SC_OUT" "screen-cmd: truncate --size=non-zero still ok"
 
+# These inputs go only to the screen; shell substitutions are never executed.
+for command in 'true;rm -rf /tmp/probe' 'true&&/bin/rm -rf /tmp/probe' \
+               'true|rm -rf /tmp/probe' '(rm -rf /tmp/probe)' 'echo $(rm -rf /tmp/probe)' \
+               'true;mkfs.ext4 /dev/sdb' 'true;find /tmp/probe -delete' \
+               'true;shred /tmp/probe' 'true;truncate -s 0 /tmp/probe' 'true;chmod -R 000 /tmp/probe'; do
+  run_screen "$command"
+  assert_eq "refuse/1" "$SC_OUT/$SC_CODE" "screen-cmd: shell boundary in $command"
+done
+run_screen 'true;printf 1'
+assert_eq "ok/0" "$SC_OUT/$SC_CODE" "screen-cmd: benign command after a separator stays allowed"
+
 # ============================================================================
 printf '\n--- verdict: convergence gate ---\n'
 # ============================================================================
@@ -432,6 +443,21 @@ assert_eq 1 "$VD_CODE"               "verdict: CEILING → exit 1"
 
 VD_OUT=$(bash "$ORCH" verdict "$FIX/does-not-exist.json" 2>/dev/null); VD_CODE=$?
 assert_eq 2 "$VD_CODE" "verdict: missing file → exit 2"
+
+_t_vd="$(mktemp)"
+printf '{"units":0,"pending_verify":true}' > "$_t_vd"
+VD_PENDING=$(bash "$ORCH" verdict "$_t_vd"); VD_PENDING_CODE=$?
+assert_eq $'RUNNING\nship=no' "$VD_PENDING" "verdict: zero units cannot waive pending verification"
+assert_eq 1 "$VD_PENDING_CODE" "verdict: pending verification → exit 1"
+printf '{"units":0,"pending_verify":false}' > "$_t_vd"
+assert_eq $'CONVERGED\nship=yes' "$(bash "$ORCH" verdict "$_t_vd")" "verdict: completed verification preserves convergence"
+for invalid in '{"units":0,"pending_verify":"false"}' '{"units":-1}' '{"units":1e400}' '{"units":0,"ceiling":"true"}'; do
+  printf '%s' "$invalid" > "$_t_vd"
+  VD_INVALID=$(bash "$ORCH" verdict "$_t_vd" 2>/dev/null); VD_INVALID_CODE=$?
+  assert_eq $'BLOCKED\nship=no' "$VD_INVALID" "verdict: invalid state blocks ($invalid)"
+  assert_eq 2 "$VD_INVALID_CODE" "verdict: invalid state → exit 2"
+done
+rm -f "$_t_vd"
 
 # ============================================================================
 printf '\n--- validate-state: schema gate ---\n'
@@ -455,6 +481,21 @@ assert_eq 2 "$VS_CODE"        "validate-state: bad type → exit 2"
 VS_OUT=$(bash "$ORCH" validate-state "$FIX/does-not-exist.json" 2>/dev/null); VS_CODE=$?
 assert_eq "invalid" "$VS_OUT" "validate-state: missing file → invalid"
 assert_eq 2 "$VS_CODE"        "validate-state: missing file → exit 2"
+
+# Each malformed field must fail on its own, not only when several are broken.
+_t_vs="$(mktemp)"
+for mutation in '{"goal":42}' '{"goal":" "}' '{"archetype":false}' '{"archetype":"other"}' \
+                '{"predicate":" "}' '{"terminal_choice":"anything"}' '{"pending_verify":"false"}' \
+                '{"errors_remaining":-1}' '{"regression_verdict":"maybe"}'; do
+  node -e 'const f=require("fs");const j=JSON.parse(f.readFileSync(process.argv[1],"utf8"));f.writeFileSync(process.argv[2],JSON.stringify({...j,...JSON.parse(process.argv[3])}));' "$FIX/state-valid.json" "$_t_vs" "$mutation"
+  VS_BAD=$(bash "$ORCH" validate-state "$_t_vs" 2>/dev/null); VS_BAD_CODE=$?
+  assert_eq "invalid/2" "$VS_BAD/$VS_BAD_CODE" "validate-state: rejects $mutation"
+done
+for choice in stop stop-at-verified proceed-to-ship; do
+  node -e 'const f=require("fs");const j=JSON.parse(f.readFileSync(process.argv[1],"utf8"));j.terminal_choice=process.argv[3];f.writeFileSync(process.argv[2],JSON.stringify(j));' "$FIX/state-valid.json" "$_t_vs" "$choice"
+  assert_eq "valid" "$(bash "$ORCH" validate-state "$_t_vs")" "validate-state: preserves terminal choice $choice"
+done
+rm -f "$_t_vs"
 
 # ============================================================================
 printf '\n--- screen-state-predicate: re-screen persisted predicate on resume ---\n'
@@ -564,7 +605,17 @@ assert_eq "0" "$U2_OUT" "units: net-negative value clamps to 0"
 assert_eq 0 "$U2_CODE"  "units: negative delta computable → exit 0"
 printf '{"failing_tests":2,"open_hard_regressions":0,"metric_delta":-5,"metric_target":10}' > "$_t_u"
 U3_OUT=$(bash "$ORCH" units "$_t_u" 2>/dev/null)
-assert_eq "1.5" "$U3_OUT" "units: negative delta folds into remaining work"
+assert_eq "2" "$U3_OUT" "units: metric overshoot never discounts failing tests"
+printf '{"failing_tests":1,"open_hard_regressions":1,"metric_delta":-10,"metric_target":1}' > "$_t_u"
+assert_eq "2" "$(bash "$ORCH" units "$_t_u")" "units: large overshoot cannot cancel hard blockers"
+printf '{"failing_tests":0,"open_hard_regressions":0,"metric_delta":-3,"metric_target":-10}' > "$_t_u"
+assert_eq "0.3" "$(bash "$ORCH" units "$_t_u")" "units: negative nonzero target preserves the original computable ratio"
+for values in '-1,0,0,1' '0,0,0,0' '0,0,-1,0' '0,0,1e400,1' '0,0,1e308,1e-300'; do
+  IFS=, read -r ft hr delta target <<< "$values"
+  printf '{"failing_tests":%s,"open_hard_regressions":%s,"metric_delta":%s,"metric_target":%s}' "$ft" "$hr" "$delta" "$target" > "$_t_u"
+  U_BAD=$(bash "$ORCH" units "$_t_u" 2>/dev/null); U_BAD_CODE=$?
+  assert_eq "unknown/2" "$U_BAD/$U_BAD_CODE" "units: invalid counts, target or nonfinite arithmetic ($values)"
+done
 rm -f "$_t_u"
 
 # verdict: units>0 with no plateau/ceiling is a healthy mid-flight loop → RUNNING, not BLOCKED.

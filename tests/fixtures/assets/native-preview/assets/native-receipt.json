@@ -1,0 +1,18 @@
+{
+  "id": "native-smoke-1",
+  "provider": "codex-native",
+  "tool": "image_gen.imagegen",
+  "model": null,
+  "status": "complete",
+  "timestamp": "2026-09-11T06:36:46.852Z",
+  "prompt_file": "assets/PROMPTS.md",
+  "review": "Inspected the actual generated image: one ceramic cup, full handle and body visible, neutral tabletop, no text, logos, or watermarks.",
+  "cost": null,
+  "service_job_id": null,
+  "file": "public/assets/ceramic-cup.png",
+  "bytes": 1856705,
+  "sha256": "e5fe1af88b68ccd9e9587c3d6fc1918ec2c47f0e92d43e2ffc755086ff019dc8",
+  "width": 1254,
+  "height": 1254,
+  "source_output": "exec-8ea4a581-2506-4079-9920-2f33ed63b74b.png"
+}

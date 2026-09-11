@@ -67,20 +67,26 @@ Print a banner on every invocation: `[forge] mode: classic | orchestrator | wiza
 | `--classic` | Bare `/forge` | Force Classic metric-loop mode |
 | `--auto` | Bare `/forge` | Force Orchestrator mode |
 | `Tracker: github\|linear` | `build`, `feature`, `test`, `design`, `fix` | Tracker of record for projects/phases/defects (default `github`; `linear` arms tracker sync) |
-| `Assets: N\|off` | `build`, `feature`, `design`, `requirements` | Media generation-job budget (default 12 when a media MCP is present; `off` disables) |
+| `Assets: N\|off` | `build`, `feature`, `design`, `requirements` | Generation-attempt budget (default 12 with suitable native/MCP tools; off preserves reuse, icons, motion and checks) |
 | `Ponytail: lite\|full\|ultra\|off` | `build` | Lazy-senior-dev discipline level — ladder (skip → reuse → stdlib → native → installed dep → one line → minimum), shortest working diff, `ponytail:` debt harvest (default `ultra`) |
 | `--thorough` | `test`, `fix`, `design` | Restores the exhaustive form of every fast-path rule (every PNG opened, full Guard per slice, per-persona walks + blind panel); the default is the fast path per `references/speed-protocol.md` |
 | `Track: none\|internal` | `android` | Play track for the release workflow's upload step (default `none` = artifacts only; `internal` arms the human-gated upload behind a GitHub Environment with required reviewers) |
 
-## Optional MCP integrations
+## Optional MCP integrations and native image tools
 
-Three integration families, used when the platform has them connected — probed by capability
-shape, availability-gated, degrading to a named fallback (never a hard dependency, never silent).
-Contract: `references/integrations-protocol.md`.
+Asset management applies to scoped images, icons and UI motion in design/build/feature/requirements.
+Reuse verified assets first; prefer Codex-native imagegen for new rasters, then matching media MCP
+tools. Icons stay SVG/code, UI motion uses native CSS/Web Animations. Probe actual session tools;
+a shell doctor or missing MCP does not decide native availability. Contract: `references/integrations-protocol.md`.
+
+Use `assets/manifest.json`, `asset-check.cjs select/check`, fresh `score-design.sh assets`, and
+`design-scan.cjs --assets <target>` for managed assets/motion. Generation copies inspected files
+into the project, records receipts/prompts, counts every attempt and pins approved hashes. Required
+slots stay unmet during outages; both motion preferences and the keyboard task need evidence.
 
 | Family | Gives the pipeline | Absent → |
 |---|---|---|
-| **Generative media** (Higgsfield-class) | Real pictures, animation loops, 3D props, audio for the product being built — planned slots, DESIGN.md style-contract prompts, batch generation, post-production (upscale/cutout/reframe/outpaint), provenance rows, 12-job cap, pinned once approved | asset sourcing ladder (CC0 → procedural → labeled placeholders) |
+| **Generative media** (Codex-native / media MCP) | Scoped raster generation and edits, copied project assets, real receipts, capped attempts and approved hashes; video/audio/3D only when scoped and supported | Checked reuse, licensed sources, native vectors/motion, named optional placeholders; required slots remain unmet |
 | **Design bridge** (Figma-class) | `Design: <figma-url>` → variables/components/frames normalized into `DESIGN.md`; audit fidelity vs source frames; `--figma-out` review push (human-gated) | catalog / file / `generate` sources |
 | **Tracker sync** (Linear-class) | `Tracker: linear` → engagement = project, phase gates = status updates, defect ledgers = issues (marker-deduped, severity-mapped, fixed→in-review, verified→done) | GitHub issues on the output repo (default) |
 

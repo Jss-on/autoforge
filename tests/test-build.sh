@@ -255,6 +255,14 @@ assert_eq "0.50" "$S2_RATE" "strict: --strict-evidence flag equals env toggle"
 S3_RATE=$(AR_SCORE_LOG=1 bash "$SCORE_SH" pass-rate "$_bt/build-results.tsv" 2>/dev/null | sed -n 's/^PASS_RATE: //p')
 assert_eq "1.00" "$S3_RATE" "non-strict scoring of the same TSV unchanged (legacy compat)"
 
+# An existing empty file is not evidence; directories are not evidence either.
+: > "$_bt/evidence/empty.txt"
+for ref in evidence/empty.txt evidence; do
+  printf 'app\tlogic\tempty proof\t1\tpass\tevidence:%s\tFR-1\n' "$ref" > "$_bt/empty-results.tsv"
+  EMPTY_RATE=$(bash "$SCORE_SH" pass-rate --strict-evidence "$_bt/empty-results.tsv" 2>/dev/null)
+  assert_eq "PASS_RATE: 0.00" "$EMPTY_RATE" "strict: $ref cannot prove a passing assertion"
+done
+
 # score-log: every scorer invocation leaves an audit line (ts, cmd, file, hash, headline).
 [[ -f "$_bt/score-log.tsv" ]] && pass "score-log.tsv written next to the ledger" || fail "score-log.tsv missing"
 SL_LAST=$(tail -1 "$_bt/score-log.tsv" 2>/dev/null)
@@ -311,6 +319,38 @@ EOF
 VH_OUT=$(bash "$VH" "$_ht/handoff.json" build); VH_CODE=$?
 assert_eq "VALID" "$VH_OUT" "validate-handoff: canonical build handoff VALID"
 assert_eq 0 "$VH_CODE" "validate-handoff: VALID → exit 0"
+
+# Required payloads must have the documented types, one invalid field at a time.
+for mutation in '{"results_tsv":null}' '{"results_tsv":" "}' '{"metric":null}' '{"metric":[]}' \
+                '{"metric":{"name":"fullstack_pass_rate","value":"1"}}' '{"config":null}' \
+                '{"config":[]}' '{"coverage":null}' '{"coverage":{}}' \
+                '{"coverage":{"requirements":0.5}}' '{"coverage":{"requirements":1,"design":2}}'; do
+  node -e 'const f=require("fs");const j=JSON.parse(f.readFileSync(process.argv[1],"utf8"));f.writeFileSync(process.argv[2],JSON.stringify({...j,...JSON.parse(process.argv[3])}));' "$_ht/handoff.json" "$_ht/bad-type.json" "$mutation"
+  VH_BAD=$(bash "$VH" "$_ht/bad-type.json" build 2>/dev/null); VH_BAD_CODE=$?
+  assert_eq "INVALID/1" "$VH_BAD/$VH_BAD_CODE" "validate-handoff: rejects $mutation"
+done
+node -e 'const f=require("fs");const j=JSON.parse(f.readFileSync(process.argv[1],"utf8"));j.metric="fullstack_pass_rate";f.writeFileSync(process.argv[2],JSON.stringify(j));' "$_ht/handoff.json" "$_ht/string-metric.json"
+assert_eq "VALID" "$(bash "$VH" "$_ht/string-metric.json" build)" "validate-handoff: documented metric string stays valid"
+node -e 'const f=require("fs");const j=JSON.parse(f.readFileSync(process.argv[1],"utf8"));j.version="3.1.0";f.writeFileSync(process.argv[2],JSON.stringify(j));' "$_ht/handoff.json" "$_ht/current-coverage.json"
+VH_CURRENT=$(bash "$VH" "$_ht/current-coverage.json" build 2>/dev/null); VH_CURRENT_CODE=$?
+assert_eq "INVALID/1" "$VH_CURRENT/$VH_CURRENT_CODE" "validate-handoff: current converged build requires design coverage"
+node -e 'const f=require("fs");const j=JSON.parse(f.readFileSync(process.argv[1],"utf8"));j.coverage.design=1;f.writeFileSync(process.argv[1],JSON.stringify(j));' "$_ht/current-coverage.json"
+assert_eq "VALID" "$(bash "$VH" "$_ht/current-coverage.json" build)" "validate-handoff: current complete coverage stays valid"
+
+for mutation in '{"source":"not-a-command"}' '{"source":"build\u001fCOMPLETE"}' \
+                '{"version":"nonsense"}' '{"version":"1.9.0"}' '{"version":"3.1"}' \
+                '{"timestamp":"yesterday"}' '{"timestamp":"2026-02-30T00:00:00Z"}' \
+                '{"timestamp":"2026-01-01T00:00:00"}'; do
+  node -e 'const f=require("fs");const j=JSON.parse(f.readFileSync(process.argv[1],"utf8"));f.writeFileSync(process.argv[2],JSON.stringify({...j,...JSON.parse(process.argv[3])}));' "$_ht/current-coverage.json" "$_ht/bad-core.json" "$mutation"
+  VH_BAD=$(bash "$VH" "$_ht/bad-core.json" 2>/dev/null); VH_BAD_CODE=$?
+  assert_eq "INVALID/1" "$VH_BAD/$VH_BAD_CODE" "validate-handoff: rejects core field $mutation"
+done
+for mutation in '{"source":"loop"}' '{"source":"forge"}' '{"version":"2.1.0"}' \
+                '{"version":"4.0.0"}' '{"timestamp":"2024-02-29T23:00:00Z"}' \
+                '{"timestamp":"2026-01-01T08:00:00.123+08:00"}'; do
+  node -e 'const f=require("fs");const j=JSON.parse(f.readFileSync(process.argv[1],"utf8"));f.writeFileSync(process.argv[2],JSON.stringify({...j,...JSON.parse(process.argv[3])}));' "$_ht/current-coverage.json" "$_ht/good-core.json" "$mutation"
+  assert_eq "VALID" "$(bash "$VH" "$_ht/good-core.json" 2>/dev/null)" "validate-handoff: preserves valid core field $mutation"
+done
 
 printf '{"version":"2.3.1","source":"build","timestamp":"t","status":"CONVERGED","results_tsv":"x","metric":"m","config":{}}' > "$_ht/noconv.json"
 VH2=0; bash "$VH" "$_ht/noconv.json" >/dev/null 2>&1 || VH2=$?

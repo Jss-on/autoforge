@@ -16,6 +16,7 @@ existing app, not a fresh repo. Loop engine + metric are shared with `build`
 - `Feature:` / `--feature` — what to add (a sentence or a brief).
 - `Target:` / `--target` — the existing app directory (e.g. `build-output/money-tracker`).
 - `Spec:` / `--spec` — the app's existing `evals/fullstack/<app>.spec.yaml` to extend (auto-detected from Target if omitted).
+- `Assets: N|off` — generation-attempt cap (default 12); `off` still permits checked reuse, icons and UI motion.
 - `Iterations:` / `--iterations` — default 25. "unlimited" to opt out.
 - `Target-rate:` — pass-rate to stop at (default 1.00). `--chain`, `--evals`.
 
@@ -52,9 +53,18 @@ cards, placeholder copy, off-token colors/faces. Missing tokens the feature genu
 `DESIGN.md` (re-lint: `scripts/score-design.sh lint`), never improvised inline. When the feature adds a
 whole new surface archetype (a dashboard to a CRUD app), its required patterns (§2) join the delta rows,
 and `design audit` runs on it before the ratchet. Imagery the delta genuinely needs follows
-`references/integrations-protocol.md` §1 (media MCP → planned slots in the SAME style contract,
-provenance rows, existing assets pinned; absent → the sourcing ladder); `Tracker: linear` arms
+`references/integrations-protocol.md` §1 (reuse → Codex-native images → matching media MCP, within
+the existing style contract and attempt cap; missing required imagery stays unmet); `Tracker: linear` arms
 tracker sync for the delta's defects (§3), GitHub issues stay the default.
+
+For scoped assets/motion, snapshot the existing `assets/manifest.json` before changes (or adopt
+the incumbent files once), extend it for the delta, and reuse the existing icon family. Use
+`asset-check.cjs select` for the observed provider decision; copy generated outputs into the Target
+and record actual receipts/prompts/provenance. Do not reset attempts or regenerate approved images.
+`asset-check.cjs check <target> --previous <snapshot>` must pass before keeping the change.
+Add `--assets <target>` to the touched-route scan, include every route affected by shared motion,
+and assert the keyboard task in normal and reduced preferences. Keep provenance and payload rows
+in the existing `hardening`/`devops` dimensions; motion traces `design:motion`, never a new tag.
 
 ## Phase 3 — Implement (the forge loop)
 Per iteration, exactly as `build`:
@@ -87,6 +97,10 @@ Every iteration, after the feature verify, run the floor:
 ## Phase 5 — Verify + Ratchet (convergence)
 When the feature's assertions are green and `regression` is `STABLE`:
 - **Independent verify** on a fresh boot (held-out) to avoid overfitting a flaky pass.
+- For a scoped manifest, rerun `scripts/score-design.sh assets <target>` and the scan with
+  `--assets <target>`; pass the target as the fifth `score-design.sh verdict` argument after
+  defects, scan, DESIGN.md and critique. Missing/stale motion evidence or missing required assets
+  prevents convergence. Preserve the existing non-regression ratchet.
 - **Ratchet**: fold the new assertions permanently into `evals/fullstack/<app>.spec.yaml` (they are now
   baseline). The next feature starts from this higher floor — compounding. Bounded by `Iterations`.
 
@@ -105,7 +119,9 @@ Print: feature, baseline→final pass-rate (over the union), new assertions gree
 ## Chain Handoff
 Write handoff.json: version "3.1.0", source "feature", status
 (COMPLETE|CONVERGED|BOUNDED|BLOCKED|USER_INTERRUPT|ERROR), results_tsv, metric (fullstack_pass_rate),
-regression_verdict, findings = remaining red, config{feature, target, spec}. Schema:
-`references/handoff-schema.md`; after writing, `scripts/validate-handoff.sh <run-dir>/handoff.json
+regression_verdict, findings = remaining red, config{feature, target, spec}.
+When assets are scoped, carry the optional `assets` manifest/report/previous snapshot, providers,
+attempts/cap, kept count and motion evidence paths; never replace acceptance results with that summary.
+Schema: `references/handoff-schema.md`; after writing, `scripts/validate-handoff.sh <run-dir>/handoff.json
 feature` must print VALID before the summary. Chain commonly
 `regression` → `ship` (human-gated). Propagate `--evals`.

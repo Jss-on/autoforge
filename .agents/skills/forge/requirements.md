@@ -33,6 +33,7 @@ bounded iteration, same as the core loop.
 - `Brief:` / `--brief` — the client requirements (inline text or a file path).
 - `Name:` / `--name` — slug for the project + generated spec (derived from the brief if omitted).
 - `Stack:` / `--stack` — preferred stack (asked/derived if omitted).
+- `Assets: N|off` — attempt budget for scoped generation (default 12); inherit it into the build spec.
 - `--chain build` — after generating + validating the spec, invoke `/forge:build` with it.
 
 ## Interactive by design — NO assumptions
@@ -99,13 +100,21 @@ assume on a scope-defining question — ask it; the client, not the command, mak
 - **Artifact-reaction loop (protocol §5) for design intent:** show 3–5 named design directions and
   collect what they **dislike**; generate 2–3 **throwaway static HTML wireframes** of the 1–2
   highest-traffic screens in the run dir (THROWAWAY banner in-file, never reused by `build`),
-  screenshot via Playwright, present the PNGs, capture reactions per screen. With a media MCP
-  present (`references/integrations-protocol.md` §1), ≤4 generated **moodboard images** (one per
+  screenshot via Playwright, present the PNGs, capture reactions per screen. With native imagegen
+  or a matching media MCP (`references/integrations-protocol.md` §1), ≤4 generated **moodboard images** (one per
   candidate direction, style-contract prompts, THROWAWAY — provenance rows still written) may join
   the wireframes as reaction artifacts. A client-shared **Figma link** is read through the design
   bridge (§2) and its key frames become reaction artifacts too. Outcome = the
   `DESIGN.md` source + density/navigation/states patterns, each traced to a client reaction —
   taste is captured by **selection and correction, never adjectives**.
+- **Asset and motion brief** (integrations-protocol §1): record required/optional image slots,
+  supplied brand files, the existing icon family, allowed sources, byte/attempt budgets, routes and
+  loading/alt expectations. Elicit each meaningful interaction's trigger, duration, essentiality,
+  reduced behavior and keyboard task outcome. Carry these into `assets/manifest.json` as a planning
+  inventory in the run dir and into future acceptance rows. Optional moodboards use `asset-check.cjs
+  select` with observed capabilities, prefer Codex-native raster tools, and retain copied files,
+  prompts and receipts in the run dir. They are throwaway direction evidence, not approved product
+  assets. `Assets: off` still permits planning, checked reuse, icons and code-native motion.
 - **Round N — close gaps:** surface ambiguities and conflicts back to the client as closed-choice
   questions. **Saturation** = two consecutive rounds surface nothing scope-defining AND the must-be
   checklist is fully dispositioned AND the client has corrected at least one artifact playback.
@@ -197,7 +206,7 @@ design: { source: catalog|file|url|generate, ref: <slug/path/url>, mode: operate
           dislikes: [ <reactions the client rejected> ] }   # build adopts as DESIGN.md via the direction protocol
                                                             # a Figma URL is source: url — build routes it through the design bridge
 tracker: { record: github|linear, team: <team name> }       # optional; linear arms tracker sync (integrations-protocol §3)
-assets: { budget: <N jobs|off> }                            # optional; media-generation cap for build's asset pass (default 12)
+assets: { budget: <N jobs|off>, manifest: <planning-manifest path> } # optional; default 12; copied/adopted into target by build
 acceptance:
   logic:      [ { id, assert, weight, traces, gate } … ]  # golden cases: input→exact output; gate:true = must-pass
   functional: [ { id, assert, weight, traces } … ]        # incl anti-demo: persist-across-restart, fresh-empty, CRUD, settings
@@ -237,6 +246,12 @@ acceptance:
   **`hardening` block spans two layers** — **security** (secrets, headers, input validation,
   per-resource authZ, OWASP Top 10) and **performance** (p95 latency SLO, no N+1, pagination, caching,
   Core Web Vitals) — so a build is "safe to expose" only when it is also fast under load.
+- For scoped assets/motion, add mechanical acceptance: `asset-check.cjs check <target>` for
+  inventory/provenance and byte caps; `design-scan.cjs --assets <target>` for both motion profiles;
+  browser image decoding/alt/loading and keyboard task outcomes in `ux` (motion traces
+  `design:motion`); initial payload in `devops`; source/attribution in `hardening`. Required blocked
+  slots remain failing build rows. A planning manifest may be incomplete: requirements validates
+  the spec and traceability, while delivery checks run after build. Keep all existing workflow gates.
 - **Validate (mechanical gate — loop until VALID):** run
   `scripts/score-requirements.sh validate evals/fullstack/<name>.spec.yaml` (resolve `scripts/…` to
   the shipped seam dir — first existing of `${CLAUDE_PLUGIN_ROOT}/skills/forge/scripts/`,
@@ -261,6 +276,8 @@ If `--chain build` → invoke `/forge:build` with the generated spec.
 ## Safety
 Documents + spec only — no product code, no deploy. Throwaway wireframes are the ONE code-shaped
 artifact allowed: static HTML in the run dir, THROWAWAY-bannered, never copied into the build scope.
+Optional moodboard rasters and their planning manifest/prompts/receipts also stay in the run dir;
+they are direction evidence, never automatically approved product assets.
 **Never proceed on assumptions** — elicit interactively and require the user's explicit sign-off
 before generating. Won't-haves stay out-of-scope. Deployment downstream stays human-gated.
 

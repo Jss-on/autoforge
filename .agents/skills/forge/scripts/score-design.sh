@@ -5,7 +5,8 @@
 #   scan     <design-scan.json>                   → SLOP: N  +  SLOP_GATE: PASS | FAIL   (design-scan.cjs output)
 #   critique <design-critique.tsv>                → DESIGN_HEALTH: N/M (Band)      (heuristic ledger)
 #   defects  <design-defects.tsv>                 → DEFECTS: VALID|INVALID total= blocking=   (delegates to score-test.sh)
-#   verdict  <design-defects.tsv> [scan.json] [DESIGN.md] [critique.tsv]
+#   assets   <project-root> [--previous manifest.json] → JSON integrity/provenance/budget gate
+#   verdict  <design-defects.tsv> [scan.json] [DESIGN.md] [critique.tsv] [asset-project-root]
 #                                                 → DESIGN_VERDICT: SHIP | FIX | REBUILD
 #   seed     <text-or-file> <n>                   → 1-based deterministic index (the direction roll)
 #   rubric   [design.md]                          → SCORE: N   (grep-rubric of the command spec)
@@ -202,9 +203,11 @@ defects() {
 #   stdout: DESIGN_VERDICT: SHIP|FIX|REBUILD    exit 0 SHIP · 1 FIX/REBUILD · 2 unusable inputs
 #   stderr: each criterion with its measured value
 # ---------------------------------------------------------------------------
+assets() { node "$SCRIPT_DIR/asset-check.cjs" check "$@"; }
+
 verdict() {
-  local defects_file="${1:?usage: verdict <design-defects.tsv> [design-scan.json] [DESIGN.md] [design-critique.tsv]}"
-  local scan_file="${2:-}" design_md="${3:-}" critique_file="${4:-}"
+  local defects_file="${1:?usage: verdict <design-defects.tsv> [design-scan.json] [DESIGN.md] [design-critique.tsv] [asset-project-root]}"
+  local scan_file="${2:-}" design_md="${3:-}" critique_file="${4:-}" asset_root="${5:-}"
   [[ -f "$defects_file" ]] || { echo "DESIGN_VERDICT: FIX"; echo "defects file not found: $defects_file" >&2; return 2; }
   local rebuild=0 fix=0
 
@@ -242,6 +245,28 @@ verdict() {
       esac
     else echo "criterion design-health: critique file missing ($critique_file) FAIL" >&2; fix=1; fi
   else echo "criterion design-health: not supplied (skipped)" >&2; fi
+
+  if [[ -n "$asset_root" ]]; then
+    local asset_report
+    if asset_report="$(assets "$asset_root")"; then
+      echo "criterion assets: fresh manifest validation PASS" >&2
+      # A declared interaction needs successful evidence for both profiles at every scanned viewport.
+      if ! printf '%s' "$asset_report" | node -e '
+        const fs = require("fs"), checked = JSON.parse(fs.readFileSync(0, "utf8"));
+        const motions = checked.manifest.motion;
+        if (!motions.length) process.exit(0);
+        try {
+          const scan = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+          if (scan.meta?.assets?.manifestSha256 !== checked.manifestSha256 || !Array.isArray(scan.pages) || !scan.pages.length) process.exit(1);
+          for (const m of motions) {
+            const pages = scan.pages.filter(p => !m.route || m.route === p.url || m.route === new URL(p.url).pathname);
+            if (!pages.length || pages.some(p => !["no-preference", "reduce"].every(profile =>
+              p.motion?.cases?.some(c => c.id === m.id && c.profile === profile && c.passed === true)))) process.exit(1);
+          }
+        } catch { process.exit(1); }
+      ' "$scan_file"; then echo "criterion motion: missing, stale or failing evidence FAIL" >&2; fix=1; fi
+    else echo "criterion assets: manifest validation FAIL ($asset_root)" >&2; fix=1; fi
+  fi
 
   local v="SHIP"
   if [[ "$rebuild" -eq 1 ]]; then v="REBUILD"; elif [[ "$fix" -eq 1 ]]; then v="FIX"; fi
@@ -299,6 +324,7 @@ case "${1:-}" in
   scan)     shift; scan "$@" ;;
   critique) shift; critique "$@" ;;
   defects)  shift; defects "$@" ;;
+  assets)   shift; assets "$@" ;;
   verdict)  shift; verdict "$@" ;;
   seed)     shift; seed "$@" ;;
   rubric)   shift; rubric "$@" ;;

@@ -131,6 +131,22 @@ DESIGN_VERDICT: SHIP
 
 ## Running the seams by hand
 
+For scoped images, icons or UI motion, adopt/create `assets/manifest.json` using the
+[asset protocol](../claude-plugin/skills/forge/references/integrations-protocol.md). `Assets: N|off`
+sets the generation-attempt cap (default 12); reuse approved assets first. Raster creation/edits
+prefer available Codex-native imagegen, with actual tool receipts and copied project files. SVG
+icons keep their existing family; UI motion uses code and declares both preference paths.
+
+Run `bash scripts/score-design.sh assets <target>` fresh, add `--assets <target>` to the scan below,
+and append `<target>` as the fifth verdict argument when the manifest is in scope. The scanner
+exercises declared motion in `no-preference` and `reduce` at every applicable viewport, including
+on a resumed scan. Also assert the keyboard task outcome and inspect both captures. Before a fix,
+snapshot approved assets; afterward run `node scripts/asset-check.cjs check <target> --previous
+<snapshot>`. Required unfinished assets remain failing rows even when generation is unavailable.
+
+The bounded CSS/Web Animations probe does not observe canvas or custom JS frame loops; those
+need application-owned tests. The existing lint, floor, axe and design verdict gates still apply.
+
 ```bash
 bash scripts/score-design.sh lint DESIGN.md
 node scripts/design-scan.cjs --url http://localhost:3000/ --url http://localhost:3000/runs \

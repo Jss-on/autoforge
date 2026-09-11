@@ -11,16 +11,16 @@ not finished until its handoff validates.
 
 | Field | Type | Rule |
 |---|---|---|
-| `version` | string | Schema version. Write `"3.1.0"`. Validator accepts `2.1.0`+ (legacy runs readable) but warns below `2.3.1`. |
-| `source` | string | The emitting subcommand, canonical short name: `build`, `feature`, `requirements`, `regression`, `fix`, `test`, `design`, `research`, `android`, `debug`, `security`, `ship`, `plan`, `scenario`, `predict`, `learn`, `reason`, `probe`, `improve`, `evals`, `forge`. Never the colon form. |
+| `version` | string | Numeric three-part schema version. Write `"3.1.0"`. Validator accepts `2.1.0`+ (legacy runs readable) but warns below `2.3.1`. |
+| `source` | string | The emitting subcommand, canonical short name: `build`, `feature`, `requirements`, `regression`, `fix`, `test`, `design`, `research`, `android`, `debug`, `security`, `ship`, `plan`, `scenario`, `predict`, `learn`, `reason`, `probe`, `improve`, `evals`, `forge`. `loop` is accepted as the existing core-loop alias. Unknown sources and colon forms are invalid. |
 | `status` | enum | `COMPLETE` \| `CONVERGED` \| `BOUNDED` \| `PLATEAU` \| `BLOCKED` \| `USER_INTERRUPT` \| `ERROR` |
-| `timestamp` | string | ISO-8601 with offset. |
+| `timestamp` | string | A valid calendar date and time in ISO-8601 with `Z` or an explicit offset; relative dates and placeholder strings are invalid. |
 
 ## Required per source
 
 | Source | Additional required fields |
 |---|---|
-| `build`, `feature` | `results_tsv` (path), `metric` (object or string naming `fullstack_pass_rate`), `config` (object). A `CONVERGED` status additionally requires `coverage` (object) — a converged build without coverage numbers is unverifiable. |
+| `build`, `feature` | `results_tsv` (nonempty path), `metric` (`"fullstack_pass_rate"` or an object with that `name` and an optional finite `value` in [0,1]), `config` (non-null object, not an array). A `CONVERGED` status additionally requires `coverage` with numeric `requirements: 1` and `design: 1`; historical 2.x handoffs may omit `design`, preserving legacy reads. |
 | `requirements` | `spec` (path to the generated `*.spec.yaml`) or `srs` (path). |
 | `regression` | `verdict` (`STABLE` \| `UNSTABLE`). |
 | `fix` | `results_tsv` or `errors_remaining` (number). |
@@ -35,7 +35,28 @@ URL, …) is optional, additive, and must not be required by any consumer. `buil
 write `repo` (and `feature` the `pr`) so the chain and `run-index` can link straight to the
 transparent output.
 
+Required paths must be nonempty strings; required objects cannot be null or arrays.
+`errors_remaining` must be a nonnegative safe integer. Coverage fractions must be finite
+numbers in [0,1]; a converged build cannot claim incomplete coverage.
+
 ## Validation
+
+### Optional asset and motion evidence
+
+When scoped, `build`, `feature`, `design` and `requirements` may add an `assets` object:
+`manifest` (project or planning manifest path), `report` (fresh checker JSON), `previous` (approved
+snapshot on resume), `providers` (observed provider names), `jobs` (attempts used), `budget` (cap or
+off), `kept` (approved count), `motion` (scan/task proof paths) and `credits` (known cost or null).
+These fields are additive; older handoffs without them remain valid. Requirements may carry a
+planning manifest without a delivery report and must not present planned slots as approved assets.
+
+Consumers reopen `assets/manifest.json`, run `asset-check.cjs check <target>` (plus `--previous`
+when resuming), and obtain fresh scan/task evidence before accepting delivery. Optional metadata
+or a COMPLETE label cannot substitute for passing required rows. File hashes, attempt accounting,
+provenance and motion profiles are checked by asset/design seams, not the handoff shape validator.
+Unknown provider model, service job ID or cost remains null/unknown, never invented.
+
+### Handoff shape gate
 
 ```
 scripts/validate-handoff.sh <handoff.json> [expected-source]

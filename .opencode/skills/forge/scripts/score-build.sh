@@ -187,7 +187,7 @@ log_invocation() {
 # ---------------------------------------------------------------------------
 # apply_evidence_strict: pre-pass for BUILD_EVIDENCE_STRICT=1. Every `pass` row
 # must carry an `evidence:<relpath>[#locator]` token in its detail column whose
-# file exists (relative to BUILD_EVIDENCE_DIR, the TSV's directory, or cwd).
+# file is regular and nonempty (relative to BUILD_EVIDENCE_DIR, the TSV's directory, or cwd).
 # A pass row without checkable evidence is demoted to fail before scoring —
 # "the model says it passed" stops being scoreable currency on its own.
 # Emits the filtered TSV path on stdout; violation count on stderr.
@@ -205,7 +205,9 @@ apply_evidence_strict() {
       local detail="${c[5]:-}" ref="" ok=0
       ref="$(printf '%s' "$detail" | grep -oE 'evidence:[^#[:space:],;]+' | head -1 | cut -d: -f2-)"
       if [[ -n "$ref" ]]; then
-        if [[ -f "$evdir/$ref" || -f "$(dirname "$results")/$ref" || -f "$ref" ]]; then ok=1; fi
+        if [[ ( -f "$evdir/$ref" && -s "$evdir/$ref" ) ||
+              ( -f "$(dirname "$results")/$ref" && -s "$(dirname "$results")/$ref" ) ||
+              ( -f "$ref" && -s "$ref" ) ]]; then ok=1; fi
       fi
       if [[ "$ok" -eq 0 ]]; then
         c[4]="fail"

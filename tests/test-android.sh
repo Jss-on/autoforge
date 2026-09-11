@@ -361,7 +361,7 @@ H_OUT=$(bash "$VH" "$_h" android 2>/dev/null); H_RC=$?
 assert_eq "VALID" "$H_OUT" "handoff: android with verdict + results_tsv → VALID"
 assert_eq 0 "$H_RC" "handoff: valid → exit 0"
 
-printf '{"version":"3.1.0","source":"android","timestamp":"t","status":"BLOCKED","verdict":"BLOCKED","results_tsv":"a.tsv","native_needs":["background location"]}' > "$_h"
+printf '{"version":"3.1.0","source":"android","timestamp":"2026-01-01T00:00:00+00:00","status":"BLOCKED","verdict":"BLOCKED","results_tsv":"a.tsv","native_needs":["background location"]}' > "$_h"
 H_OUT=$(bash "$VH" "$_h" android 2>/dev/null)
 assert_eq "VALID" "$H_OUT" "handoff: BLOCKED verdict is a valid handoff (honest stop)"
 

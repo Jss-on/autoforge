@@ -37,7 +37,7 @@ Decide the mode from the requested surface (§0), record it in the surface's bri
 | Type | display face with a point of view; ≤2 families | **one workhorse family**, fixed rem scale (ratio 1.125–1.2), tabular numerals for data | reading measure 60–75ch first | display may carry voice |
 | Layout | asymmetric/fluid composition earns its place; ≥4 layout families across 8 sections; hero fits the viewport | predictable structure, stable density, standard nav (top bar + side nav / tabs / breadcrumbs / command palette), responsive is **structural** (collapse, reflow), not fluid type | linear, one reading path, TOC | artifact first viewport |
 | Motion | one authored focal moment; scroll-reveal ok; ≤1 marquee | 150–250 ms state transitions only; **no page-load choreography**, no decorative motion | none beyond feedback | may be the material |
-| Imagery | real imagery required (gen tool — a media MCP per `integrations-protocol.md` §1 when present → real photo → labeled placeholder slot); no div-built fake screenshots | none required; icons from one library, one stroke | diagrams when they explain | the work itself |
+| Imagery | real imagery required (reuse → Codex-native imagegen / matching media MCP per `integrations-protocol.md` §1 → licensed photo; required placeholders stay unmet); no div-built fake screenshots | none required; icons from one library, one stroke | diagrams when they explain | the work itself |
 | Kickers/eyebrows | **banned** | rationed: ≤ ceil(sections/3), never above every heading | rare | rare |
 | Cards | identical icon+heading+text grids and hero-metric tiles are tells | KPI tiles allowed when the numbers ARE the content; still no nested cards | avoid | avoid |
 | Modal | for interruption/protected focus only | **modal-first is laziness**: inline / slide-over / progressive disclosure first | no | no |
@@ -87,13 +87,13 @@ Cross-archetype product truths (from `forge-real-product-not-demo`): create → 
 8. **List 5–7 candidate directions**, each: thesis (one idea + the category default it refuses) · palette strategy + 3 named colors · type · material/depth · first-viewport composition · signature interaction · honest risk. Keep the category's predictable page AND its predictable opposite out of the list (they are the rut).
 9. **Roll**: `scripts/score-design.sh seed "<spec name + brief hash text>" <n>` → the 1-based index picks the direction to build. The roll breaks the ranking rut while staying reproducible; a user- or brief-pinned direction always beats the roll; re-roll only on **named product-truth grounds** (the direction cannot carry the task), never taste. Present the pick + the standing exit (the category standard, played straight, never recommended) when a human is in the loop; unattended, build the roll and record the assumption.
 10. **Commit and record.** Write `DESIGN.md` per §4 (tokens + prose + named rules + Do/Don't), and put the **direction contract** as the first HTML comment in the root layout: `THESIS · OWN-WORLD · STORY · FIRST VIEWPORT · FORM (candidate index + seed key) · FINISH ("unreviewed and undocumented is unfinished")` — ≤150 words, must survive the production build (grep the built output for the seed key). Then `scripts/score-design.sh lint DESIGN.md` → `DESIGN_LINT: VALID` is the Phase 4 gate. In a redesign, the old look is evidence of what the subject is, never authority over what it becomes; a coherent world already in code (even without a DESIGN.md) is inherited and documented, not replaced.
-11. **Asset pass.** With a media MCP present and imagery required by the mode, run the generation
-   protocol of `integrations-protocol.md` §1 against the committed world: planned slots
-   (`assets/PLAN.md`), the style contract (thesis + named hex + material + scene) as prompt base,
-   batches under the job cap, every asset opened and read before it is kept, dedicated
-   post-production (upscale · `remove_background` for real cutouts — the honest replacement for
-   geometric-mask fakes · reframe · outpaint), provenance rows in `assets/CREDITS.md`. Absent →
-   the sourcing ladder (`game-assets-protocol.md` §1) unchanged. Approved assets are pinned.
+11. **Asset pass.** For scoped assets/motion or imagery required by the mode, follow
+   `integrations-protocol.md` §1: reuse first, write `assets/manifest.json` + `assets/PLAN.md`, select
+   Codex-native imagegen for raster work or available media MCP tools, preserve SVG/icons and UI
+   motion in code. Prompts derive from the DESIGN.md style contract. Count every attempt, inspect
+   copied project files, keep actual receipts/provenance in the manifest and `assets/CREDITS.md`.
+   Approved hashes are pinned; required missing slots remain failing rows regardless of provider
+   availability. Declare normal/reduced motion together; do not require generation on every surface.
 
 ## 4. DESIGN.md — the machine-readable design source
 
@@ -193,6 +193,7 @@ reported only. Mode-gated rules fire as `warn` in Persuade/Experience and `advis
 | `hero-overflows-viewport` · `oversized-h1` · `section-layout-repetition` | Persuade composition | warn · warn · advisory |
 | `design-font-drift` · `design-color-drift` · `design-radius-drift` | live computed styles outside the DESIGN.md frontmatter (needs `--design`) | warn · warn · advisory |
 | `content-hidden-at-rest` | > 20% of text at opacity 0 after settle + scroll sweep (failed reveal) | warn |
+| `motion-missing` · `reduced-motion-active` · `motion-duration` · `motion-unverifiable` · `motion-console-error` | Declared interaction absent, exceeds reduced behavior/budget, cannot run or emits errors (`--assets`) | error |
 | `imp:*` | the impeccable detector's rules when the package is resolvable (superset) | its severity |
 
 Waivers are explicit and named: `--ignore <rule,…>` in the scan invocation recorded in the run's
@@ -215,11 +216,20 @@ persona walk are the inputs; the builder's summary is never evidence.
 
 1. **Capture validity first.** Settle motion (`prefers-reduced-motion: reduce`, wait for network idle + settle), full-page from the document top, every required viewport (desktop 1280×800, mobile 390×844, + the user's reported width when known), open the contact sheet (`design-scan.cjs --sheet`) and confirm every capture shows what its name claims (no blank/black regions, no half-loaded state, right route) — individual PNGs when a cell or the scan flags them or a defect is filed against them (`--thorough`: every PNG; `references/speed-protocol.md`). A malformed capture invalidates the round → `RECAPTURE`; never score on broken evidence.
 2. **Mechanical scan** — `node scripts/design-scan.cjs --url … --mode <mode> --design DESIGN.md --shots <run>/evidence/screens --out <run>/evidence/design-scan.json` on every primary route (authenticated ones via `--storage-state`); then `scripts/score-design.sh scan …` → `SLOP: N`, `SLOP_GATE`. Also run axe via Playwright for the WCAG rows.
+   For scoped assets/motion, add `--assets <target>` and run `score-design.sh assets <target>` fresh.
+   It validates the manifest and file hashes; the scan exercises declared bounded CSS/Web Animations
+   in `no-preference` and `reduce` at every applicable viewport. Asset hashes invalidate cached
+   captures even for same-sized replacements; declared motion always reruns with `--prev`.
+   Also assert the actual keyboard task outcome in both profiles and inspect their captures.
+   Canvas/custom JS timelines need app-owned tests (integrations-protocol §1.6).
 3. **Heuristic critique** — score Nielsen's ten 0–4 (be honest: most real UIs land 20–32/40; a 4 is genuinely excellent; `na` only for heuristics the mode cannot apply, e.g. 7 and 10 on Persuade/Experience, renormalizing the max) with one **key issue** per row; run the **cognitive-load** eight (single focus · chunking ≤4 · grouping · hierarchy · one thing at a time · ≤4 visible options per decision · no working-memory bridge · progressive disclosure; 0–1 fails low, 2–3 moderate, 4+ high); write `design-critique.tsv` (`item kind score max note`; H1..H10 required). Where a `reason`-style blind panel is available, let two isolated assessors score before seeing the detector output — detector findings anchor judgment.
    Heuristic reminders: H1 status (feedback on every action, progress, current location) · H2 real-world language · H3 control/freedom (undo, cancel, back, clear filters) · H4 consistency (same control = same look everywhere) · H5 error prevention (confirm destructive, constrain input, autosave) · H6 recognition over recall (visible options, labels on icons, recents) · H7 flexibility (shortcuts, bulk, power paths) · H8 minimalist (every element earns its pixel) · H9 error recovery (plain, specific, actionable, preserves work) · H10 help (contextual, task-focused).
 4. **Persona walk** — pick 2–3 by surface (dashboard/admin → Alex power user + Sam screen-reader/keyboard; forms/onboarding/checkout → Jordan first-timer + Sam + Casey one-thumb mobile; landing → Jordan + Riley stress-tester + Casey; data-heavy → Alex + Sam; add 1–2 project personas from the SRS stakeholders). Walk the primary task as each; report **specific red flags** (the exact element that failed them), never generic descriptions.
 5. **Ledger** — every finding becomes a `design-defects.tsv` row (`id severity priority status test_id summary evidence`; severity critical|high|medium|low; priority P1–P4; evidence `evidence:<relpath>#locator` = the screenshot/scan line that proves it) — a `[rebuild]` tag in the summary when fidelity failed wholesale (wrong world, contradicted contract, imitation material). Map: P0 blocking (task impossible / a11y blocker) → critical · P1 major (WCAG AA fail, significant confusion, floor error) → high · P2 → medium · P3 polish → low. Structural repeats ("hard-coded colors in 15 components") are one systemic defect, not fifteen.
 6. **Verdict** — `scripts/score-design.sh verdict design-defects.tsv evidence/design-scan.json DESIGN.md design-critique.tsv` → `DESIGN_VERDICT: SHIP | FIX | REBUILD`. Report the word verbatim; a table with open material findings is never announced as a pass. On a verdict pass after fixes, score each prior finding resolved / partial / unresolved against the **new** captures only (a claimed fix you cannot see is unresolved), name ≤3 regressions the fix batch introduced, and stop — no new hunt.
+   Append `<target>` as the fifth argument when assets/motion are scoped: the verdict reruns file
+   validation and requires matching evidence for both motion profiles at every scanned viewport.
+   On fix/resume, also run `asset-check.cjs check <target> --previous <approved-snapshot>`.
 7. **Report** — `design-report.md`: mode + surfaces reviewed · captures (paths) · `SLOP` + rule table · Design Health table (10 rows + band) · cognitive-load result · persona red flags · P0–P3 findings with fix + evidence · what works (2–3, specific) · verdict. The report is the deliverable; the ledger is the backlog `--fix` / `fix` consume.
 
 ## 8. Remediation (`design --fix`) — the builder half, bounded

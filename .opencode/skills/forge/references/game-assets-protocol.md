@@ -7,14 +7,14 @@ protocol pins the four places asset-heavy builds fail differently.
 
 ## 1. Asset sourcing ladder (in order — licensing is a gate, not a vibe)
 
-1. **CC0 / public-domain packs first.** Kenney.nl (CC0, thousands of coherent sprites/tiles/audio/UI),
+1. **Reuse checked assets, then CC0 / public-domain packs.** Kenney.nl (CC0, thousands of coherent sprites/tiles/audio/UI),
    OpenGameArt + itch.io filtered to CC0, Google Fonts (OFL), CC0 sections of freesound/Pixabay.
    A coherent pack beats mixed sources — one art style, one license, done.
-2. **Generated on brief** (media MCP present — `integrations-protocol.md` §1): sprites, tiles,
+2. **Generated on brief** (Codex-native imagegen or a matching media MCP — `integrations-protocol.md` §1): sprites, tiles,
    textures, illustrations, 3D props (image → GLB), SFX/music generated from the DESIGN.md
    style contract so the whole set shares one world. Discipline is the point: planned slots
    (`assets/PLAN.md`), the job cap, every asset opened and read, provenance rows
-   (`generated — <service>/<model>` + job id) in `CREDITS.md`, approved assets pinned. Beats a
+   (`generated — <provider>/<exposed model or unknown>` + actual/local receipt) in `CREDITS.md`, approved assets pinned. Beats a
    mismatched pack mix when no single pack covers the brief; loses to a coherent CC0 pack that does.
 3. **Procedural / code-generated.** SVG or canvas-drawn sprites, generated tilemaps, WebAudio-
    synthesized SFX (jsfxr-style), CSS/JS particle effects. Tiny, license-free, deterministic, and
@@ -27,7 +27,9 @@ protocol pins the four places asset-heavy builds fail differently.
 
 **License ledger (mandatory):** `assets/CREDITS.md` — one row per asset/pack: file(s) · source URL ·
 author · license · attribution-required? The hardening dimension gets one acceptance row asserting the
-ledger exists and covers every file under `assets/` (a script can diff the tree against the ledger).
+ledger covers every delivered runtime file. Use `assets/manifest.json` from `integrations-protocol.md`
+§1.5 and `node scripts/asset-check.cjs check <target>` to check inventory, sources, bytes and hashes.
+Keep prompts/receipts outside declared runtime roots; include every shipped file inside them.
 
 ## 2. Repo & size discipline (the output-repo contract still applies)
 
@@ -44,9 +46,11 @@ Every build ships to its own GitHub repo — asset bloat breaks that contract fa
 - **When assets legitimately exceed limits:** Git LFS (declare in `.gitattributes` BEFORE the first
   large commit — LFS-migrating history later is the visionseek purge all over again), or a
   fetch-at-build script for public packs (URL + checksum pinned; the repo stays reproducible).
-- **Atlas + manifest:** pack sprites into atlases; ship an asset **manifest** (path, type, bytes,
-  hash, preload-vs-lazy). The manifest is what the loading screen, the budget row, and the license
-  ledger diff all read — one source of truth.
+- **Atlas + manifest:** pack sprites into atlases; share the version-1 `assets/manifest.json`
+  (path, kind, bytes, sha256, eager/lazy, provenance, usage, jobs and motion). The loading screen,
+  budget row and ledger use the same inventory. Snapshot approved hashes before resumed work and
+  run `asset-check.cjs check <target> --previous <snapshot>`; every attempt counts against the cap.
+  `Assets: off` preserves reuse, native icons and UI motion; required unfinished slots stay unmet.
 
 ## 3. Determinism & testability (canvas is opaque to Playwright — design around it)
 

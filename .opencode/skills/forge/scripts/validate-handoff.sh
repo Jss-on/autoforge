@@ -21,15 +21,49 @@ fi
 ERRORS=0
 err() { echo "$1" >&2; ERRORS=$((ERRORS + 1)); }
 
-# One parse, all fields. Joined on unit-separator (charCode 31) — tab is
+# One parse, all fields and their types. Joined on unit-separator (charCode 31) — tab is
 # IFS-whitespace and read collapses leading empty fields.
 PARSED="$(node -e '
   const fs = require("fs");
   let j;
   try { j = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); }
   catch { console.log("__PARSE_ERROR__"); process.exit(0); }
-  const s = (k) => (typeof j[k] === "string" ? j[k] : "");
-  const h = (k) => (k in j ? "1" : "0");
+  const s = (k) => {
+    const v = j[k];
+    if (typeof v !== "string" || /[\u0000-\u001f\u007f]/.test(v)) return "";
+    if (k === "version") {
+      const parts = v.split(".").map(Number);
+      if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(v) ||
+          !parts.every(Number.isSafeInteger) || parts[0] < 2 || (parts[0] === 2 && parts[1] < 1)) return "";
+    }
+    if (k === "timestamp") {
+      if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(v) ||
+          !Number.isFinite(Date.parse(v))) return "";
+      // Date.parse normalizes impossible days such as February 30; reject them.
+      if (new Date(v.slice(0, 10) + "T00:00:00Z").toISOString().slice(0, 10) !== v.slice(0, 10)) return "";
+    }
+    return v;
+  };
+  const object = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
+  const fraction = (v) => Number.isFinite(v) && v >= 0 && v <= 1;
+  const h = (k) => {
+    const v = j[k];
+    let valid;
+    if (k === "config" || k === "design") valid = object(v);
+    else if (k === "metric")
+      valid = v === "fullstack_pass_rate" || (object(v) && v.name === "fullstack_pass_rate" &&
+        (!("value" in v) || fraction(v.value)));
+    else if (k === "coverage") {
+      // Historical 2.x handoffs may omit design coverage; current writers may not.
+      const legacy = /^2\./.test(s("version"));
+      valid = object(v) && fraction(v.requirements) &&
+        ((legacy && !("design" in v)) || fraction(v.design)) &&
+        (s("status") !== "CONVERGED" || (v.requirements === 1 &&
+          ((legacy && !("design" in v)) || v.design === 1)));
+    } else if (k === "errors_remaining") valid = Number.isSafeInteger(v) && v >= 0;
+    else valid = typeof v === "string" && v.trim().length > 0;
+    return valid ? "1" : "0";
+  };
   console.log([s("version"), s("source"), s("status"), s("timestamp"), s("verdict"),
                h("results_tsv"), h("metric"), h("config"), h("coverage"),
                h("spec"), h("srs"), h("generated_spec"), h("errors_remaining"), h("design"),
@@ -43,7 +77,7 @@ fi
 IFS=$'\x1f' read -r VERSION SOURCE STATUS TS VERDICT \
   H_RESULTS H_METRIC H_CONFIG H_COVERAGE H_SPEC H_SRS H_GENSPEC H_ERRREM H_DESIGN H_REPORT <<< "$PARSED"
 
-has_field() { # reads the pre-parsed presence flags
+has_field() { # reads the pre-parsed presence-and-type flags
   case "$1" in
     results_tsv)      [[ "$H_RESULTS"  == "1" ]] ;;
     metric)           [[ "$H_METRIC"   == "1" ]] ;;
@@ -59,14 +93,20 @@ has_field() { # reads the pre-parsed presence flags
   esac
 }
 
-[[ -n "$VERSION" ]] || err "missing: version"
+[[ -n "$VERSION" ]] || err "missing or invalid: version (numeric schema version >= 2.1.0 required)"
 [[ -n "$SOURCE"  ]] || err "missing: source"
 [[ -n "$STATUS"  ]] || err "missing: status"
-[[ -n "$TS"      ]] || err "missing: timestamp"
+[[ -n "$TS"      ]] || err "missing or invalid: timestamp (ISO-8601 with offset required)"
 
 if [[ -n "$SOURCE" ]] && printf '%s' "$SOURCE" | grep -q ':'; then
   err "source must be the short name, not a colon form (got: $SOURCE)"
 fi
+
+# The core loop currently emits "loop"; retain it as the documented forge alias.
+case "$SOURCE" in
+  ""|forge|loop|build|feature|requirements|regression|fix|test|design|research|android|debug|security|ship|plan|scenario|predict|learn|reason|probe|improve|evals) ;;
+  *) err "source not in enum: $SOURCE" ;;
+esac
 
 if [[ -n "$STATUS" ]]; then
   case "$STATUS" in
@@ -143,7 +183,7 @@ fi
 
 # Legacy-version warning is stderr-only; the file is still VALID.
 case "$VERSION" in
-  2.1.*|2.2.*) echo "warn: legacy handoff version $VERSION (current schema 3.1.0)" >&2 ;;
+  2.1.*|2.2.*|2.3.0) echo "warn: legacy handoff version $VERSION (current schema 3.1.0)" >&2 ;;
 esac
 
 echo "VALID"; exit 0

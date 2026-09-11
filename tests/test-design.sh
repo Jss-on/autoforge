@@ -241,6 +241,11 @@ if [[ -z "$PW_CWD" ]]; then
   done
 fi
 if [[ -n "$PW_CWD" ]]; then
+  if node "$REPO_ROOT/tests/fixtures/assets/motion-check.cjs" "$PW_CWD" "$T/assets" >"$T/assets.log" 2>&1; then
+    pass "asset browser checks: real native image, motion profiles, keyboard, pinning and verdict"
+  else
+    fail "asset browser checks ($(tail -12 "$T/assets.log" | tr '\n' ' '))"
+  fi
   PORT=48731
   node -e '
     const http=require("http"),fs=require("fs"),path=require("path");
@@ -377,7 +382,7 @@ grep -q "polish-ui" "$REPO_ROOT/claude-plugin/skills/forge/references/orchestrat
 _h="$T/h.json"
 printf '{"version":"3.0.0","source":"design","timestamp":"2026-01-01T00:00:00+00:00","status":"COMPLETE","verdict":"SHIP","results_tsv":"design-results.tsv"}' > "$_h"
 assert_eq "VALID" "$(bash "$REPO_ROOT/scripts/validate-handoff.sh" "$_h" design 2>/dev/null)" "handoff: design audit with verdict VALID"
-printf '{"version":"3.0.0","source":"design","timestamp":"t","status":"COMPLETE","design":{"design_md":"DESIGN.md","lint":"VALID"}}' > "$_h"
+printf '{"version":"3.0.0","source":"design","timestamp":"2026-01-01T00:00:00+00:00","status":"COMPLETE","design":{"design_md":"DESIGN.md","lint":"VALID"}}' > "$_h"
 assert_eq "VALID" "$(bash "$REPO_ROOT/scripts/validate-handoff.sh" "$_h" design 2>/dev/null)" "handoff: design system run with design object VALID"
 printf '{"version":"3.0.0","source":"design","timestamp":"t","status":"COMPLETE"}' > "$_h"
 bash "$REPO_ROOT/scripts/validate-handoff.sh" "$_h" >/dev/null 2>&1; VH_RC=$?
