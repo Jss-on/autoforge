@@ -36,7 +36,7 @@ Based on [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) —
 
 <br>
 
-[How It Works](#how-it-works) · [Commands](#commands) · [Build Software](#building-complex-software) · [Quick Start](#quick-start) · [Guides](guide/) · [FAQ](#faq)
+[How It Works](#how-it-works) · [Commands](#commands) · [Build Software](#building-complex-software) · [Quick Start](#quick-start) · [Secure & Ship](#security-and-shipping-guide) · [Publish AutoForge](#publishing-and-releasing-autoforge) · [Guides](guide/) · [FAQ](#faq)
 
 </div>
 
@@ -849,47 +849,342 @@ turns `fixed` into `verified` (or `reopened`).
 
 ---
 
+## Security and shipping guide
+
+Use this sequence for an existing application: **audit → repair and re-audit → regression →
+preview shipment → authorize shipment → verify the deployed artifact**. Each step produces evidence
+the next step can inspect. A completed audit, a stable regression result, and a successful
+deployment are separate outcomes.
+
+### Where to enter the commands
+
+Enter Forge commands in your agent's chat while working in the application repository. They are
+agent workflows; there is no standalone `forge` shell executable required by these examples.
+Use the same arguments after the command name on each platform:
+
+| Task | Codex | Claude Code | OpenCode |
+|------|-------|-------------|----------|
+| Audit | `$forge security` | `/forge:security` | `/forge_security` |
+| Check regressions | `$forge regression` | `/forge:regression` | `/forge_regression` |
+| Preview or ship | `$forge ship` | `/forge:ship` | `/forge_ship` |
+
+The examples below use Codex syntax. Replace paths, repository names, environment names, and
+URLs with your project's values. `Scope:` limits the files examined or changed; `Target:` identifies
+what and where to ship. Include the repository/account and environment when a short name such as
+`staging` would be ambiguous.
+
+Commands beginning with `bash`, `git`, or `gh` belong in a terminal. Run the shell examples from
+the repository root using Bash (Git Bash on Windows). The `scripts/` examples use the AutoForge
+source checkout; when using an installed plugin, use its `skills/forge/scripts/` directory.
+See [Prerequisites](#prerequisites) for the local verification tools.
+
 ## /forge:security — Autonomous Security Audit
 
-Read-only security audit using STRIDE threat modeling, OWASP Top 10 sweeps, and red-team adversarial analysis with 4 hostile personas.
+Audit application code and deployment boundaries with STRIDE threat modeling, OWASP checks, and
+four adversarial perspectives: security attacker, supply chain, insider, and infrastructure.
+The default is report-only: the audit writes its reports without modifying application source.
 
-```
-/forge:security
+### Run a scoped audit
+
+```text
+$forge security
+Scope: src/**, tests/**, package.json, package-lock.json, Dockerfile, .github/workflows/**
+Focus: authorization, input validation, dependency trust, and deployment credentials
+Depth: standard
 Iterations: 15
+--fail-on high
 ```
 
-Codebase recon → asset inventory → trust boundaries → STRIDE threat model → attack surface map → autonomous testing loop → structured report. Every finding requires code evidence (file:line + attack scenario).
+Choose paths that exist in your project, including its actual dependency lockfile and deployment
+configuration. Forge maps data assets and trust boundaries, pins the planned checks, investigates
+attack paths, and records each finding with a file/line reference and a concrete scenario.
+Reproductions use local, redacted fixtures. Production probes and external writes require
+authorization for that target and action.
 
-| Flag | Purpose |
-|------|---------|
-| `--diff` | Only audit files changed since last audit |
-| `--fix` | Auto-fix confirmed Critical/High findings |
-| `--fail-on <severity>` | Exit non-zero for CI/CD gating |
+| Argument | Purpose |
+|----------|---------|
+| `Scope:` / `--scope` | File globs to audit; without scope or `--diff`, Forge asks for the audit surface. |
+| `Focus:` | Emphasize an area such as auth, API, data handling, or deployment. |
+| `Depth:` / `--depth` | `quick` (5 iterations), `standard` (15), or `deep` (30+). |
+| `Iterations:` / `--iterations` | Set an explicit budget; the default is 15. |
+| `--diff` | Audit files changed since the last audit; use after an initial full scoped audit. |
+| `--fix` | Chain confirmed Critical/High findings to remediation, then retest before claiming resolution. |
+| `--fail-on <severity>` | Block at `critical`, `high`, `medium`, `low`, or `info`; default `high`. |
+| `--evals` | Add progress checkpoints and a final analysis. |
 
-**Output:** Creates `security/{date}-{slug}/` with 7 structured report files.
+For a follow-up review with authorized local repairs:
+
+```text
+$forge security --diff --fix --fail-on high Iterations: 15
+```
+
+`--fail-on medium` makes unresolved Medium findings block too; it does not expand `--fix` beyond
+its Critical/High repair scope. Keep the threshold consistent across an audit and its retests.
+Marking a blocking finding as accepted risk does not make the security gate pass.
+
+### Read the result and enforce it
+
+Each run writes `forge/security-YYMMDD-HHMM/` with `overview.md`, `threat-model.md`,
+`attack-surface-map.md`, `findings.md`, `owasp-coverage.md`, `recommendations.md`, a results TSV,
+`handoff.json`, and saved check/retest evidence. Open `findings.md` for actionable issues and the
+handoff's `security.verdict` for readiness:
+
+| Security verdict | Meaning | Next action |
+|------------------|---------|-------------|
+| `PASS` | Every planned check passed and no unresolved finding meets the threshold. | Continue to regression and shipment readiness. |
+| `FAIL` | A check failed or an unresolved finding meets the threshold. | Repair, retest, and re-audit. |
+| `BLOCKED` | Planned checks are incomplete, unavailable, or not run. | Restore the missing tool/access/evidence and rerun. |
+
+A top-level `status: COMPLETE` means the report finished; that report can still have a `FAIL`
+verdict. Zero findings alone is also insufficient if planned checks could not run.
+
+Use the validator as the shell/CI gate after the agent has produced the handoff. Set `AUDIT_RUN`
+to the actual run directory:
+
+```bash
+AUDIT_RUN=forge/security-YYMMDD-HHMM
+bash scripts/validate-handoff.sh "$AUDIT_RUN/handoff.json" security
+bash scripts/validate-handoff.sh "$AUDIT_RUN/handoff.json" security --require-pass
+```
+
+The first command validates the report's structure. The second must exit zero before a readiness
+claim or downstream work other than already-authorized remediation. Evidence must be nonempty
+regular files inside that run directory; unavailable checks cannot be recorded as passing.
+The validator checks the recorded results and evidence files; it does not perform the audit.
+
+Full audit protocol: [Security guide](guide/forge-security.md).
 
 ---
 
 ## /forge:ship — Universal Shipping Workflow
 
-Ship anything through 8 phases: **Identify → Inventory → Checklist → Prepare → Dry-run → Ship → Verify → Log.**
+Ship through eight phases: **Identify → Inventory → Checklist → Prepare → Dry-run → Ship →
+Verify → Log**. Forge identifies the artifact, checks the destination's requirements, performs
+the authorized action, and verifies that the intended revision is actually available.
 
+### 1. Check regressions before shipping
+
+After security passes, compare the candidate to the project's actual base branch:
+
+```text
+$forge regression Base: origin/main Scope: src/**, tests/** --select full
 ```
-/forge:ship --auto
+
+Use your repository's base ref if it is not `origin/main`. Resolve `UNSTABLE` results before
+shipping. `STABLE` means no blocking eligible HARD regression was found and the measured stability
+score met its threshold. Inspect the dimensions run and unavailable; pre-existing failures and new
+failing tests still need consideration in the ship checklist. It does not replace required security
+or deployment checks.
+
+### 2. Inspect readiness and preview the action
+
+Use checklist-only mode to discover the required checks without executing them:
+
+```text
+$forge ship --type deployment --checklist-only
+Target: staging deployment of your-org/your-app
 ```
 
-Auto-detects what you're shipping (code PR, deployment, blog post, email campaign, sales deck, research paper, design assets) and generates domain-specific checklists — every item mechanically verifiable.
+Then prepare and validate the concrete deployment without publishing it:
 
-| Flag | Purpose |
-|------|---------|
-| `--dry-run` | Validate everything but don't ship |
-| `--auto` | Auto-approve if checklist passes |
-| `--force` | Skip non-critical items (blockers still enforced) |
-| `--rollback` | Undo last ship action |
-| `--monitor N` | Post-ship monitoring for N minutes |
-| `--checklist-only` | Just check readiness |
+```text
+$forge ship --type deployment --dry-run
+Target: staging deployment of your-org/your-app at https://staging.example.com
+Deploy the current committed revision using this project's deployment configuration.
+Use the passing security audit and regression results from this session.
+Verify the deployed revision and health endpoint after deployment.
+```
 
-**9 supported types:** code-pr, code-release, deployment, content, marketing-email, marketing-campaign, sales, research, design.
+Forge pins the destination and immutable artifact identity, runs the readiness checks, and
+shows the proposed action. Use a full Git identity (`git:<40-or-64-hex>`) or content digest
+(`sha256:<64-hex>`) with lowercase hexadecimal digits in recorded evidence; a branch name, tag,
+or `latest` is insufficient.
+If the destination or artifact changes, affected checks must run again.
+
+Both preview modes emit `DRY_RUN` handoffs and stop their chains. They do not push, tag,
+publish, deploy, or send messages. A dry-run validates preparation; live verification is still
+required after an actual shipment.
+
+### 3. Ship the reviewed artifact
+
+Once the preview is ready, give the agent a concrete instruction in the same session:
+
+```text
+$forge ship --type deployment --monitor 5
+Target: staging deployment of your-org/your-app at https://staging.example.com
+Deploy the exact artifact reviewed in the preceding dry-run. I authorize that staging deployment.
+Verify its revision and health endpoint, then monitor for five minutes.
+```
+
+Forge reuses authorization already given for the same action and destination. A direct user
+`--auto` also supplies authorization for the requested scope once every blocker passes. For example:
+
+```text
+$forge ship --type code-pr --auto
+Target: pull request from the current branch to main in your-org/your-app
+Create the PR after its readiness checks pass.
+```
+
+This instruction authorizes creating the PR. Merging it, deploying it, requesting reviewers,
+or notifying people requires the corresponding authorization. An orchestrator or chained command
+cannot supply user authorization by adding `--auto`. For a production shipment, name the production
+destination and authorize that action explicitly.
+
+| Argument | Purpose |
+|----------|---------|
+| `Target:` / `--target` | Identify the artifact and destination: repository, account, environment, PR, or path. |
+| `--type <type>` | Override detection with `code-pr`, `code-release`, `deployment`, `content`, `docs`, `package`, or `config`. |
+| `--checklist-only` | Generate the checklist and stop before preparation or execution. |
+| `--dry-run` | Run preparation and preview the action; stop before external writes. |
+| `--auto` | Apply the user's direct authorization for this target/action after all blockers pass. |
+| `--force` | Skip non-critical checklist items; authorization, secrets, required checks, identity, verification, and rollback safety remain mandatory. |
+| `--monitor N` | Observe the shipment for N minutes; this does not install permanent monitoring or authorize rollback. |
+| `--rollback` | Restore a selected, reversible shipment on the same target after checking its current identity. |
+
+### 4. Verify completion and handle failures
+
+Each run writes `forge/ship-YYMMDD-HHMM/` containing `checklist.md`, `summary.md`, `ship-log.tsv`,
+`handoff.json`, and evidence. A successful shipment requires recorded authorization, passing
+readiness checks, the provider's actual receipt, and passing verification for the same target
+and artifact. A successful upload or deployment request alone does not prove the revision is live.
+
+```bash
+SHIP_RUN=forge/ship-YYMMDD-HHMM
+bash scripts/validate-handoff.sh "$SHIP_RUN/handoff.json" ship
+bash scripts/validate-handoff.sh "$SHIP_RUN/handoff.json" ship --require-pass
+```
+
+Replace `SHIP_RUN` with the actual directory. Shape validation accepts honest previews and failure
+reports; `--require-pass` accepts evidenced successful shipment/restoration. `DRY_RUN`, `BLOCKED`,
+and `ERROR` do not pass that gate or continue a publication chain. If verification fails after a
+provider accepted the action, inspect the saved receipt and current destination before retrying.
+
+To restore a previous deployment, select its recorded shipment and environment explicitly:
+
+```text
+$forge ship --rollback --type deployment
+Target: staging deployment of your-org/your-app at https://staging.example.com
+Use the shipment recorded in forge/ship-YYMMDD-HHMM/handoff.json.
+Restore its known previous artifact; I authorize that restoration on staging.
+```
+
+Replace the run path with the shipment being undone. Forge independently checks the current
+receipt, target, and artifact against that record before restoring anything. A newer deployment
+or stale receipt blocks rollback. Restoration must be demonstrably reversible and is reported as
+`ROLLBACK` only after verification; sent messages, published packages, and database migrations
+do not automatically have a safe undo operation.
+
+Full workflow and evidence format: [Ship guide](guide/forge-ship.md) ·
+[Handoff schema](plugins/forge/skills/forge/references/handoff-schema.md).
+
+### Use a natural-language hardening goal
+
+If you want Forge to choose the investigation and repair steps, enter a goal without `Metric:`
+or `Verify:`:
+
+```text
+$forge Harden this application's authentication and deployment workflow; preserve existing checks and stop once verified. --max-cycles 10
+```
+
+The orchestrator proposes a mechanical success predicate and a terminal choice. Choose
+**stop-at-verified** to finish without shipment, or **proceed-to-ship** to reach the ship gate
+after verification. Proceeding to that gate still requires authorization for the actual shipment;
+an absent or stop-at-verified choice does not enable shipping. Add `--dry-run` to preview the
+derived configuration and pipeline before executing the loop.
+
+For a fixed metric and file boundary, use the [plan command](#forgeplan--goal-to-config) to produce
+`Goal`, `Scope`, `Metric`, `Direction`, `Verify`, `Guard`, and `Iterations`. The orchestrator's
+command screen rejects known dangerous forms and rechecks persisted commands on resume; it is
+a lexical check, not a shell sandbox. Keep host permissions and isolated test environments in place.
+
+---
+
+## Publishing and releasing AutoForge
+
+These terminal scripts maintain **AutoForge itself** at `Jss-on/autoforge`. Use `$forge ship`
+for an application's own repository or deployment. Run the scripts from an AutoForge checkout
+with Bash, Git, Node, the [harness prerequisites](#prerequisites), and authenticated Git access.
+Versioned releases also require the `gh` CLI and repository write access.
+
+| Intent | Command | Result |
+|--------|---------|--------|
+| Publish committed product changes | `bash scripts/publish-autoforge.sh "publish: describe the change"` | One verified product commit on `master`; local source history is not published. |
+| Prepare and release a new version | `bash scripts/release.sh X.Y.Z --title "Release title"` | Version updates, a reviewed PR, verified merge, version tag, and GitHub release. |
+
+### Publish committed changes
+
+Review and commit only the intended product files first. The publisher checks the **entire tracked
+tree**, so keeping private/client output in an earlier commit's current tree still blocks publication.
+Its credential gate checks filenames and PEM private-key headers; review content and use a dedicated
+secret scanner for broader detection.
+
+```bash
+git status --short
+git log -1 --oneline
+git show --stat HEAD
+bash scripts/publish-autoforge.sh "publish: harden security and shipment checks"
+```
+
+The last line performs a remote write after its gates pass. The script uses the `autoforge`
+remote, creates that remote with the canonical URL if absent, and validates effective fetch and
+push URLs against `Jss-on/autoforge`. The `origin` remote is not a publication destination.
+
+Publication requires a fresh fetch of product `master` and proof that its tree appears in the
+candidate's local ancestry. It rejects tracked client run directories, credential artifacts,
+hidden index flags, and changes to HEAD, index, or tracked files during verification. Every
+`tests/test-*.sh` suite and `scripts/smoke-seam.sh` must pass; `AUTOFORGE_SKIP_TESTS` cannot bypass them.
+
+The publisher pushes a commit containing the exact verified tree with the fetched product commit
+as its parent, then checks the remote receipt. The published commit ID can differ from local HEAD.
+If the marketplace version has no remote tag, its tag and the commit are pushed atomically.
+Existing version tags are preserved and unrelated local tags are not pushed. If the tree already
+matches product `master`, the verified run reports that there is nothing to publish.
+
+### Create a versioned release
+
+Start in a clean product checkout with `master` at the freshly fetched `autoforge/master` commit.
+A separate clone is useful when your development checkout contains private source history:
+
+```bash
+git clone --origin autoforge --branch master https://github.com/Jss-on/autoforge.git autoforge-release
+cd autoforge-release
+gh auth status
+node -p "require('./claude-plugin/.claude-plugin/plugin.json').version"
+# Choose an unused version greater than the one printed above.
+bash scripts/release.sh 3.6.1 --title "Security and shipment hardening"
+```
+
+`3.6.1` is an example: replace it with the next intended version. Versions must increase, use
+`X.Y.Z` without leading zeros, and have no existing release tag; an initial `v` is accepted.
+Authenticate with `gh auth login` if needed before starting.
+
+1. The script creates `release/X.Y.Z`, updates the three manifests, all five skill versions, and
+   version badges, then pauses for document review. Review `README.md`, `guide/`, `CONTRIBUTING.md`,
+   and `COMPARISON.md`; press Enter to continue or type `abort` to retain local changes and stop.
+2. It stages only release/documentation paths, commits them, runs all harness suites and the seam
+   smoke, then pushes the verified release branch and creates a PR against product `master`.
+3. Review the PR. Enter `merge` to continue; any other response leaves it open. The script waits
+   for CI, requires a successful GitHub Actions `Harness test suites` check on that exact head,
+   and checks that the PR is non-draft, cleanly mergeable, and has no blocking review decision.
+4. It publishes a merge containing the verified tree and reviewed parents, verifies GitHub's
+   merge receipt, tags that exact merge, and creates the GitHub release. Existing repository
+   permissions and branch rules still apply; the script does not change or bypass them.
+
+### Resolve a blocked publication
+
+| Stop condition | How to proceed |
+|----------------|----------------|
+| Dirty tracked files or hidden index flags | Review the changes/flags, commit only intended files, and verify again. |
+| Private output or credentials in the tree | Prepare a clean product candidate containing only intended distribution files. |
+| Product changes absent from source history | Reconcile product changes or apply the intended commits on a fresh product checkout. |
+| Tests fail, or the candidate changes during tests | Fix the failure, commit the candidate, and rerun publication gates. |
+| PR head or product base advances | Update the candidate and rerun verification against the new revisions. |
+| CI is pending, failed, or lacks the required harness success | Resolve the exact-head CI result before release. |
+| Remote denies the push | Follow the repository's permitted merge workflow; do not bypass its rules. |
+| Push, receipt lookup, tag, or release creation is interrupted | Inspect remote `master`, PR, tag, and release state before retrying; an earlier write may have succeeded. |
+
+Neither script force-pushes, deletes branches, or automatically resets failed work. See the
+[release and publication runbook](scripts/release.md) for the complete gate and retry contract.
 
 ---
 
@@ -1065,9 +1360,9 @@ Before you push, prove the change didn't break what already worked. Captures bas
 | `--debug` | Force the bisect Hunter (HARD dims passing 3/3 reproduction) |
 | `--max-runs N` | Ceiling on dims×axes×samples×cells (warn+confirm past 200) |
 
-**Output:** Creates `regression/{date}-{slug}/` with regression-results.tsv, stability-report.md, dimensions/<dim>.md, baseline/, evals-summary.md, handoff.json.
+**Output:** Creates `forge/regression-YYMMDD-HHMM/` with regression-results.tsv, stability-report.md, dimensions/<dim>.md, baseline/, evals-summary.md (with `--evals`), handoff.json.
 
-> **data-migration is hard-guarded:** opt-in, and refuses any DB URL that isn't ephemeral/allowlisted (`*test*`, `*ci*`, container). Migrations are forward-only by default.
+> **data-migration is hard-guarded:** opt-in, with an anchored URL allowlist: an exact local/container host or a database name ending in `_test` / `_ci`. A substring such as `test` inside `latest` does not qualify. Use an isolated test database and confirm the migration target before execution. Migrations are forward-only by default.
 
 ---
 
