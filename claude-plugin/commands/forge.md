@@ -57,6 +57,10 @@ For each iteration (1 to max_iterations, or unbounded):
 - Run `git log --oneline -20` — see what worked/failed
 - If last iteration was "keep" → run `git diff HEAD~1` to see what improved metric
 - Identify: what worked, what failed, what's untried
+- Retrieve applicable `loop` procedures via `scripts/lessons.cjs select <project> loop` once at
+  task start, and again if applicability inputs change. Follow `references/procedural-lessons.md`;
+  record selection separately from actual use. When a reusable recovery is proposed, freeze its
+  candidate and verifier files and collect a real failing baseline before modifying the code.
 
 ### Phase 2: Modify
 - Based on review, make ONE focused change to improve the metric
@@ -84,6 +88,10 @@ For each iteration (1 to max_iterations, or unbounded):
 
 ### Phase 7: Log
 Append row to TSV: iteration, timestamp, commit/-, metric, delta, guard status, guard-metric, status, description
+For a reusable kept recovery, collect matching recovery, independent holdout and guard receipts
+and promote through `scripts/lessons.cjs` per `references/procedural-lessons.md`. An improved metric
+alone cannot promote a lesson. If a retrieved procedure was actually used, run its `reuse` check
+and record its ID/version and outcome; selection alone is not use. Preserve normal iteration bounds.
 
 ### Eval Checkpoint
 If --evals: check if current_iteration % interval == 0 → run checkpoint analysis.

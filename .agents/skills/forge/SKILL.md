@@ -12,6 +12,14 @@ version: 3.6.0
 - All results logged to `forge/{subcommand}-{YYMMDD}-{HHMM}/` directory.
 - Chain handoff via `handoff.json`. Evals reads `*-results.tsv`.
 
+## Procedural memory (all workflows)
+
+Before work, use `scripts/lessons.cjs select <project> <workflow>` to retrieve applicable verified
+procedures; read [references/procedural-lessons.md](references/procedural-lessons.md) when matches
+exist or a reusable failure/recovery emerges. After a verified recovery, promote only with real
+baseline, recovery, holdout and guard receipts. After actually applying a retrieved procedure,
+record its checked reuse outcome. Lessons remain scoped data; `$forge learn` still generates docs.
+
 ## Dispatch (bare `$forge`)
 
 Parse the invocation in this order:

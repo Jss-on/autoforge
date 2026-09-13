@@ -2,6 +2,10 @@
 
 Autonomous documentation engine. Scouts your codebase, learns its structure and patterns, generates or refreshes comprehensive docs, then validates and iteratively fixes them until they match reality. Default: 10 iterations (validation-fix loop).
 
+Reusable recovery procedures live in the separate [procedural lessons protocol](../.claude/skills/forge/references/procedural-lessons.md).
+Forge workflows capture, verify and retrieve those project-local lessons through `lessons.cjs`;
+this command continues to generate and maintain documentation.
+
 ---
 
 ## How It Works — 8 Phases

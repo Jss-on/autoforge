@@ -106,6 +106,9 @@ stays frozen as the tester's record).
 ### Phase 1 — Pick ONE item
 Read `iterations.tsv` + git log; take the queue head not yet resolved. Metric already zero → exit
 loop (SUCCESS).
+At task start, retrieve scoped `fix` procedures using `scripts/lessons.cjs select <project> fix`;
+reselect if applicability inputs change. Read `references/procedural-lessons.md` for matches or
+candidate capture. Apply only a procedure supported by this item's root cause and current Scope.
 
 ### Phase 2 — Reproduce RED (defect mode)
 Run the defect report's exact repro steps first; tee raw output to `evidence/def-<id>-red.txt`. Mark
@@ -121,6 +124,10 @@ root-cause field is invalid. **Fix the implementation, not the test** — deleti
 test or loosening an assertion to get green is forbidden, with ONE exception: the defect's
 root-caused location IS the test (a broken fixture, a wrong expected value contradicting the oracle)
 — then fixing the test is the fix, and the report must say so.
+When the diagnosed recovery is reusable, draft its candidate/procedure and freeze its verifier
+files before the repair; collect a failing `baseline` receipt via `scripts/lessons.cjs check`.
+Existing red text alone cannot promote it. If the oracle itself needs repair, correct it first and
+collect fresh receipts against that oracle; do not reuse receipts from the faulty test.
 
 ### Phase 4 — Fix ONE thing
 Minimal, focused diff inside Scope; atomic (exactly one item). **Reuse before build**: when the root
@@ -159,6 +166,10 @@ Append the iteration row; in defect mode re-validate the ledger
 Eval checkpoint if `--evals` and interval hit. Bounded check: `scripts/score-build.sh bound
 iterations.tsv <N>` — `BOUND: EXCEEDED` blocks a COMPLETE status without a recorded user-approved
 extension.
+For a kept reusable recovery with a captured baseline, follow `references/procedural-lessons.md`
+to collect recovery, separate holdout and guard receipts and promote it. If a selected procedure
+was actually applied, record its `reuse` check and ID/version in this run. Lesson promotion never
+sets a defect to `verified`: the independent `test` re-engagement still owns that decision.
 
 ## GitHub flow (transparency contract)
 When the working repo is an output repo (per `build`'s contract), fixes ride the standard lifecycle:
