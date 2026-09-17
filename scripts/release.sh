@@ -48,7 +48,7 @@ for(const f of ['.claude-plugin/marketplace.json','claude-plugin/.claude-plugin/
 }
 for(const root of ['.claude','claude-plugin','.agents','.opencode','plugins/forge']) {
   const f=root+'/skills/forge/SKILL.md';
-  if(fs.existsSync(f)) fs.writeFileSync(f,fs.readFileSync(f,'utf8').replace(/^version: .*$/m,'version: '+v));
+  if(fs.existsSync(f)) fs.writeFileSync(f,fs.readFileSync(f,'utf8').replace(/^([ \t]*)version: .*$/m,(_,indent)=>indent+'version: '+v));
 }
 for(const f of ['README.md','guide/README.md']) if(fs.existsSync(f)) fs.writeFileSync(f,fs.readFileSync(f,'utf8').replace(/version-\d+\.\d+\.\d+-blue/g,'version-'+v+'-blue'));
 JS

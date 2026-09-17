@@ -1,6 +1,6 @@
 {
   "name": "forge",
-  "version": "3.6.0-codex.0",
+  "version": "3.6.0-codex.0+codex.20260917151931",
   "description": "Autonomous improvement engine for Codex. 21 commands: iterate, plan, debug, fix, security, ship, scenario, predict, learn, reason, probe, improve, evals, regression, build, requirements, feature, test, design, research, android.",
   "author": {
     "name": "Jss-on",
@@ -33,8 +33,8 @@
     "privacyPolicyURL": "https://github.com/Jss-on/autoforge/blob/master/LICENSE",
     "termsOfServiceURL": "https://github.com/Jss-on/autoforge/blob/master/LICENSE",
     "defaultPrompt": [
-      "$forge plan Improve test coverage to 90%",
-      "$forge security --diff --fail-on critical",
+      "$forge plan Goal: Improve test coverage to 90%",
+      "$forge security --diff --fail-on high",
       "$forge learn --mode update --scope docs/**/*.md"
     ],
     "brandColor": "#0F766E"

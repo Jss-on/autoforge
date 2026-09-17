@@ -83,7 +83,7 @@ transform_opencode() {
 
 # --- Codex Transform ---
 # Differences: colon → space in invocations, /forge:X → $forge X,
-# AskUserQuestion → request_user_input, merged into skills directory
+# Codex router binds the shared command contracts to native tools and bundle paths.
 
 transform_codex() {
   local dst_skills="$REPO_ROOT/plugins/forge/skills/forge"
@@ -93,15 +93,28 @@ transform_codex() {
   mkdir -p "$dst_skills/references" "$dst_agents/references"
 
   adapt_codex() {
-    # Generic rules (see adapt_opencode) — enumerated per-command seds rot.
-    sed -E \
-      -e 's/`AskUserQuestion`/`request_user_input`/g' \
-      -e 's/AskUserQuestion/request_user_input/g' \
-      -e 's|/forge:([a-z]+)|\$forge \1|g' \
-      -e 's|/forge|\$forge|g' \
-      -e 's|\.claude/skills/|skills/forge/|g' \
-      -e 's|\.claude/commands/|skills/forge/|g' \
-      "$1"
+    # Adapt invocation tokens, never filesystem paths or URLs containing /forge.
+    node - "$1" <<'JS'
+const fs = require('node:fs');
+let text = fs.readFileSync(process.argv[2], 'utf8').replace(/\r\n/g, '\n')
+  .replace(/^version: (.+)$/m, 'metadata:\n  version: $1')
+  .replace(/AskUserQuestion/g, 'request_user_input')
+  .replace(/(?<![\w/.:$-])\/forge(?::([a-z]+))?(?![\w/.:-])/g,
+    (_, command) => '$forge' + (command ? ' ' + command : ''));
+const binding = [
+  '## Codex command loading',
+  '',
+  '- Set `AR_ROOT` to the absolute directory containing this loaded `SKILL.md`. Read bundled `scripts/` and `references/` from that directory. This binding takes precedence over the shared contracts\' Claude path examples and project-local copies.',
+  '- Treat text after `$forge` as the invocation. If its first word is a subcommand listed below, read `<subcommand>.md` beside this file and execute that contract with the remaining text as `$ARGUMENTS`. Do this before bare-goal dispatch. Load only the selected contract and references it needs; use the same dispatch for chained commands.',
+  '- For a bare invocation, use the dispatch table below; read `forge.md` for Classic or Setup wizard mode. A natural-language goal uses the Orchestrator section.',
+  '- Command and reference files are shared across agents: interpret canonical slash/colon Forge invocations as `$forge <subcommand>`. `$ARGUMENTS` means user input, not a shell variable to evaluate.',
+  '- In shared contracts, `AskUserQuestion` means the available Codex question tool (`request_user_input` in Plan mode, `request_user_input_async` when available), or a concise chat question when no tool is available. Translate other tool examples to actual session tools; never assume a Claude-only tool exists.',
+  '- Run project commands in the user\'s repository and write project output there. Quote absolute bundle paths. On Windows use Git Bash for `.sh` scripts; PowerShell\'s `bash` may resolve to an unconfigured WSL installation.',
+  '',
+].join('\n');
+text = text.replace('## Dispatch (bare', binding + '\n## Dispatch (bare');
+process.stdout.write(text);
+JS
   }
 
   # Skills
@@ -112,34 +125,35 @@ transform_codex() {
     [[ -f "$ref" ]] || continue
     local base
     base="$(basename "$ref")"
-    adapt_codex "$ref" > "$dst_skills/references/$base"
+    cp "$ref" "$dst_skills/references/$base"
     cp "$dst_skills/references/$base" "$dst_agents/references/$base"
   done
 
   # Command files (Codex merges commands into skills directory)
-  adapt_codex "$CLAUDE_COMMANDS/forge.md" > "$dst_skills/forge.md"
+  cp "$CLAUDE_COMMANDS/forge.md" "$dst_skills/forge.md"
   cp "$dst_skills/forge.md" "$dst_agents/forge.md"
 
   for cmd in "$CLAUDE_COMMANDS"/forge/*.md; do
     [[ -f "$cmd" ]] || continue
     local cbase
     cbase="$(basename "$cmd")"
-    adapt_codex "$cmd" > "$dst_skills/$cbase"
+    cp "$cmd" "$dst_skills/$cbase"
     cp "$dst_skills/$cbase" "$dst_agents/$cbase"
   done
 
   # Restore agents config
-  mkdir -p "$dst_agents/agents"
+  mkdir -p "$dst_agents/agents" "$dst_skills/agents"
   cat > "$dst_agents/agents/openai.yaml" <<'YAML'
 interface:
   display_name: "AutoForge"
   short_description: "Autonomous goal-directed iteration engine"
-  brand_color: "#7C3AED"
-  default_prompt: "Set a goal, define a metric, let Codex loop until done"
+  brand_color: "#0F766E"
+  default_prompt: "$forge plan Goal: Define a measurable improvement for this repository"
 
 policy:
   allow_implicit_invocation: true
 YAML
+  cp "$dst_agents/agents/openai.yaml" "$dst_skills/agents/openai.yaml"
 
   printf 'Codex: transformed %s → plugins/ + .agents/\n' ".claude/"
 }

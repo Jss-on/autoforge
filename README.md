@@ -10,7 +10,7 @@ Based on [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) —
 
 [![Claude Code Skill](https://img.shields.io/badge/Claude_Code-Skill-blue?logo=anthropic&logoColor=white)](https://docs.anthropic.com/en/docs/claude-code)
 [![OpenCode](https://img.shields.io/badge/OpenCode-Skill-purple)](https://opencode.ai)
-[![Codex](https://img.shields.io/badge/Codex-Skill-green?logo=openai&logoColor=white)](https://developers.openai.com/codex)
+[![Codex](https://img.shields.io/badge/Codex-Plugin-green?logo=openai&logoColor=white)](https://developers.openai.com/codex)
 ![Version](https://img.shields.io/badge/version-3.6.0-blue.svg)
 [![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 
@@ -513,20 +513,58 @@ cp autoforge/.opencode/commands/forge*.md ~/.config/opencode/commands/
 
 ### Codex Quick Start
 
-**Option A — Guided installer (recommended):**
-```bash
-git clone https://github.com/Jss-on/autoforge
-cd autoforge
-./scripts/install.sh --codex --global
+**Native plugin from GitHub (recommended):**
+
+Run these commands in a terminal, including Windows PowerShell. Use a Codex CLI with
+`codex plugin` support; authenticate Git with access to this private repository first
+(`gh auth login` and `gh auth setup-git`, or your existing Git credentials).
+
+```powershell
+codex plugin marketplace add Jss-on/autoforge
+codex plugin add forge@forge-local
 ```
 
-**Option B — Manual copy:**
-```bash
-git clone https://github.com/Jss-on/autoforge
-cp -r autoforge/.agents/skills/forge ~/.codex/skills/forge
+`forge-local` is the marketplace name stored in this repository; the plugin appears as
+**AutoForge**. Installation is available across your repositories. Open your target repository
+in Codex and start a **new thread**, then invoke:
+
+```text
+$forge plan Goal: Improve this repository's test coverage
+$forge security --diff --fail-on high
+$forge build Spec: ./spec.yaml
 ```
 
-> Invoke via `$forge` mention syntax. Subcommands are keywords: `$forge plan`, `$forge debug`, `$forge evals`, etc.
+All 21 workflows use `$forge` followed by a subcommand. The plugin loads the selected command
+and its bundled references and verification scripts. Results are written into the target
+repository's `forge/` directory. The package includes skills and scripts; the nine Claude Code
+hooks are specific to Claude Code.
+
+To update a GitHub installation, refresh this marketplace, reinstall, and start a new thread:
+
+```powershell
+codex plugin marketplace upgrade forge-local
+codex plugin add forge@forge-local
+```
+
+Installation itself needs no Bash or WSL. Workflows that run `.sh` checks still need Bash,
+POSIX tools and Node.js. On Windows install Git for Windows and use **Git Bash**; if PowerShell's
+`bash` reports `WSL ... /bin/bash ... No such file or directory`, invoke Git Bash explicitly:
+
+```powershell
+# From a cloned AutoForge repository; adjust the Git installation path if needed.
+& 'C:\Program Files\Git\bin\bash.exe' scripts/doctor.sh
+```
+
+**Manual skill fallback** (when the Codex CLI has no `plugin` subcommand):
+
+```bash
+git clone https://github.com/Jss-on/autoforge
+mkdir -p ~/.agents/skills
+cp -r autoforge/.agents/skills/forge ~/.agents/skills/forge
+```
+
+Use either the plugin or the manual skill to avoid duplicate Forge entries. For development
+from a local checkout, see [Contributing](CONTRIBUTING.md#codex-plugin-development).
 
 ### Run It
 
@@ -1512,7 +1550,7 @@ A: Yes. Any language, framework, or domain. Install via plugin (Claude Code), in
 A: Yes. Run `./scripts/install.sh --opencode --global` or manually copy `.opencode/` files. Commands use underscore naming (`/forge_debug`, `/forge_evals`, etc.). All 21 commands available.
 
 **Q: Does this work with OpenAI Codex?**
-A: Yes. Run `./scripts/install.sh --codex --global` or copy `.agents/skills/forge/` to `~/.codex/skills/forge`. Invoke via `$forge` mention syntax.
+A: Yes. Run `codex plugin marketplace add Jss-on/autoforge`, then `codex plugin add forge@forge-local`. Start a new thread and invoke `$forge plan`, `$forge build`, or any other subcommand. See [Codex Quick Start](#codex-quick-start) for updates, Windows setup and the manual skill fallback.
 
 **Q: How do I stop the loop?**
 A: `Ctrl+C` or add `Iterations: N` to your inline config. Claude commits before verifying, so your last successful state is always in git.

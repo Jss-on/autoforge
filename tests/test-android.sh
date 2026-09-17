@@ -464,14 +464,15 @@ PRODUCT_VERSION=$(node -p 'require(process.argv[1]).version' "$REPO_ROOT/.claude
   && pass "marketplace has a valid release version" || fail "invalid marketplace release version"
 [[ "$(node -p 'require(process.argv[1]).version' "$REPO_ROOT/claude-plugin/.claude-plugin/plugin.json")" == "$PRODUCT_VERSION" ]] \
   && pass "claude plugin matches marketplace version" || fail "claude plugin version drift"
-[[ "$(node -p 'require(process.argv[1]).version' "$REPO_ROOT/plugins/forge/.codex-plugin/plugin.json")" == "$PRODUCT_VERSION-codex.0" ]] \
+CODEX_VERSION=$(node -p 'require(process.argv[1]).version' "$REPO_ROOT/plugins/forge/.codex-plugin/plugin.json")
+[[ "${CODEX_VERSION%%+*}" == "$PRODUCT_VERSION-codex.0" && ( "$CODEX_VERSION" != *+* || "${CODEX_VERSION#*+}" =~ ^codex\.[A-Za-z0-9-]+$ ) ]] \
   && pass "codex plugin matches marketplace version" || fail "codex plugin version drift"
 
 for sk in .claude/skills/forge/SKILL.md claude-plugin/skills/forge/SKILL.md \
           .agents/skills/forge/SKILL.md plugins/forge/skills/forge/SKILL.md \
           .opencode/skills/forge/SKILL.md; do
   grep -q 'android' "$REPO_ROOT/$sk" && pass "router lists android: $sk" || fail "router lists android: $sk"
-  [[ "$(sed -n 's/^version: //p' "$REPO_ROOT/$sk" | tr -d '\r')" == "$PRODUCT_VERSION" ]] \
+  [[ "$(sed -n 's/^[[:blank:]]*version: //p' "$REPO_ROOT/$sk" | tr -d '\r')" == "$PRODUCT_VERSION" ]] \
     && pass "router version matches marketplace: $sk" || fail "router version drift: $sk"
 done
 grep -q '/forge:android' "$REPO_ROOT/.claude/skills/forge/SKILL.md" \

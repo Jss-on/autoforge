@@ -14,7 +14,8 @@ cd autoforge
 # 2. Install via guided installer
 ./scripts/install.sh --claude --global   # Claude Code
 ./scripts/install.sh --opencode --global # OpenCode
-./scripts/install.sh --codex --global    # Codex
+codex plugin marketplace add .          # Codex local plugin source
+codex plugin add forge@forge-local
 
 # 3. Or symlink for live editing (recommended for development)
 ln -s $(pwd)/.claude/skills/forge ~/.claude/skills/forge
@@ -31,6 +32,23 @@ The canonical source is `.claude/`. After making changes, run the transform to s
 ./scripts/transform.sh --opencode   # OpenCode only
 ./scripts/transform.sh --codex      # Codex only
 ```
+
+### Codex plugin development
+
+The native plugin lives in `plugins/forge/`; `.agents/plugins/marketplace.json` registers it as
+`forge@forge-local`. From this checkout, run `codex plugin marketplace add .` once, then
+`codex plugin add forge@forge-local`. Use a new thread in another repository to test the installed
+bundle independently of this repository's `.agents/skills/forge` copy.
+
+Edit canonical commands and references under `.claude/`, then run `bash scripts/transform.sh --codex`
+and `bash tests/test-codex-plugin.sh` (Git Bash on Windows). Command contracts and references stay
+identical to canonical source; the generated Codex router binds invocation syntax, questions and
+resource paths. Both Codex distribution trees include the same scripts and `agents/openai.yaml`.
+
+After an edit, refresh the plugin manifest's `+codex.<timestamp>` build metadata using Codex's
+Plugin Creator cachebuster helper, then run `codex plugin add forge@forge-local` again and start a
+new thread. Product releases still use `scripts/release.sh`. For a GitHub installation, use the
+[README update commands](README.md#codex-quick-start) instead of the local development marketplace.
 
 ## Repository Structure (v2.1.0)
 

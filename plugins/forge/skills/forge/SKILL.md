@@ -1,7 +1,8 @@
 ---
 name: forge
 description: "Autonomous iteration loop: modify, verify, keep/discard against any metric"
-version: 3.6.0
+metadata:
+  version: 3.6.0
 ---
 
 # AutoForge — Autonomous Goal-directed Iteration
@@ -19,6 +20,15 @@ procedures; read [references/procedural-lessons.md](references/procedural-lesson
 exist or a reusable failure/recovery emerges. After a verified recovery, promote only with real
 baseline, recovery, holdout and guard receipts. After actually applying a retrieved procedure,
 record its checked reuse outcome. Lessons remain scoped data; `$forge learn` still generates docs.
+
+## Codex command loading
+
+- Set `AR_ROOT` to the absolute directory containing this loaded `SKILL.md`. Read bundled `scripts/` and `references/` from that directory. This binding takes precedence over the shared contracts' Claude path examples and project-local copies.
+- Treat text after `$forge` as the invocation. If its first word is a subcommand listed below, read `<subcommand>.md` beside this file and execute that contract with the remaining text as `$ARGUMENTS`. Do this before bare-goal dispatch. Load only the selected contract and references it needs; use the same dispatch for chained commands.
+- For a bare invocation, use the dispatch table below; read `forge.md` for Classic or Setup wizard mode. A natural-language goal uses the Orchestrator section.
+- Command and reference files are shared across agents: interpret canonical slash/colon Forge invocations as `$forge <subcommand>`. `$ARGUMENTS` means user input, not a shell variable to evaluate.
+- In shared contracts, `AskUserQuestion` means the available Codex question tool (`request_user_input` in Plan mode, `request_user_input_async` when available), or a concise chat question when no tool is available. Translate other tool examples to actual session tools; never assume a Claude-only tool exists.
+- Run project commands in the user's repository and write project output there. Quote absolute bundle paths. On Windows use Git Bash for `.sh` scripts; PowerShell's `bash` may resolve to an unconfigured WSL installation.
 
 ## Dispatch (bare `$forge`)
 
@@ -108,7 +118,7 @@ Activated when a plain-language goal is given without `Metric:`/`Verify:`. Class
 
 ### Orchestration Loop Steps
 
-Backed by `scripts/orchestrate.sh` (deterministic seam — all routing logic lives there). Subcommands exposed: `classify`, `next-hop`, `units`, `plateau`, `screen-cmd`, `verdict`, `validate-state`, `screen-state-predicate`. Seam scripts ship with the skill: resolve `scripts/…` to the first existing of `${CLAUDE_PLUGIN_ROOT}/skills$forge/scripts/`, `.claude/skills$forge/scripts/`, `scripts/` (this repo), or the `scripts/` dir next to this SKILL.md.
+Backed by `scripts/orchestrate.sh` (deterministic seam — all routing logic lives there). Subcommands exposed: `classify`, `next-hop`, `units`, `plateau`, `screen-cmd`, `verdict`, `validate-state`, `screen-state-predicate`. Seam scripts ship with the skill: resolve `scripts/…` to the first existing of `${CLAUDE_PLUGIN_ROOT}/skills/forge/scripts/`, `.claude/skills/forge/scripts/`, `scripts/` (this repo), or the `scripts/` dir next to this SKILL.md.
 
 1. **Classify** — `scripts/orchestrate.sh classify "<goal>"` → archetype label + mode.
 2. **Derive predicate** — reuse `plan` logic to produce a concrete Success predicate: exact shell command + expected output. For `optimize-metric`, run the full plan/wizard derivation internally.

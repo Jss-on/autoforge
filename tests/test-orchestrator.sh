@@ -730,7 +730,7 @@ done
 # canonical stamp, not a literal, so version bumps can't silently rot this test.
 CANON_SKILL_VER="$(grep -m1 '^version:' "$REPO_ROOT/.claude/skills/forge/SKILL.md" | sed 's/version:[[:space:]]*//')"
 for mirror in claude-plugin .agents .opencode plugins/forge; do
-  mv_line="$(grep -m1 '^version:' "$REPO_ROOT/$mirror/skills/forge/SKILL.md" 2>/dev/null)"
+  mv_line="$(grep -m1 '^[[:blank:]]*version:' "$REPO_ROOT/$mirror/skills/forge/SKILL.md" 2>/dev/null)"
   if printf '%s' "$mv_line" | grep -qF "$CANON_SKILL_VER"; then
     pass "parity: $mirror SKILL.md version matches canonical ($CANON_SKILL_VER)"
   else

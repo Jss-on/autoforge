@@ -27,13 +27,15 @@ Restart session after install. All 21 commands become available as `/forge` and 
 
 ### Codex (plugin)
 
-```bash
-git clone https://github.com/Jss-on/autoforge
-cd autoforge
-./scripts/install.sh --codex --global
+```powershell
+codex plugin marketplace add Jss-on/autoforge
+codex plugin add forge@forge-local
 ```
 
-Invoke via the `$forge` mention syntax: `$forge <subcommand> [flags]`.
+Works from PowerShell without Bash for installation. Start a new Codex thread in your target
+repository and invoke `$forge <subcommand> [flags]`. Update with
+`codex plugin marketplace upgrade forge-local`, then repeat `codex plugin add forge@forge-local`.
+Workflow shell checks still require Bash (Git Bash on Windows) and Node.js.
 
 ### Manual (any agent)
 
@@ -47,8 +49,9 @@ cp -r autoforge/claude-plugin/skills/forge .claude/skills/forge
 cp -r autoforge/claude-plugin/commands/forge .claude/commands/forge
 cp autoforge/claude-plugin/commands/forge.md .claude/commands/forge.md
 
-# Codex
-cp -r autoforge/plugins/forge ~/.agents/plugins/forge
+# Codex manual skill fallback (use instead of the plugin)
+mkdir -p ~/.agents/skills
+cp -r autoforge/.agents/skills/forge ~/.agents/skills/forge
 ```
 
 ---
@@ -305,9 +308,9 @@ iteration  commit   metric  delta   status    description
 
 ### Codex
 
-- Commands are invoked as plain text: `forge` and `forge:<subcommand>`
-- Interactive setup uses `request_user_input` or direct question batches
-- Plugin files: `plugins/forge/` with `skills/`
+- Commands are invoked as `$forge` and `$forge <subcommand>`
+- Interactive setup uses an available Codex question tool or direct question batches
+- Plugin files: `plugins/forge/.codex-plugin/plugin.json` and `skills/`; marketplace: `.agents/plugins/marketplace.json`
 - Command contracts live in each command file under `plugins/forge/skills/forge/`
 
 ### Other Agents (OpenCode, Gemini CLI, etc.)
