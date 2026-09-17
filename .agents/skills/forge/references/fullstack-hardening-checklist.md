@@ -9,6 +9,10 @@ gate the number — "the app boots" alone caps at the functional weight, not 1.0
 pass-rate is capped at 0.50, so correct domain math is a precondition for "done", never a
 tradeable component.
 
+**Security is a separate must-pass gate.** A weighted score, skipped hardening rows or a clean
+dependency scan cannot establish security readiness. Build/feature completion or convergence requires the
+current candidate's passing typed `security` evidence (see `references/handoff-schema.md`).
+
 ## Dimension Weights
 
 | Dimension | Weight | Env override | Gates |
@@ -91,15 +95,27 @@ For any domain with computation or stateful rules (payroll, accounting, POS, bil
 
 ### 4a. Security layer
 
-- [ ] **No hardcoded secrets** — credentials/keys only via env or secret manager; secret-scan clean
-- [ ] **Security headers** — CSP, HSTS, X-Content-Type-Options, X-Frame-Options (e.g. via helmet)
-- [ ] **Input validation** — schema-validate every request body/param at the boundary; reject on fail
-- [ ] **Dependency scan clean** — no known CVEs above the agreed severity (npm audit / pip-audit / trivy)
-- [ ] **Rate limiting** — per-IP / per-token limiter on public endpoints
-- [ ] **AuthN/AuthZ** — protected routes require a valid principal; authorization checked **per resource** (no IDOR)
-- [ ] **CSRF + SSRF guards** — state-changing routes CSRF-protected; outbound fetches validated against an allowlist
-- [ ] **TLS-ready** — no plaintext-only assumptions; secrets redacted from logs and error responses
-- [ ] **OWASP Top 10 pass** — reuse `/forge:security` for an injection / auth / access-control sweep
+- [ ] **Owner-reviewed security requirements** — plain-language risks, affected people/data,
+      roles, deployment and compliance assumptions have owners and measurable acceptance checks.
+- [ ] **Applicable baseline pinned** — assess every row in `references/security-checklist.md`,
+      record applicability/reasons and select versioned **ASVS 5.0.0** requirements. **OWASP Top
+      10:2025** is a risk map, not a certification. Reuse framework/platform security controls.
+- [ ] **Negative tests pass** — server-side cross-user/tenant authorization, sessions/admin MFA
+      and recovery, injection/mass assignment, CSRF, and scoped uploads/webhooks/SSRF are exercised
+      through the real application. Denied requests disclose no data and cause no side effects.
+- [ ] **Deployment and recovery verified** — HTTPS, secure cookies/headers, private DB/storage/
+      backups, least privilege, secret rotation, bounded requests/rate limiting, isolated restore
+      proof, redacted security logs, tested alerts and a named incident responder. State the tested
+      environment; production-only checks remain mandatory release readiness work, never a claimed
+      build proof or a reason to skip applicable local/staging tests.
+- [ ] **Supply chain checked** — secret/dependency/artifact scans and CI trust-boundary review
+      are current for the candidate; no unresolved Critical/High findings (or stricter agreed bar).
+- [ ] **Security evidence gate passes** — run `/forge:security` with the pinned checks; save real
+      command results tied to the candidate/environment, then run
+      `scripts/validate-handoff.sh <security-run>/handoff.json security --require-pass`.
+      Every applicable planned check must pass. Failed, missing or skipped checks block readiness;
+      accepted risk cannot resolve a finding at the blocking threshold. Re-audit affected paths
+      after fixes and changes before convergence/release.
 
 ### 4b. Performance layer
 

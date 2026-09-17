@@ -20,7 +20,7 @@ not finished until its handoff validates.
 
 | Source | Additional required fields |
 |---|---|
-| `build`, `feature` | `results_tsv` (nonempty path), `metric` (`"fullstack_pass_rate"` or an object with that `name` and an optional finite `value` in [0,1]), `config` (non-null object, not an array). A `CONVERGED` status additionally requires `coverage` with numeric `requirements: 1` and `design: 1`; historical 2.x handoffs may omit `design`, preserving legacy reads. |
+| `build`, `feature` | `results_tsv` (nonempty path), `metric` (`"fullstack_pass_rate"` or an object with that `name` and an optional finite `value` in [0,1]), `config` (non-null object, not an array). A `CONVERGED` status additionally requires `coverage` with numeric `requirements: 1` and `design: 1`; historical 2.x handoffs may omit `design`, preserving legacy reads. Current 3.x+ `COMPLETE` and `CONVERGED` also require the typed `security` record below with PASS, a high-or-stricter threshold, and readable evidence inside this run directory; this is enforced even without `--require-pass`. |
 | `requirements` | `spec` (path to the generated `*.spec.yaml`) or `srs` (path). |
 | `regression` | `verdict` (`STABLE` \| `UNSTABLE`). |
 | `fix` | `results_tsv` or `errors_remaining` (number). |
@@ -43,7 +43,7 @@ numbers in [0,1]; a converged build cannot claim incomplete coverage.
 
 ## Validation
 
-### Security and shipping readiness
+### Security, build and shipping readiness
 
 Both records use checks shaped as `{id, status, evidence}`. IDs are nonempty and unique within each
 list; status is `pass|fail|blocked|not_run`. Evidence is a nonempty path relative to this run directory.
@@ -65,8 +65,17 @@ For a finding, evidence contains the file/line proof and any successful retest. 
 `{id, severity, status, evidence}`, with unique nonempty IDs, severity from the same list and status
 `open|resolved|accepted`. Accepted findings remain unresolved at the blocking threshold.
 The verdict is derived: FAIL when any check fails or an unresolved finding meets/exceeds the threshold;
-otherwise PASS when every planned check passes, otherwise BLOCKED. PASS requires core status COMPLETE.
+otherwise PASS when every planned check passes, otherwise BLOCKED. A security-source PASS requires core status COMPLETE.
 A clean audit needs no findings. COMPLETE+FAIL is an honest finished audit and cannot satisfy a readiness gate.
+
+Build and feature reuse this same `security` object. Before declaring COMPLETE or CONVERGED, run a
+fresh audit of the candidate and copy its record and redacted evidence beneath the build/feature run
+directory. Include every applicable hardening assertion in the planned checks; failed, skipped or
+unavailable work cannot disappear from that list. Use `fail_on: high` or a stricter threshold
+(`medium|low|info`); `critical` alone cannot satisfy build completion. Every check must pass and every
+referenced check/finding evidence file must be readable, nonempty and regular inside this run directory.
+Neither a reduced target rate nor weighted scoring can waive this completion gate. BOUNDED, BLOCKED
+and ERROR reports may omit security evidence and remain readable, but cannot pass `--require-pass`.
 
 ```json
 {
@@ -97,15 +106,15 @@ current deployment must agree in all three identity fields and target must match
 The outer artifact names the revision being restored. Missing reversibility or a changed current
 deployment blocks restoration. Obtain the observed identity before mutation, then save the new receipt.
 
-`validate-handoff.sh <handoff.json> security|ship --require-pass` additionally requires successful
+`validate-handoff.sh <handoff.json> security|ship|build|feature --require-pass` additionally requires successful
 disposition and every referenced evidence file to exist, be nonempty and regular, and resolve inside
 the run directory (including symlinks). Absolute paths, URLs and traversal are refused. This checks
 record consistency and evidence presence; consumers must independently read the evidence and verify
 the current target/artifact before external action. It does not execute receipts or prove that a
 self-reported result is true. Preview, failed and blocked records never pass this gate.
 
-Historical 2.x security/ship records without these objects remain readable via the shape gate, but
-cannot pass `--require-pass`. Other sources retain their existing contracts. A security FAIL/BLOCKED
+Historical 2.x security/ship/build/feature records remain readable via the shape gate, but
+cannot pass `--require-pass`, even if a security record is added. Other sources retain their existing contracts. A security FAIL/BLOCKED
 may chain only to authorized remediation (`fix`); re-audit before delivery. Ship previews/failures stop chaining.
 
 ### Optional asset and motion evidence

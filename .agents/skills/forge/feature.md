@@ -33,6 +33,10 @@ current acceptance** — confirm the baseline is green before adding to it (you 
 baseline). Read the app: source, `git log`, current `build-results.tsv`, and its **`DESIGN.md`**.
 
 ## Phase 1 — Requirements delta
+Read the existing client security review and threat model. Changes to roles, data, public exposure,
+integrations or privileged actions add/reopen linked A-n / SC-n decisions and security NFRs in the
+same plain-language review. Carry new negative security tests into the hardening delta; preserve
+existing protections and include affected shared callers, not just changed files.
 Derive the feature's acceptance (reuse `requirements`/`probe`): new, mechanical assertions across the
 **six** dimensions (**logic** + functional + **ux incl design-conformance** + devops + monitoring +
 hardening), weighted by MoSCoW. **Any new business rule ships its `logic` golden vectors first** (exact
@@ -97,6 +101,12 @@ Every iteration, after the feature verify, run the floor:
 ## Phase 5 — Verify + Ratchet (convergence)
 When the feature's assertions are green and `regression` is `STABLE`:
 - **Independent verify** on a fresh boot (held-out) to avoid overfitting a flaky pass.
+- **Security completion gate:** reuse build Phase 6's audit baseline and High-or-stricter threshold.
+  Recheck the current candidate, including all existing and new applicable security assertions and
+  affected shared boundaries. Require `validate-handoff.sh <audit>/handoff.json security --require-pass`.
+  Copy the typed `security` record and redacted evidence beneath the feature run, with paths relative
+  to that run; `validate-handoff.sh <run>/handoff.json feature --require-pass` must pass before
+  COMPLETE/CONVERGED. A lower Target-rate, `skip`, an accepted risk or an old audit cannot waive this.
 - For a scoped manifest, rerun `scripts/score-design.sh assets <target>` and the scan with
   `--assets <target>`; pass the target as the fifth `score-design.sh verdict` argument after
   defects, scan, DESIGN.md and critique. Missing/stale motion evidence or missing required assets
@@ -114,12 +124,15 @@ When the feature's assertions are green and `regression` is `STABLE`:
 
 ## Summary
 Print: feature, baseline→final pass-rate (over the union), new assertions green/total, regression verdict
-(must be STABLE), iterations, kept vs reverted slices, and confirmation the delta was ratcheted into the spec.
+(must be STABLE), security PASS|FAIL|BLOCKED with evidence/remaining risks, iterations, kept vs reverted
+slices, and confirmation the delta was ratcheted into the spec.
 
 ## Chain Handoff
 Write handoff.json: version "3.1.0", source "feature", status
 (COMPLETE|CONVERGED|BOUNDED|BLOCKED|USER_INTERRUPT|ERROR), results_tsv, metric (fullstack_pass_rate),
 regression_verdict, findings = remaining red, config{feature, target, spec}.
+COMPLETE/CONVERGED also carry the passing typed `security` record with evidence in this run; run
+`scripts/validate-handoff.sh <run-dir>/handoff.json feature --require-pass` before claiming either.
 When assets are scoped, carry the optional `assets` manifest/report/previous snapshot, providers,
 attempts/cap, kept count and motion evidence paths; never replace acceptance results with that summary.
 Schema: `references/handoff-schema.md`; after writing, `scripts/validate-handoff.sh <run-dir>/handoff.json

@@ -21,7 +21,7 @@ by `scripts/score-build.sh pass-rate`. **`logic` is first-class for complex, mul
 first-class: a working-but-ugly or inaccessible app is capped, never shipped as "done". A **seed-only
 demo** — pre-seeded read-only data with no create/persist path, or a store that resets on restart — is
 likewise **not "done"**: a real product runs on the user's **own, durably-persisted data** (accounts,
-full CRUD, settings, onboarding from an empty state), not fixtures. **Done also
+full CRUD, settings, onboarding from an empty state, per reviewed scope and exceptions), not fixtures. **Done also
 requires full coverage** — every PRD requirement (`FR-`/`NFR-`) and every `DESIGN.md` token group
 traces to ≥1 acceptance assertion (`scripts/score-build.sh coverage`), so a green pass-rate can never
 hide an unbuilt requirement. **Coverage is necessary but not sufficient — every requirement must also be
@@ -216,11 +216,18 @@ Extract from $ARGUMENTS:
 
 ## Setup (if required context missing)
 
-If neither Spec nor Goal is provided, AskUserQuestion (single batch):
-  Q1 (What): "What should I build?" — open text
-  Q2 (Stack): node+postgres+react, python+fastapi+postgres, your call, let me choose
-  Q3 (UX bar): full (design system + WCAG AA + the craft floor + design audit), basic responsive, minimal (floor only)
-  Q4 (Launch): build until passing acceptance (bounded 40), unlimited, dry-run
+For a free-text Goal without a reviewed requirements spec, first run `/forge:requirements` with
+the Goal as the Brief (and supplied Stack/Assets hints), following `references/elicitation-protocol.md`:
+show the owner the understanding, assumptions, stories and scenarios before detailed questions.
+Resume build after the current review is approved and the generated spec is VALID; reuse that
+handoff without re-interviewing settled decisions. This happens before charter scope is committed
+or product scaffolding starts. A supplied Spec remains the build input; surface any newly discovered
+scope-changing assumptions through the same review instead of silently adding them. Recorded
+requirements exceptions govern the product-surface defaults (accounts, organizations, CRUD, etc.);
+do not silently restore excluded features. Explain any actual conflict and resolve it in the review.
+
+If neither Spec nor Goal is provided, ask only "What should I build?", then use the requirements
+route above. Stack, design and launch choices belong in that visible review.
 If a spec file is provided → derive everything from it and skip setup.
 
 ## Precondition Checks
@@ -242,7 +249,7 @@ not document completion, is the metric), and the convergence criteria are the **
 Full gate criteria + principles: the **Phase-gate protocol** section at the end of this doc.
 
 ## Phase 1 — Planning / Initiation
-Define what is being built, why, and how — before any requirement is enumerated. Produce the
+Summarize what is being built, why, and how from the reviewed requirements or supplied Spec. Produce the
 **Project Charter** (`charter.md`, agile-right-sized to ~1 page): objectives + product vision (the
 elevator pitch), explicit **in/out scope** lists, stakeholders/ICP, the **iteration budget** (the
 `Iterations:` bound is the schedule/budget analog), constraints (stack hints, compliance), and a
@@ -426,15 +433,23 @@ IEEE-829-style incident report, right-sized to its `iterations.tsv` line.
   actual file/initial-payload budgets to `devops`; preserve the six dimensions and seven design tags.
 - **Performance** — run a **load test** (k6 / autocannon / locust) asserting the p95 latency SLO and
   **zero N+1** on the primary flows; check frontend bundle budget + Core Web Vitals via Playwright.
-- **Security** — an **OWASP Top 10** pass (reuse `/forge:security`): headers, input validation,
-  per-resource authZ, secret-scan, and dependency-scan all clean.
+- **Security (mandatory completion gate)** — run `/forge:security` on this candidate, with High or
+  stricter failure threshold, the baseline from `references/fullstack-hardening-checklist.md`, and
+  every applicable security acceptance assertion. Include real negative tests for access, session
+  revocation, data exposure and integration boundaries; secret/dependency scans alone are insufficient.
+  `scripts/validate-handoff.sh <audit>/handoff.json security --require-pass` must pass. Record the
+  candidate commit/digest and relevant config; re-audit affected checks after changes. Copy the typed
+  `security` record and its redacted evidence into the build run (paths relative to that run), then
+  require `scripts/validate-handoff.sh <run>/handoff.json build --require-pass` before completion.
+  FAIL/BLOCKED checks or unresolved Critical/High findings prevent completion regardless of score,
+  Target-rate, skipped acceptance rows, or accepted-risk labels. Remediate and retest.
 - **Coverage** — unit+integration coverage ≥ the project floor (default 80%).
 Deliverables, right-sized per IEEE 829's intent: the **Test Plan** is the acceptance TSV + this
 pyramid (scope, approach, item pass/fail criteria); **test cases** are the executable suites;
 **defect reports** are the Defect Loop's records; the **Test Summary Report** is the final
 per-dimension breakdown (written into `evals-summary.md` / the Summary).
 **Gate:** every layer green; coverage ≥ floor; e2e + axe clean; UI conforms to `DESIGN.md`
-(`SLOP_GATE: PASS`, no design drift) and the design audit's verdict is `SHIP`.
+(`SLOP_GATE: PASS`, no design drift), the design audit's verdict is `SHIP`, and security readiness PASS.
 
 ## Phase 7 — Deployment
 Write the release deliverables, then hand to `forge:ship` (8-phase: checklist → dry-run →
@@ -453,6 +468,9 @@ never operates prod):
 - **Runbook** (`RUNBOOK.md`) — boot/stop commands, the health (`/healthz`, `/readyz`) + `/metrics`
   endpoints to watch, datastore backup/restore, common failures → fixes, log locations +
   correlation-ID usage. Every command/endpoint named in it is **verified against the running app**.
+- **Security operations** — access-removal/key-rotation procedure, patch ownership, security alerts
+  with redacted data, incident contact and a restore exercise using test data. Record what production
+  settings still need verification at release; a local pass does not prove live configuration.
 - **Change-request path** — post-release changes are new work items: `feature` (delta acceptance +
   the hard non-regression ratchet), `fix` (error burn-down), `improve` (ICP research → PRDs) — each
   re-enters this pipeline with the shipped acceptance baseline as the regression floor.
@@ -498,7 +516,7 @@ iteration:
    `skipped: X, add when Y`) to `iterations.tsv`.
 7. **Repeat** until (`pass-rate --strict-evidence >= Target-rate` **AND** `logic_gate == PASS` **AND**
    `REQ_COVERAGE == 1.00` **AND** `DESIGN_COVERAGE == 1.00` **AND** `SLOP_GATE == PASS` with
-   `DESIGN_VERDICT: SHIP` **AND** the requirement-satisfaction audit
+   `DESIGN_VERDICT: SHIP` **AND** security readiness PASS **AND** the requirement-satisfaction audit
    passes **AND** `scripts/score-build.sh bound iterations.tsv <N>` prints `BOUND: OK`) or the bound
    (`Iterations: N`, default 40) is reached — **bounded by default**; `Iterations: unlimited` opts out.
    The bound is itself mechanical: `BOUND: EXCEEDED` means the run may NOT report CONVERGED — either
@@ -540,7 +558,7 @@ Two **structural** gates close that gap — both mechanical counts (not judgemen
   (`orphan_traces`) and fails the gate — delete or re-point it.
 
 Convergence (DONE) requires `pass-rate --strict-evidence >= Target-rate` **and** both coverages
-`== 1.00` **and** `BOUND: OK` **and** the requirement-satisfaction audit — every goal/FR/NFR exercised
+`== 1.00` **and** `BOUND: OK` **and** the security completion gate **and** the requirement-satisfaction audit — every goal/FR/NFR exercised
 end-to-end in the live app, **no user-facing FR satisfied by an engine/unit test alone**. The evidence
 store closes the loop: the final `<run-dir>` must contain `evidence/` (raw verification outputs),
 `score-log.tsv` (hashed scorer invocations), `build-results.tsv`, and `iterations.tsv` — a third party
@@ -558,7 +576,8 @@ can re-run the scorer on the stored ledger and check every pass row's evidence f
 ## Summary
 Print: final pass-rate, **logic_gate (PASS|CAPPED)**, **REQ_COVERAGE + DESIGN_COVERAGE**, **`SLOP` +
 `SLOP_GATE` + `DESIGN_VERDICT`** (the design QA line), per-dimension
-scores (incl **logic** + **ux**), assertions green/total, **requirement-satisfaction audit verdict**,
+scores (incl **logic** + **ux**), assertions green/total, **security PASS|FAIL|BLOCKED with evidence and
+untested production assumptions**, **requirement-satisfaction audit verdict**,
 phases completed (of the 8 SDLC phases), iterations used, kept vs discarded slices, total `loc_delta`
 + **ponytail debt rows** harvested into `DEBT.md`, build output
 path, and a **deliverables checklist** (charter · SRS + RTM · HLD/LLD + `DESIGN.md` · test summary ·
@@ -577,6 +596,12 @@ Write handoff.json: version "3.1.0", source "build", timestamp, status
 coverage{requirements, design}, design{lint, slop, verdict, design_md}, phases_completed, findings = remaining red
 assertions + untraced requirements/tokens + open design defects + ponytail debt rows, config{spec,
 scope, stack, target_rate}.
+For COMPLETE/CONVERGED, include the existing typed `security` record from the current audit, with
+High-or-stricter threshold and redacted evidence files beneath this run. Both statuses are rejected
+without passing security, even when the weighted score reaches Target-rate. Run
+`scripts/validate-handoff.sh <run-dir>/handoff.json build --require-pass` before either completion
+claim or a downstream delivery chain. Use BOUNDED/BLOCKED for unfinished work; do not relabel a
+failed audit as an accepted risk to finish.
 The handoff shape is the chain contract — `references/handoff-schema.md`. After writing it, run
 `scripts/validate-handoff.sh <run-dir>/handoff.json build`; on `INVALID`, fix the handoff before
 printing the summary — a run with an invalid handoff is NOT finished.

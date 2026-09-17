@@ -1,14 +1,14 @@
 ---
 name: forge:requirements
-description: "Turn raw client requirements into a validated SRS + a ready-to-run forge:build spec via the standard requirements-engineering process"
+description: "Show the client a plain-language understanding, assumptions and scenarios; refine them together into a validated SRS + forge:build spec"
 argument-hint: "[Brief: <text|file>] [Name: <slug>] [Stack: <hint>] [--chain build]"
 ---
 
 EXECUTE IMMEDIATELY.
 
-The front end of the SDLC. Takes a client's full requirements (a brief, a transcript, a doc) and
-runs the **standard requirements-engineering process** — elicitation → analysis → specification →
-validation — then **generates the arguments for `/forge:build`**: a validated
+The front end of the SDLC. Takes a client's brief, transcript or doc and runs
+**understand → show assumptions and stories → correct together → specify → validate**,
+then **generates the arguments for `/forge:build`**: a validated
 `evals/fullstack/<name>.spec.yaml` plus the exact build invocation. Output is documents and a spec,
 never product code (throwaway elicitation mockups in the run dir are instruments, not product).
 
@@ -16,17 +16,16 @@ never product code (throwaway elicitation mockups in the run dir are instruments
 structure — and a raw interview captures only *stated* intent.** The expensive misses are the
 must-be needs clients assume ("obviously it has refunds"), the taste they cannot verbalize, and the
 domain rules neither party said out loud. The elicitation therefore follows
-`references/elicitation-protocol.md`: **domain recon before the first question**, a
-**day-in-the-life walkthrough** per role, the **must-be (Kano) checklist** dispositioned item by
-item, an **artifact-reaction loop** (reference triage + throwaway wireframe screenshots) for design
-intent, an **ambiguity audit** (adjective→number, rule→boundary, workflow→failure-path), and a
-**provenance ledger** so every derived requirement is read back for individual confirmation.
+`references/elicitation-protocol.md`: an **initial client review before detailed questions**, domain
+recon, **draft user stories and day-in-the-life scenarios** corrected by the owner, a **full
+lifecycle + must-be (Kano) checklist**, an **artifact-reaction loop** for design intent, an
+**ambiguity audit**, and a visible **provenance ledger** from the first reply through sign-off.
 
 **AutoForge first principle (single-pass form):** requirements is a single-pass dispatch — no
 metric optimization loop — but it still obeys the principle. The interview iterates until
 **saturation**, and the generated spec is released to `build` only when the **mechanical** `validate`
-gate returns `VALID` — never on subjective judgment. Constraint (no assumptions) + mechanical gate +
-bounded iteration, same as the core loop.
+gate returns `VALID` AND the owner has approved the latest review revision with zero open items.
+The validator checks spec structure; it cannot establish owner understanding or approval.
 
 ## Parse Arguments
 
@@ -36,17 +35,22 @@ bounded iteration, same as the core loop.
 - `Assets: N|off` — attempt budget for scoped generation (default 12); inherit it into the build spec.
 - `--chain build` — after generating + validating the spec, invoke `/forge:build` with it.
 
-## Interactive by design — NO assumptions
+## Interactive by design — visible assumptions, never silent decisions
 
-This command **interviews the user back-and-forth** to arrive at the final requirements. It does NOT
-fill scope-defining gaps with assumptions. A one-line brief (e.g. "build a money app") is a starting
-point, not the requirements — treat it as the first answer and keep asking until the picture is
-complete and the user signs off. Proceed to specification ONLY after explicit user confirmation.
+This command **shows a working diagnosis and refines it with the owner**. A one-line brief is enough
+to draft an understanding, assumptions, stories and scenarios; missing facts stay visibly open.
+Never promote an inference into a requirement without review. Use very simple words for the client,
+including security, deployment and compliance decisions; explain their effects on daily work,
+cost and risk. The owner corrects Forge's picture instead of having to invent a complete feature
+list. Save a draft at any time; finalize requirements only after explicit approval of the current
+playback. An earlier approval covers unchanged content, never new or changed scope.
 
 ## Build a real product, not a demo (default stance)
 The target is a **usable product a real user runs with their own data — not a seeded, read-only
-demo.** Unless the user explicitly scopes a throwaway/prototype/game, every spec MUST treat these as
-in-scope and elicit them (default them IN):
+demo.** Surface the following as **visible recommended defaults, initially open**, with the cost
+and effect of including or excluding each. They are not automatically in scope. Confirm relevant
+product needs and record an explicit reason for exceptions (including a prototype/game/static
+site, guest-only or single-user workflow):
 - **Durable persistence** — a real datastore wired end-to-end; data created in the UI **survives a
   restart**. An in-memory / seed-only store that resets is a demo, not a product.
 - **Identity & accounts** — sign-up / sign-in; a **fresh account starts EMPTY** and creates its own data.
@@ -56,31 +60,47 @@ in-scope and elicit them (default them IN):
 - **Onboarding** — the first-run path from empty → productive (create the first org / project /
   records). **Seeded data is for tests/fixtures only — never the app's only data path.**
 "Demo data already there, nothing to create or manage, resets on restart" is the failure mode this
-stance exists to prevent. (Pure games / static sites legitimately opt out — confirm with the user.)
+stance exists to prevent. Do not force accounts, organizations or destructive deletion into a
+workflow that does not need them; confirm the appropriate access and correction path instead.
 
 ---
 
-## Phase 0 — Domain recon (research BEFORE the first question)
-Per the protocol's research-first rule: one bounded research pass on the stated domain — category
+## Phase 0 — First playback, then domain recon
+Before detailed questions, create `forge/requirements-{YYMMDD}-{HHMM}/client-review.md` and present
+the **draft understanding, all currently known assumptions and unknowns, user stories, and
+step-by-step scenarios** in the conversation (protocol §0). Keep stable `A-n`, `US-n`, `SC-n` IDs.
+Separate what the client said from what Forge inferred; include proposed defaults and exclusions.
+Cover every lifecycle area in protocol §4, marking missing information open, and highlight the
+highest-impact choices. This is a visible, revisable diagnosis, not an early technical SRS.
+
+**Domain recon (research BEFORE the first detailed question):** one bounded pass on the stated domain — category
 leaders, standard workflow vocabulary, and the **statutory/regulatory layer** (tax, receipts,
 mandated discounts, retention, audit, accessibility law). Write the **domain brief** to the run dir:
 table-stakes feature list for the category, domain glossary, regulatory checklist **with
-citations**, and the 3–5 highest-risk questions a domain expert would open with. Question quality is
-capped by domain knowledge — every derived item enters the interview as a **confirmation with a
-recommended default**, not an open-ended question.
+citations**, date checked, jurisdiction/applicability and the 3–5 highest-risk questions. Update the
+client review with discoveries. Research-derived needs remain proposals until reviewed; unknown
+legal applicability stays open pending evidence and the responsible reviewer, never "compliant"
+because the owner accepted a suggestion. Recommend defaults only when supported.
 
 ## Phase 1 — Elicitation (iterative interview, until saturation)
-Run a **multi-round** AskUserQuestion interview per `references/elicitation-protocol.md` —
-progressive disclosure, one facet per round, ≤4 questions per round, ONE batched AskUserQuestion
-call each, every question carrying a recommended default the client can accept in one click. Never
-assume on a scope-defining question — ask it; the client, not the command, makes the call.
+Run a **multi-round** interview per `references/elicitation-protocol.md`: start with corrections to
+the first playback, then 1–3 related questions at a time using the available question tool or a short
+conversational batch. Offer recommendations with consequences, and allow corrections or "I don't
+know". Do not invent answers to factual questions or treat silence as acceptance.
+After every answer, update `client-review.md` and show **what changed, affected stories/scenarios,
+and remaining open items**. A changed assumption reopens affected decisions and flows for review;
+retain unchanged confirmations. Preserve decision history and the review revision (protocol §2).
 - **Round order (protocol §2):** vision & stakes (ladder every feature to its GOAL) → actors & roles
   (who may see/do/approve what) → **day-in-the-life walkthrough** → objects & lifecycle (create /
   states / edit-void-delete / correction path / retention per noun) → **money & rules** (exact
   rates, caps, boundaries, rounding — a **worked example per rule**, which becomes its golden
   vector) → design via artifacts → edges & elasticity (offline, concurrent edits, peak numbers,
-  import from the old system) → out-of-scope + MoSCoW.
-- **Day-in-the-life walkthrough (protocol §3)** for each primary role, open to close, probing the
+  import from the old system) → delivery & life after launch → out-of-scope + MoSCoW.
+- **User stories + day-in-the-life walkthrough (protocol §3): Forge drafts, owner corrects.** Start
+  in Phase 0 for each known primary role, including owner/operator/support roles where relevant.
+  Each story states who wants what and why; each scenario states the starting situation, numbered
+  person-action → system-response steps, handoffs, saved result and notifications, plus a failure
+  and recovery/correction path. Link assumptions to the steps they affect. Walk open to close, probing the
   **unhappy paths** (returns, fat-fingered entries, over/short drawer, dead internet mid-sale,
   absent approver), the **rhythms** (end-of-shift/day/month/year rituals), and the **paper** (every
   current physical artifact = a data model + report). Each walkthrough becomes a numbered scenario —
@@ -89,9 +109,21 @@ assume on a scope-defining question — ask it; the client, not the command, mak
   reset, permissions, correction paths, search/filter, exports, receipts, audit trail,
   backup/restore, data import, empty states, offline, locale, pagination, the new-hire and
   someone-quit paths. Clients never state these because they assume them; silently absent =
-  protocol violation. (This subsumes the anti-demo product-surface confirmation: persistence,
-  accounts + onboarding from empty, full CRUD, settings — defaulted IN unless the client scopes a
-  throwaway/game/static site.)
+  protocol violation. The product-surface proposals (persistence, accounts, management, settings,
+  onboarding) need the same visible decisions; an excluded item retains its reason.
+- **Full SDLC coverage (protocol §4):** purpose/scope/budget/feasibility; people/access; workflows
+  and rules; UX/accessibility; data lifetime/import/export; integrations/technical constraints;
+  testing/acceptance; environments/deployment/data migration/rollback; security/misuse;
+  privacy/compliance/jurisdiction/evidence; reliability/backups/restore; monitoring/support;
+  maintenance/handover; retirement/exit. Every concern has a linked assumption/decision, including
+  non-applicability with a reason. Tell operational scenarios too: a bad release, a lost database,
+  a staff member leaving, a support request and closing the service, where applicable. These are
+  owner-visible questions about consequences, not hidden implementation defaults.
+- **Security concern playback (protocol §4):** show concern → proposed protection → concrete check
+  in the same client review. Identify private data, permissions, privileged actions, likely misuse,
+  deployment exposure and the incident/recovery owner. Draft negative scenarios: another customer's
+  record, a revoked session, a harmful upload/link, and failed recovery, where applicable. Use
+  invented data; never collect real credentials. Keep security decisions linked to A-n / SC-n.
 - **Game briefs:** add the facets from `references/game-assets-protocol.md` §5 — reference games
   (mechanics vs aesthetics separated), art direction + closest CC0 pack, session/scope shape,
   difficulty model, platforms + input (mobile touch elicited FIRST, never as a port), audio
@@ -117,10 +149,11 @@ assume on a scope-defining question — ask it; the client, not the command, mak
   assets. `Assets: off` still permits planning, checked reuse, icons and code-native motion.
 - **Round N — close gaps:** surface ambiguities and conflicts back to the client as closed-choice
   questions. **Saturation** = two consecutive rounds surface nothing scope-defining AND the must-be
-  checklist is fully dispositioned AND the client has corrected at least one artifact playback.
-- Capture **stakeholders**, goals, explicit asks, and implicit needs from the answers (never
-  invented) — every item tagged with **provenance** (protocol §7): `stated` · `derived-domain` ·
-  `default-confirmed` · `open` (an `open` item blocks sign-off).
+  and full lifecycle checklists are dispositioned AND the client has reviewed the stories and
+  scenarios (corrected them or explicitly said they are accurate). Unanswered rounds do not count.
+- Capture **stakeholders**, goals and proposals in the visible assumptions ledger (protocol §0).
+  Accepted requirements carry **provenance** (protocol §7): `stated` · `derived-domain` ·
+  `default-confirmed`; an `open` item blocks sign-off. A proposed default is not `default-confirmed`.
 
 ## Phase 2 — Analysis & Classification
 - Split **functional requirements** (what the system does) from **non-functional requirements (NFRs)**
@@ -134,8 +167,9 @@ assume on a scope-defining question — ask it; the client, not the command, mak
   | behavior, data, app flows (CRUD, status codes) | **functional** |
   | **business-rule computations & invariants** (tax, payroll, pricing, double-entry, proration) | **logic** |
 - Detect **ambiguities, conflicts, and scope creep** → take them BACK to the user (another round), do
-  not resolve by assumption. Record **constraints**. Only client-confirmed defaults may be written down,
-  labeled "confirmed with user" — never silent assumptions.
+  not resolve silently. Record **constraints**. Unconfirmed defaults stay in the visible draft
+  ledger as open proposals, never final requirements. Carry owner-approved decisions into the
+  analysis; any newly derived scope goes back into the review before acceptance.
 - **Ambiguity audit (protocol §6, mechanical sweep of the draft):** adjective→**number** with a
   stated load model (a p95 without concurrency is not testable) · rule→**boundary** (inclusive?
   calendar or rolling window? behavior AT the edge, rounding mode) · workflow→**failure path** (who
@@ -145,18 +179,25 @@ assume on a scope-defining question — ask it; the client, not the command, mak
   exactly the gaps a later `test` engagement would otherwise file as open SRS questions.
 - **Prioritize with MoSCoW** (Must / Should / Could / Won't). "Won't" becomes out-of-scope.
 
-## Phase 3 — Specification (write `requirements.md`)
-Produce an SRS/PRD with:
+## Phase 3 — Specification (draft `requirements.md`)
+Translate the reviewed flows into a draft SRS/PRD; Phase 4 approves the corresponding client
+playback and finalizes this document. No new scope may enter through translation. Include:
 - Overview + stakeholders + goals
 - **Day-in-the-life scenarios** (the numbered walkthroughs from elicitation — the use-case set, each
   later an e2e acceptance journey), incl. the unhappy paths and periodic rituals they surfaced
 - **User stories** in INVEST form: "As a <role>, I want <capability>, so that <benefit>"
 - **Functional requirements** FR-1…FR-n (atomic, testable)
-- **Product-completeness FRs (mandatory unless a confirmed throwaway/game/static site)** — explicit
-  `FR-`s for **durable persistence**, **accounts + auth**, **full CRUD management** of each core entity
+- **Product-completeness FRs (per the reviewed decisions and explicit exceptions)** — explicit
+  `FR-`s for confirmed **durable persistence**, **accounts + auth**, **full CRUD management** of each core entity
   (create/edit/delete, not read-only), **settings** (account + org), and **onboarding** (empty-state →
   first records). These exist so the build can't converge on a seeded read-only demo.
 - **Non-functional requirements** NFR-1…NFR-n (measurable thresholds)
+- **Security requirements and threat model** — what needs protection, actors/trust boundaries,
+  misuse scenarios, controls and owners. Use the applicable controls from
+  `references/fullstack-hardening-checklist.md` and the versioned sources in
+  `references/security-checklist.md`; cite selected ASVS requirement IDs, not a vague "OWASP pass".
+  Each applicable control has a hardening assertion, expected denied/safe behavior, and evidence
+  to collect; non-applicability has a reason. Separate proposed controls from verified protections.
 - **Logic spec (computational/stateful domains)** — for every business rule, the **rule matrix** as
   concrete data (tax brackets, contribution bands + caps, overtime/holiday multipliers, ledger
   invariants) **with source citations**, plus **golden vectors**: `input → exact expected output`,
@@ -169,24 +210,33 @@ Produce an SRS/PRD with:
   state transition + every decision branch must map to a golden vector**, so the diagrams are the
   completeness checklist for the logic spec.
 - **Constraints**, **assumptions**, **out-of-scope**
-- **Provenance appendix** — every FR/NFR tagged `stated` / `derived-domain` / `default-confirmed`,
-  plus the dispositioned must-be checklist (in / out / N-A-because per item)
+- **Provenance appendix** — `client-review.md` revision and owner responses (final approval pending
+  until Phase 4), every FR/NFR
+  tagged `stated` / `derived-domain` / `default-confirmed`, linked A-n decisions and US-n/SC-n flows,
+  plus the dispositioned full lifecycle + must-be checklist (in / out / N-A-because per item).
+  Keep excluded/deferred items and their reasons outside the in-scope acceptance set.
 - **Stack & reuse constraints** — name the expected battle-tested packages for the solved problems in
   scope (validation, auth, money/date math, ORM, uploads) in the spec's `stack:` notes, so `build`
   adopts them instead of reinventing; hand-rolled code is reserved for the domain rules the `logic`
   golden vectors pin.
 - **Acceptance criteria** per requirement in **Given/When/Then** form (mechanically verifiable)
-- **Traceability**: every requirement → its acceptance criteria → the build dimension it maps to
+- **Traceability**: reviewed assumption/decision → story/scenario where applicable → FR/NFR →
+  acceptance criteria → build dimension. Operational NFRs may trace directly to an A-n decision.
 
 ## Phase 4 — Validation (playback in the client's language, then explicit sign-off)
-Playback is **never the SRS document** (protocol §7). Present, in order: (a) the numbered
+Playback is **never the SRS document** (protocol §7). Present the latest `client-review.md` revision:
+the understanding, complete assumptions/decisions, changes since the previous review, then (a) the stories and numbered
 day-in-the-life scenarios re-told **with the system in place** ("Maria scans 3 items, the customer
 shows an SC card, the screen shows ₱X because …"), (b) the wireframe screenshots, (c) the
 worked-example table for every money rule, (d) the **derived-requirements list read back item by
 item** — `derived-domain` provenance is where miscommunication lives, so each gets its own yes/no —
-(e) the Won't-list. Clients correct narratives and pictures far more reliably than clauses;
+(e) the Won't/deferred list with consequences, and (f) delivery, deployment, security/compliance,
+operation and exit scenarios/decisions. Clients correct narratives and pictures far more reliably than clauses;
 sign-off on the playback IS sign-off on the SRS. Check **complete, consistent, testable, feasible,
-unambiguous** — every requirement verifiable, traced, and provenance-tagged with zero `open` items.
+unambiguous** — every requirement verifiable, traced, and provenance-tagged with zero `open` items
+or unresolved conflicts; all lifecycle concerns dispositioned and in-scope stories/scenarios reviewed.
+Record explicit owner approval of this exact review revision, then finalize the SRS. Material changes
+invalidate final approval until the affected playback is reviewed again; no need to re-ask unchanged decisions.
 If the user wants changes, loop back to elicitation. Do NOT generate the spec until the user says
 the requirements are final. Close with the **honesty clause** (protocol §8): the built app is the
 best elicitation artifact there is — reactions to v1 land as issues on the tracker of record (the
@@ -229,7 +279,7 @@ acceptance:
   `input → expected output` (e.g. "gross 30000 semi-monthly → SSS EE 675, withholding 1158.33, net …")
   so it is mechanically checkable; mark each `gate: true` (must-pass). **Required whenever the domain
   has business-rule computations**; omit only for pure-CRUD apps with no math. The **`functional`
-  block MUST include anti-demo rows** (unless a confirmed throwaway): data created in the UI
+  block MUST include the confirmed product-completeness rows** (respect recorded exceptions): data created in the UI
   **persists across a restart**, a **fresh account/tenant starts empty** (no pre-seed), and each core
   entity has a working **create / edit / delete** path — a spec whose functional rows only *read*
   seeded data fails this bar. **Each assertion must EXERCISE its requirement at the right level**: pure
@@ -246,13 +296,20 @@ acceptance:
   **`hardening` block spans two layers** — **security** (secrets, headers, input validation,
   per-resource authZ, OWASP Top 10) and **performance** (p95 latency SLO, no N+1, pagination, caching,
   Core Web Vitals) — so a build is "safe to expose" only when it is also fast under load.
+- Security assertions include the applicable negative scenarios from the reviewed threat model.
+  Cross-user/tenant checks exercise direct API access, lists, downloads/exports and mutations;
+  hiding a button is not authorization. Every security assertion joins the build's planned audit
+  checks; it cannot disappear through `skip`, a lower weight or a lower Target-rate. Default the
+  build/feature readiness threshold to High (or stricter): all planned checks must pass and no
+  unresolved Critical/High finding may remain. Requirements plans this evidence; build produces it
+  and runs `validate-handoff.sh ... build --require-pass` before reporting completion.
 - For scoped assets/motion, add mechanical acceptance: `asset-check.cjs check <target>` for
   inventory/provenance and byte caps; `design-scan.cjs --assets <target>` for both motion profiles;
   browser image decoding/alt/loading and keyboard task outcomes in `ux` (motion traces
   `design:motion`); initial payload in `devops`; source/attribution in `hardening`. Required blocked
   slots remain failing build rows. A planning manifest may be incomplete: requirements validates
   the spec and traceability, while delivery checks run after build. Keep all existing workflow gates.
-- **Validate (mechanical gate — loop until VALID):** run
+- **Validate (mechanical spec gate — loop until VALID):** run
   `scripts/score-requirements.sh validate evals/fullstack/<name>.spec.yaml` (resolve `scripts/…` to
   the shipped seam dir — first existing of `${CLAUDE_PLUGIN_ROOT}/skills/forge/scripts/`,
   `.claude/skills/forge/scripts/`, or repo `scripts/`; for a computational domain
@@ -260,7 +317,8 @@ acceptance:
   hard failure). It MUST print `VALIDATION: VALID` (all five operational dimensions present + weighted;
   any declared `logic` block carries ≥1 `gate: true` golden row). If `INVALID`, fix the flagged
   dimension and re-run — repeat until VALID. The spec is handed to `build` only on the validator's VALID
-  verdict, never on a subjective "looks complete" — the mechanical gate decides "done".
+  verdict AND the current owner-approved review. Fixing syntax needs no new interview; changing
+  scope, a rule or an expected outcome returns to playback. VALID alone does not authorize handoff.
 
 ## Phase 6 — Emit build arguments + chain
 Print the ready invocation:
@@ -271,18 +329,23 @@ Write handoff.json to the output dir (`forge/requirements-{YYMMDD}-{HHMM}/`): ve
 source "requirements", status COMPLETE, `spec` = generated spec path, config{name, stack}, traceability
 summary. Schema: `references/handoff-schema.md`; after writing, `scripts/validate-handoff.sh
 <run-dir>/handoff.json requirements` must print VALID.
-If `--chain build` → invoke `/forge:build` with the generated spec.
+Only emit COMPLETE, ready build arguments or `--chain build` after both the current owner approval
+and VALID spec gate. If input is still needed, save the draft review and open items; do not label
+the requirements complete or chain. Include the review path/revision in the traceability summary.
 
 ## Safety
 Documents + spec only — no product code, no deploy. Throwaway wireframes are the ONE code-shaped
 artifact allowed: static HTML in the run dir, THROWAWAY-bannered, never copied into the build scope.
 Optional moodboard rasters and their planning manifest/prompts/receipts also stay in the run dir;
 they are direction evidence, never automatically approved product assets.
-**Never proceed on assumptions** — elicit interactively and require the user's explicit sign-off
-before generating. Won't-haves stay out-of-scope. Deployment downstream stays human-gated.
+**Never proceed on unconfirmed assumptions** — expose them immediately, refine the linked stories
+and scenarios, and require the user's explicit sign-off before finalizing. Won't-haves stay
+out-of-scope. Deployment downstream stays human-gated.
 
 ## Summary
-Print: # functional reqs, # NFRs (by dimension), MoSCoW counts, **provenance counts (stated /
+Lead with the plain-language agreed scope, key decisions/exclusions and how the system will be used
+and run. Link the approved client review and SRS. Then print: # functional reqs, # NFRs (by dimension), MoSCoW counts, **provenance counts (stated /
 derived-domain / default-confirmed — zero open)**, must-be checklist disposition tally, # scenarios +
 # wireframes reacted to, generated spec path, validation verdict, and the `/forge:build`
-invocation. List unresolved assumptions as risks.
+invocation. Open assumptions mean the draft is unfinished; list them with the next needed answer,
+never as risks attached to a COMPLETE handoff.

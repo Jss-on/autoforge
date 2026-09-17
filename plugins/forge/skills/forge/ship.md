@@ -29,7 +29,7 @@ Remaining text = description of what to ship.
    - Has Dockerfile / deploy config → deployment
    - Has markdown / content files → content
    - Has package.json version change → package
-2. If still unclear → request_user_input (single batch):
+2. If still unclear → AskUserQuestion (single batch):
    Q1 (What): "What are you shipping?" — code PR, release, deployment, content, docs, package
    Q2 (Target): "Specific target?" — current branch, specific PR, specific path
    Q3 (Mode): "How to ship?" — full workflow, dry-run only, checklist only
@@ -81,7 +81,13 @@ Execute pre-ship tasks:
 - Save the exit status and redacted output of every planned check under the run's `evidence/`.
   Missing credentials, unavailable checks and skipped checks remain blocked/not_run, never pass.
   Check CI for the pinned commit, including required checks still pending; a successful earlier commit is insufficient.
-- For a required security audit, run `scripts/validate-handoff.sh <audit>/handoff.json security --require-pass`.
+- For releases/deployments of Forge-built applications, security readiness is required: validate the
+  current build/feature handoff with `--require-pass`, then recheck deployment-specific controls
+  (TLS, private data/storage, secrets, least privilege, safe logs, backup/restore and alerts) for the
+  intended environment. Record each as a required readiness check with evidence. Confirm the audit
+  commit/content digest and configuration match the artifact being shipped; rerun affected checks
+  after changes. A localhost audit does not establish production readiness.
+- For other required security audits, run `scripts/validate-handoff.sh <audit>/handoff.json security --require-pass`.
   An audit's COMPLETE status only means its report finished. The security gate must pass before shipment.
 - `--force` cannot waive authorization, secrets, failed/pending required checks, artifact identity,
   verification, or rollback safety. Redact secret values instead of copying them into evidence.
@@ -129,6 +135,8 @@ Post-ship verification:
 - Check monitoring for errors
 - If `--monitor N` → watch for N minutes
 - Verify the pinned artifact on the pinned destination and save smoke/health/CI output under `evidence/`.
+  For application deployments, include safe checks of access denial, TLS/cookie/header configuration,
+  private storage and monitoring; use only authorized test accounts/data and the agreed probe scope.
   Every planned verification must pass. Failed or unavailable verification emits ERROR or BLOCKED,
   retains the receipt for diagnosis, and never becomes COMPLETE or chains into another publication.
   A provider accepting a request is not proof that the requested revision is live.

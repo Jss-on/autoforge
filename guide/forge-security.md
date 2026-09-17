@@ -1,6 +1,8 @@
 # /forge:security — The Security Auditor
 
-Comprehensive security audit using STRIDE threat modeling, OWASP Top 10, and 4 red-team adversarial personas. Default: 15 iterations. Every finding requires code evidence (file:line + attack scenario). No theoretical vulnerabilities — confirmed findings only.
+Security audit using STRIDE threat modeling, OWASP ASVS 5.0.0 requirements, OWASP Top 10:2025 risk
+categories and 4 red-team personas. Default: 15 iterations. Findings require concrete evidence
+(file:line + attack scenario); untested risks stay open questions, not confirmed vulnerabilities.
 
 Loads `references/security-checklist.md` for STRIDE/OWASP coverage tracking. Pin the scoped check
 list before execution and report PASS, FAIL or BLOCKED separately from audit completion.
@@ -15,6 +17,45 @@ readable but cannot substitute for current evidence.
 
 ---
 
+## From the client interview to release
+
+Security starts in `forge:requirements`. Forge explains its assumptions in ordinary words and
+lets the owner correct them before turning them into a build plan. Each concern follows the same
+path: **what could go wrong → protection → check → proof**.
+
+For example, for an app that stores customer documents:
+
+| What Forge asks the owner to confirm | Protection | How Forge checks it | Proof shown to the owner |
+|---|---|---|---|
+| “I think each customer should see only their own documents.” | The server checks who owns every document. | Sign in as another customer and try to read, change or download it directly. | The attempt was denied, no document was revealed and no change was saved. |
+| “I think an administrator needs an extra sign-in check, even when recovering an account.” | Require a second factor and protect account recovery. | Try admin access without it; try an old reset link and a revoked session. | Each attempt was rejected. |
+| “I think we must be able to recover yesterday's work if storage fails.” | Keep private backups and agree how much work/time can be lost. | Restore test documents in a separate environment and measure recovery. | Recovered records, elapsed time and any lost changes against the agreed limits. |
+| “I think someone needs to know when suspicious access happens.” | Send a redacted alert to the named responder. | Trigger a harmless test event and check the approved test inbox. | The event arrived without passwords or private document contents. |
+
+These are proposed assumptions, not promises made before testing. The owner also reviews who
+handles private data, third parties, hosting locations, retention/deletion, legal obligations,
+security updates and incident response. Questions requiring legal judgment remain explicit.
+
+`forge:build` and `forge:feature` reuse the approved scenarios and the
+[application security baseline](../claude-plugin/skills/forge/references/security-checklist.md).
+Every area needs an applicability decision with a reason; missing information is not a reason
+to omit a protection. Forge reuses the app's framework and hosting controls, adds negative tests
+through the real app paths, and records results for the candidate commit/environment.
+
+Before either command reports complete/converged, its typed `security` record must pass every
+planned check and have no unresolved Critical/High findings (or the stricter chosen bar).
+A high build score, a scan with no findings, or a completed audit alone cannot satisfy this gate.
+Release also checks the deployment's permissions, secrets, backups and alerts, and reads the
+actual evidence for the candidate being released. Retest after relevant changes. Missing access
+or tools means **blocked**, never “secure.”
+
+The standards are pinned to [ASVS 5.0.0](https://owasp.org/www-project-application-security-verification-standard/)
+and [Top 10:2025](https://owasp.org/Top10/2025/) (checked 2026-09-16). ASVS supplies testable
+requirements; Top 10 groups risks. Forge reports the selected requirements and evidence, not
+OWASP certification, legal compliance, or a guarantee that no vulnerability exists.
+
+---
+
 ## How It Works — 3 Phases
 
 ```
@@ -24,7 +65,7 @@ SETUP (once):
   3. Trust Boundary Map  Browser↔Server, Public↔Auth, User↔Admin
   4. STRIDE Threat Model  6 threat categories × every asset
   5. Attack Surface Map  Entry points, data flows, abuse paths
-  6. Baseline            Run npm/pip/go audit + lint
+  6. Baseline            Pin applicable checks; run supported scans + negative tests
 
 LOOP (15 iterations by default):
   1. Select untested attack vector from threat model
@@ -72,33 +113,36 @@ REPORT:
 | `Iterations: N` | Override default of 15 |
 | `--diff` | Only audit files changed since last audit (fast PR checks) |
 | `--fix` | Auto-fix confirmed Critical/High findings after audit |
-| `--fail-on <severity>` | Exit non-zero for CI/CD gating: `critical`, `high`, `medium` |
+| `--fail-on <severity>` | Audit threshold: `critical`, `high` (default), `medium`, `low`, `info`; build/feature readiness requires high or stricter |
 | `--evals` | Analyze security-audit-results.tsv after completion |
 | `--chain <targets>` | Chain to next command(s) after completion |
 
-Flags combine: `--diff --fix --fail-on critical`
+Flags combine: `--diff --fix --fail-on high`
 
 ---
 
 ## Code Evidence Format
 
-Every finding must include:
+Every finding must include concrete evidence. This is an illustrative defect; replace the
+location, reproduction and results with observed evidence from the application being audited:
 
 ```markdown
-### [CRITICAL] JWT Algorithm Confusion
-- **OWASP:** A07 — Authentication Failures
+### [CRITICAL] Unverified token claims used as identity
+- **OWASP:** A07:2025 — Authentication Failures
 - **STRIDE:** Spoofing
 - **Location:** src/middleware/auth.ts:18
 - **Confidence:** Confirmed
 - **Attack Scenario:**
-  1. Attacker crafts JWT with "alg": "none"
-  2. Server accepts token without signature verification
-  3. Attacker gains access as any user including admins
+  1. Attacker changes the token's user ID to an administrator's ID
+  2. The auth middleware decodes the payload without verifying the signature
+  3. A protected admin request succeeds with the forged identity
 - **Code Evidence:**
-  const decoded = jwt.verify(token, process.env.JWT_SECRET);
-  // no algorithm restriction — accepts alg:none
+  req.user = jwt.decode(token);
+  next(); // decoding is not verification
 - **Mitigation:**
-  jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] })
+  Use the identity provider's verified-token middleware with the intended
+  signature algorithm/key, issuer, audience and expiry checks. Reject invalid
+  tokens; rerun the forged-token request and verify access is denied.
 ```
 
 ---
@@ -135,17 +179,17 @@ Iterations: 5
 Iterations: 15
 ```
 
-### CI/CD gate — fail on Critical
+### CI/CD gate — fail on High or Critical
 
 ```
-/forge:security --fail-on critical
+/forge:security --fail-on high
 Iterations: 10
 ```
 
 ### Combined: delta + fix + gate
 
 ```
-/forge:security --diff --fix --fail-on critical
+/forge:security --diff --fix --fail-on high
 Iterations: 15
 ```
 
@@ -200,25 +244,19 @@ forge/security-{YYMMDD}-{HHMM}/
 ├── owasp-coverage.md           OWASP Top 10 coverage matrix
 ├── dependency-audit.md         npm/pip/go audit results + CVE details
 ├── recommendations.md          Prioritized fix roadmap with code examples
+├── handoff.json                Typed security verdict, checks and finding dispositions
+├── evidence/                   Redacted check outputs and successful retests
 └── security-audit-results.tsv  Machine-readable iteration log
 ```
 
 ---
 
-## OWASP Top 10 Coverage
+## OWASP Coverage
 
-| ID | Category | Key Checks |
-|----|----------|-----------|
-| A01 | Broken Access Control | IDOR, missing auth middleware, privilege escalation |
-| A02 | Cryptographic Failures | Plaintext secrets, weak hashing, missing encryption |
-| A03 | Injection | SQL, NoSQL, command, XSS, template injection |
-| A04 | Insecure Design | Missing rate limits, CSRF gaps, business logic flaws |
-| A05 | Security Misconfiguration | Debug mode on, default credentials, missing headers |
-| A06 | Vulnerable Components | Known CVEs in npm/pip/go dependencies |
-| A07 | Auth Failures | JWT flaws, session fixation, weak password policies |
-| A08 | Data Integrity Failures | Unsigned webhooks, insecure deserialization |
-| A09 | Logging Failures | Missing audit logs, sensitive data in logs |
-| A10 | SSRF | Unvalidated URLs in server-side requests |
+Use the versioned [Top 10:2025 risk map and application security baseline](../claude-plugin/skills/forge/references/security-checklist.md).
+Report executed/planned checks separately from category coverage and readiness. The ASVS
+requirement selection and app-specific misuse scenarios determine what must be tested; marking
+ten categories covered does not mean every relevant protection works.
 
 ---
 
@@ -227,17 +265,17 @@ forge/security-{YYMMDD}-{HHMM}/
 ### security → fix → re-audit → ship
 
 ```
-/forge:security --fail-on high
+/forge:security --fix --fail-on high
 Iterations: 15
 
-/forge:fix --from-debug
-Iterations: 20
-
-/forge:security --diff
+/forge:security --fail-on high
 Iterations: 10
 
 /forge:ship --auto
 ```
+
+`--fix` passes the actual security findings to remediation. Re-audit the pinned release scope
+after fixes; a narrow `--diff` report alone cannot cover unchanged release requirements.
 
 ### predict → security
 
@@ -256,6 +294,6 @@ Goal: Pre-deployment security review
 | Before a major release | `Iterations: 15` |
 | PR review (changed files) | `--diff --iterations 5` |
 | Overnight comprehensive sweep | `Iterations: unlimited` |
-| CI/CD gate | `--fail-on critical --iterations 10` |
+| CI/CD gate | `--fail-on high --iterations 10` |
 | After auth/API changes | `--diff --fix` |
 | Compliance preparation | `Iterations: 20` |

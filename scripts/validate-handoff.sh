@@ -56,9 +56,12 @@ PARSED="$(node -e '
     new Set(v.map(c => c.id)).size === v.length;
   const passed = (v) => checks(v) && v.every(c => c.status === "pass");
   const artifact = (v) => typeof v === "string" && /^(?:git:(?:[a-f0-9]{40}|[a-f0-9]{64})|sha256:[a-f0-9]{64})$/.test(v);
+  const build = ["build", "feature"].includes(s("source"));
+  const completedBuild = build && ["COMPLETE", "CONVERGED"].includes(s("status"));
+  const legacy = /^2\./.test(s("version"));
   const evidence = [];
   let securityValid = false, shipValid = false, passValid = false;
-  if (s("source") === "security") {
+  if (s("source") === "security" || build) {
     const a = j.security;
     const levels = ["critical", "high", "medium", "low", "info"];
     securityValid = object(a) && ["PASS", "FAIL", "BLOCKED"].includes(a.verdict) &&
@@ -70,8 +73,9 @@ PARSED="$(node -e '
       const blocking = a.findings.some(f => f.status !== "resolved" && levels.indexOf(f.severity) <= levels.indexOf(a.fail_on));
       const failed = blocking || a.checks.some(c => c.status === "fail");
       const verdict = failed ? "FAIL" : passed(a.checks) ? "PASS" : "BLOCKED";
-      securityValid = a.verdict === verdict && (a.verdict !== "PASS" || s("status") === "COMPLETE");
-      passValid = securityValid && a.verdict === "PASS";
+      securityValid = a.verdict === verdict && (a.verdict !== "PASS" || build || s("status") === "COMPLETE");
+      passValid = securityValid && a.verdict === "PASS" &&
+        (!build || (completedBuild && a.fail_on !== "critical"));
       evidence.push(...a.checks.map(c => c.evidence), ...a.findings.map(f => f.evidence));
     }
   }
@@ -105,7 +109,7 @@ PARSED="$(node -e '
       if (authorized) evidence.push(a.authorization.evidence);
     }
   }
-  if (process.argv[2] === "--require-pass") {
+  if (process.argv[2] === "--require-pass" || (completedBuild && !legacy)) {
     // Evidence is data under this run directory, never a shell command or a remote URL.
     const path = require("path");
     try {
@@ -119,7 +123,6 @@ PARSED="$(node -e '
       });
     } catch { passValid = false; }
   }
-  const legacy = /^2\./.test(s("version"));
   if (legacy && !("security" in j)) securityValid = true;
   if (legacy && !("ship" in j)) shipValid = true;
   if (legacy) passValid = false;
@@ -211,6 +214,9 @@ case "$SOURCE" in
     if [[ "$STATUS" == "CONVERGED" ]] && ! has_field coverage; then
       err "missing: coverage (a CONVERGED $SOURCE without coverage numbers is unverifiable)"
     fi
+    if [[ "$VERSION" != 2.* && ( "$STATUS" == "COMPLETE" || "$STATUS" == "CONVERGED" ) && "$H_PASS" != "1" ]]; then
+      err "passing security with high-or-stricter threshold and readable in-run evidence required for completed $SOURCE"
+    fi
     ;;
   requirements)
     # generated_spec is the pre-2.3.1 field name — accepted for legacy runs.
@@ -262,7 +268,7 @@ case "$SOURCE" in
 esac
 
 if [[ "$REQUIRE_PASS" == "--require-pass" && "$H_PASS" != "1" ]]; then
-  err "passing security/ship disposition with readable in-run evidence required"
+  err "passing security/ship/build/feature disposition with readable in-run evidence required"
 fi
 
 if [[ "$ERRORS" -gt 0 ]]; then

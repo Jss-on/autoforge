@@ -331,7 +331,8 @@ for mutation in '{"results_tsv":null}' '{"results_tsv":" "}' '{"metric":null}' '
 done
 node -e 'const f=require("fs");const j=JSON.parse(f.readFileSync(process.argv[1],"utf8"));j.metric="fullstack_pass_rate";f.writeFileSync(process.argv[2],JSON.stringify(j));' "$_ht/handoff.json" "$_ht/string-metric.json"
 assert_eq "VALID" "$(bash "$VH" "$_ht/string-metric.json" build)" "validate-handoff: documented metric string stays valid"
-node -e 'const f=require("fs");const j=JSON.parse(f.readFileSync(process.argv[1],"utf8"));j.version="3.1.0";f.writeFileSync(process.argv[2],JSON.stringify(j));' "$_ht/handoff.json" "$_ht/current-coverage.json"
+printf 'security fixture evidence\n' > "$_ht/security.txt"
+node -e 'const f=require("fs");const j=JSON.parse(f.readFileSync(process.argv[1],"utf8"));j.version="3.1.0";j.security={verdict:"PASS",fail_on:"high",checks:[{id:"auth",status:"pass",evidence:"security.txt"}],findings:[]};f.writeFileSync(process.argv[2],JSON.stringify(j));' "$_ht/handoff.json" "$_ht/current-coverage.json"
 VH_CURRENT=$(bash "$VH" "$_ht/current-coverage.json" build 2>/dev/null); VH_CURRENT_CODE=$?
 assert_eq "INVALID/1" "$VH_CURRENT/$VH_CURRENT_CODE" "validate-handoff: current converged build requires design coverage"
 node -e 'const f=require("fs");const j=JSON.parse(f.readFileSync(process.argv[1],"utf8"));j.coverage.design=1;f.writeFileSync(process.argv[1],JSON.stringify(j));' "$_ht/current-coverage.json"

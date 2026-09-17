@@ -3,7 +3,7 @@
 Companion to `/forge:test`. Grounded in primary sources (verified 2026-08): **ISO/IEC/IEEE
 29119** (-1:2022 concepts, -2:2021 processes, -3:2021 documentation, -4:2021 techniques,
 -5:2024 keyword-driven), **ISTQB CTFL v4.0.1** (2024), **ISO/IEC 25010:2023** product-quality model,
-**WCAG 2.2** (2023), **OWASP Top 10:2021/2025 + ASVS 5.0**. The engagement claims **tailored
+**WCAG 2.2** (2023), **OWASP Top 10:2025 + ASVS 5.0.0** (security versions checked 2026-09-16). The engagement claims **tailored
 conformance** to 29119 (tailoring documented in the test plan) — the honest claim for an automated
 engagement; full conformance requires organizational-level artifacts (test policy, organizational
 test practices) that belong to the client, not to one engagement.
@@ -93,12 +93,16 @@ API, tampered client-side prices.
   checklists citing 87 total are stale). Automated axe scan covers ≈30–57%; mandatory manual:
   keyboard-only navigation + tab order, focus visibility (2.4.11) , target size ≥24px (2.5.8),
   contrast 4.5:1 / 3:1, redundant entry (3.3.7), accessible auth (3.3.8), screen-reader spot pass.
-- **Security (QA depth) — OWASP Top 10** (2021 baseline; 2025 final: A01 Broken Access Control now
-  absorbs SSRF, A03 Software Supply Chain Failures, A10 Mishandling of Exceptional Conditions) as the
-  checklist; **ASVS 5.0 L1** as the structured floor (L2 target for sensitive data). QA owns
-  *functional* security: per-role authz matrix, IDOR probes, session expiry, input validation,
-  header/config checks, error-message leakage. Crypto review and pentest depth → `security` command /
-  humans.
+- **Security (QA depth)** — apply `references/security-checklist.md`: versioned **ASVS 5.0.0**
+  requirements (applicable L1 floor; L2 for sensitive data, multi-tenant or privileged workflows)
+  and **OWASP Top 10:2025** risk categories. QA owns functional security through the real app:
+  cross-user/tenant and role denial tests, revocation/recovery, input/mass-assignment checks,
+  secure failure and secret-redaction proof. Include scoped uploads/webhooks/outbound URLs and
+  deployment/restore checks. Record applicability before execution; unavailable checks stay blocked.
+  Crypto review and pentest depth → `security` command / qualified reviewers. Scans or category
+  coverage cannot substitute for the passing typed security evidence required by build/feature.
+  New security findings reopen that evidence. Carry them into the security findings ledger;
+  general QA deferral/sign-off cannot waive an unresolved Critical/High security finding at release.
 - **Performance** — types per ISTQB CT-PT: load, stress, spike, endurance/soak, concurrency,
   capacity. Assert percentiles (p95/p99) + throughput + error rate, never means. The load model must
   contend on physically possible concurrency or the gate is fiction.

@@ -1,5 +1,55 @@
 # Security Audit Checklist
 
+## Application security baseline
+
+Use this baseline from requirements through build, feature, QA and release. Start with the
+owner's plain-language security assumptions and misuse scenarios, then map each applicable
+protection to a requirement ID, implementation, runnable check and saved evidence. Prefer
+existing framework/platform controls and managed identity; do not invent crypto or an auth service.
+
+**Standards checked 2026-09-16:** use [OWASP ASVS 5.0.0](https://owasp.org/www-project-application-security-verification-standard/)
+for verifiable requirements; record selected requirement IDs with their version (`v5.0.0-…`).
+Forge's minimum target is applicable Level 1 requirements; use Level 2 for sensitive data,
+multi-tenant systems or privileged workflows, and assess higher assurance needs explicitly.
+Record the chosen level, applicability and reasons in the existing requirements/security documents.
+Use [OWASP Top 10:2025](https://owasp.org/Top10/2025/) to organize risks, not as a certification or
+an “OWASP pass.” The compact checks below do not establish full ASVS-level conformance.
+
+Before testing, assess **every row** against the actual app, including deployment and integrations.
+Record `applies` or `not applicable` with a concrete reason (for example, “no upload endpoint or
+user-controlled file ingestion”). Do not infer absence from an incomplete brief. Resolve security-
+critical unknowns with the owner before claiming requirements complete. Freeze the applicable check
+list before execution; missing access, tools, implementation or evidence means blocked/not_run,
+not not-applicable. Never drop a failed check or raise the severity threshold to get a pass.
+
+Name the verification environment and phase for each control before execution. Build/feature
+verify the candidate's application and infrastructure controls in the available isolated test or
+staging environment. Record production-only checks as mandatory pending **release readiness**
+checks; they are not verified or not-applicable because build cannot deploy. Release must execute
+them for the actual destination before exposure. Never move a failing build check to a later phase
+to obtain PASS, and never describe a local/staging PASS as production verification.
+
+| Area | Required protection when applicable | Concrete check and proof |
+|---|---|---|
+| Ownership, data and obligations | Name security/incident owners; inventory private data, recipients, countries, retention, deletion, legal obligations and vendor responsibilities. Define roles and allowed actions. | Trace each owner-approved concern to a requirement and test. Verify export/deletion and retention behavior with synthetic data, including backups and downstream copies. Record unresolved legal applicability for qualified review; do not claim compliance from an audit score. |
+| Authentication, sessions and recovery | Use maintained identity controls, secure password hashing if passwords are stored, admin MFA, bounded sessions and revocation. Recovery must not bypass MFA or transfer an account without proof. | Reject forged/expired credentials, invalid token signature/issuer/audience and reused/expired reset links; reject revoked sessions after logout, reset, role removal or account disablement within the specified revocation bound. Test admin login/recovery without the second factor and account-enumeration responses. Record cookie/token settings and results. |
+| Authorization and tenant isolation | Deny by default on the server for every resource/action, including reads, lists, writes, exports, downloads, background jobs and admin routes. Derive ownership/tenant from the verified principal. | With anonymous, user A, user B, another tenant and admin fixtures, call APIs directly, swap IDs and request privileged fields/actions. Verify denied reads reveal no data and denied writes produce no side effect; cover caches, signed links and jobs as well as the UI. |
+| Injection and mass assignment | Validate type/size/range at each trust boundary; parameterize queries, encode output for its context, restrict writable fields and avoid shell evaluation of untrusted input. | Submit SQL/NoSQL/command and stored/reflected XSS payloads where their sinks exist. Send `role`, `owner_id`, `tenant_id` or price fields a user cannot set; verify no execution, privilege change or unauthorized data mutation. |
+| Browser and transport | Enforce HTTPS in deployment; secure cookies (`Secure`, `HttpOnly`, appropriate `SameSite`), suitable CSP/frame controls, explicit CORS origins and CSRF protection for automatically attached credentials. | Check deployed headers/cookies and HTTP redirects. Attempt a cross-site state change and disallowed origin; verify denial without mutation. CORS is not API authorization. Test framing and sensitive response caching. |
+| Uploads and downloads | Restrict allowed file kinds, size and count; inspect content as required by risk; store outside executable/public paths with generated names and access checks. | Try disguised types, oversized files, traversal names and active content; deny unsafe processing and executable serving. Recheck access with another user's download ID or expired link; use harmless fixtures for malware-scanning tests. |
+| Webhooks and external callbacks | Verify provider signature over the required raw bytes before processing, validate event fields, enforce freshness/replay controls and idempotent effects. | Reject invalid signatures, modified bodies and stale messages. Deliver the same valid event twice and concurrently; verify one business effect and no authorization bypass. |
+| Outbound URLs and redirects | Constrain destinations/schemes/ports and network egress; block unapproved loopback, private, link-local and metadata addresses, including IPv6. Disable redirects or revalidate every hop and the actual connection address. | Use controlled local fixtures to try internal/metadata destinations, alternate IP forms, redirects to denied addresses and DNS rebinding. Verify no prohibited connection. Separately reject unapproved browser return/redirect URLs. See [OWASP SSRF guidance](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html). |
+| Abuse and safe failure | Bound login/recovery attempts, requests, uploads, query sizes, queues and costly operations; trust forwarded addresses only from known proxies. Fail closed and preserve transaction integrity on errors. | Exercise configured limits with synthetic traffic; verify rejection, bounded cost and useful alerts. Inject dependency failures/timeouts and retries; verify no fail-open access, partial money/data mutation, duplicate effect or secret-bearing error. |
+| Data stores, backups and deployment | Keep DBs, sensitive object storage, backup files, admin/metrics/debug endpoints private; least-privilege service roles; encrypt sensitive data and backups with managed keys. Separate environments and use supported, hardened runtimes. | Check actual deployed permissions/network rules with unauthorized credentials. Restore a synthetic backup into an isolated environment and meet the agreed recovery time/data-loss targets. Verify migrations/rollback preserve access controls and no production secrets/data enter test environments. |
+| Secrets and software supply chain | Keep secrets out of source, client bundles, images, artifacts and logs; provide rotation/revocation. Use locked dependencies and reviewed immutable CI action/image identities, minimal CI permissions and trusted build artifacts. | Scan source and produced artifacts with supported tools; inspect runtime/transitive dependency results and triage severity. Prove untrusted PR code cannot obtain privileged credentials; bind release evidence to its commit/digest and environment. Missing scanners remain blocked, not clean. |
+| Detection and incident response | Record auth/admin/data-access security events without passwords, tokens or unnecessary personal data; protect log access/integrity and define retention. Name the responder, alert destination and containment/restore process. | Trigger an abuse/admin event, inspect redacted logs and confirm an alert reaches the approved test sink. Exercise session/key revocation and the recovery runbook in an isolated drill; record who handles reporting obligations and future security updates. |
+
+Tests must exercise the real enforcement path, not just an isolated helper or a hidden UI button.
+Save the command, expected/observed result, candidate commit or artifact digest and environment
+with redacted outputs. Use synthetic fixtures and authorized targets; do not probe real customers
+or production for destructive scenarios. Code/config review can supplement executable proof,
+but a clean dependency scan or generated checklist cannot prove application security.
+
 ## STRIDE Threat Categories
 
 | Category | Threat | Look For |
@@ -11,20 +61,20 @@
 | Denial of Service | Availability attacks | Unbounded queries, missing rate limits, regex DoS |
 | Elevation of Privilege | Unauthorized access | Missing authz checks, IDOR, privilege escalation paths |
 
-## OWASP Top 10 (2021) Checklist
+## OWASP Top 10 (2025) Checklist
 
 | # | Category | Key Checks |
 |---|---|---|
-| A01 | Broken Access Control | IDOR, missing function-level authz, CORS misconfiguration, path traversal |
-| A02 | Cryptographic Failures | Plaintext secrets, weak algorithms, missing TLS, hardcoded keys |
-| A03 | Injection | SQL, NoSQL, OS command, LDAP, XSS (stored/reflected/DOM) |
-| A04 | Insecure Design | Missing threat model, no rate limiting, no abuse prevention |
-| A05 | Security Misconfiguration | Default credentials, unnecessary features enabled, missing headers |
-| A06 | Vulnerable Components | Known CVEs in dependencies, outdated packages, unmaintained libs |
-| A07 | Auth Failures | Credential stuffing, brute force, weak passwords, missing MFA |
-| A08 | Data Integrity Failures | Unsigned updates, insecure deserialization, CI/CD poisoning |
-| A09 | Logging Failures | Missing security events, insufficient monitoring, no alerting |
-| A10 | SSRF | Unvalidated URLs, internal service access, cloud metadata exposure |
+| A01 | Broken Access Control | Cross-user/tenant access, function-level authorization, path traversal, SSRF |
+| A02 | Security Misconfiguration | Default credentials, public storage/debug endpoints, unsafe headers/settings |
+| A03 | Software Supply Chain Failures | Vulnerable dependencies, untrusted builds, privileged CI, artifact provenance |
+| A04 | Cryptographic Failures | Plaintext secrets/data, weak crypto, missing TLS, key lifecycle |
+| A05 | Injection | SQL, NoSQL, OS command, LDAP, stored/reflected/DOM XSS |
+| A06 | Insecure Design | Missing abuse model, unsafe recovery, missing limits, insecure business rules |
+| A07 | Authentication Failures | Credential stuffing, weak recovery, missing MFA, session revocation |
+| A08 | Software or Data Integrity Failures | Unverified updates/webhooks, replay, unsafe deserialization |
+| A09 | Security Logging and Alerting Failures | Missing security events/alerts, leaked secrets, unsafe log access |
+| A10 | Mishandling of Exceptional Conditions | Fail-open errors, incomplete rollback, unsafe failure/retry paths |
 
 ## Red-Team Personas
 
@@ -37,10 +87,13 @@
 
 ## Severity Classification
 
+Rate demonstrated impact, exploitability and exposure in this app; a weakness name alone does not
+determine severity. Examples below assume the stated impact has been established.
+
 | Severity | Criteria | Examples |
 |---|---|---|
-| Critical | Remote exploitation, no auth required, data breach | RCE, SQL injection, auth bypass |
-| High | Requires some access, significant impact | Stored XSS, IDOR, privilege escalation |
+| Critical | Broad compromise or severe data/availability impact | Unauthenticated production RCE, full administrative takeover |
+| High | Significant compromise, with or without prior access | Cross-tenant sensitive-data access, exploitable privilege escalation |
 | Medium | Limited impact or requires interaction | CSRF, reflected XSS, info disclosure |
 | Low | Minimal impact, informational | Missing headers, verbose errors |
 | Info | Best practice recommendation | Hardening suggestions, defense in depth |
@@ -55,7 +108,7 @@ Pin a nonempty check list from the actual scope before the audit. Count executed
 toward coverage; blocked/not_run checks remain incomplete. Finding count is informational, never
 a reward or a readiness metric: a clean audit can pass with zero findings.
 
-Use `references/handoff-schema.md` for the typed `security` record. PASS requires COMPLETE,
+Use `references/handoff-schema.md` for the typed `security` record. A security-source PASS requires COMPLETE,
 every planned check passing and zero unresolved findings at/above `fail_on` (default high).
 Accepted risk is still unresolved at that threshold. FAIL and BLOCKED are valid reporting outcomes,
 but cannot pass `validate-handoff.sh <run>/handoff.json security --require-pass` or authorize shipping.
@@ -82,7 +135,7 @@ Executed: 7/12 | Findings: 7 | Disposition: BLOCKED
 Every finding requires:
 1. **Title** — one-line summary
 2. **Severity** — Critical/High/Medium/Low/Info
-3. **OWASP** — A01-A10 category
+3. **OWASP** — versioned category (for example, A01:2025); applicable versioned ASVS requirement IDs
 4. **STRIDE** — S/T/R/I/D/E category
 5. **Evidence** — file:line + attack scenario (no theoretical fluff)
 6. **Reproduction** — steps to trigger

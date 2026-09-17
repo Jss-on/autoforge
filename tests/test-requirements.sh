@@ -117,6 +117,42 @@ proto_has "end-of-shift|rhythms"                  "protocol: periodic rituals pr
 proto_has "criticize an artifact|selection and correction" "protocol: react-not-specify premise"
 proto_has "pronoun test"                          "protocol: pronoun ambiguity check"
 proto_has "authority on their business"           "protocol: client-authority stance"
+
+# Instruction-contract checks only; these do not simulate or prove a live interview.
+# Join wrapped prose so the behavior checks survive ordinary Markdown reflow.
+printf '\n--- owner review: instruction contract ---\n'
+proto_clause() { tr '\r\n' '  ' < "$PROTO" | grep -qiE -- "$1" && pass "$2" || fail "$2 (protocol missing /$1/)"; }
+spec_has 'client-review\.md' "contract: requirements uses the visible client review"
+proto_clause 'first substantive reply.{0,120}stories, and scenarios.{0,60}before the detailed interview' "contract: draft understanding, assumptions, stories and scenarios precede questions"
+proto_clause 'Create .client-review\.md.{0,60}present its contents in the conversation' "contract: the owner sees the review contents"
+proto_clause 'all currently known assumptions, including defaults,.{0,120}missing facts' "contract: assumptions include defaults, exclusions, choices and unknowns"
+proto_clause 'Use short sentences and everyday words throughout the interview' "contract: client language governs the whole interview"
+proto_has 'SC-n.*linked.*US-n.*A-n' "contract: scenarios link stories and assumptions by ID"
+proto_clause 'Keep IDs stable; preserve the old decision in a short change log' "contract: corrections preserve IDs and decision history"
+proto_has 'Numbered steps:.*person does.*system shows/does.*what happens next' "contract: scenarios describe the person/system sequence"
+proto_has 'Normal path, unhappy paths, and recovery/correction path' "contract: scenarios cover failure and recovery"
+proto_clause 'After every owner response, update the same review:.{0,100}what is still open' "contract: each answer updates changes, impacts and open items"
+proto_clause 'When a correction invalidates an earlier confirmation, reopen the affected items.{0,70}changed flows for review again' "contract: changed assumptions reopen affected flows"
+proto_clause 'Never write .confirmed. merely because Forge.{0,30}recommends it' "contract: recommendations remain unconfirmed"
+proto_clause 'Silence, elapsed time,.{0,110}not confirmation or saturation' "contract: unanswered questions never count as approval"
+proto_clause 'In the first playback, cover.{0,40}every area below.{0,100}Each individual concern gets an A-n decision' "contract: first review covers each lifecycle concern"
+proto_has 'Testing & acceptance.*normal and failure examples.*who accepts the result' "contract: acceptance includes failure examples and an owner"
+proto_has 'Environments & deployment.*release approval.*rollback after a bad release' "contract: deployment covers release approval and rollback"
+proto_has 'Security & misuse.*access boundaries.*suspected break-in' "contract: security includes access and incident handling"
+proto_has 'Privacy & compliance.*jurisdictions.*source evidence.*responsible review' "contract: compliance includes jurisdiction and evidence"
+proto_clause 'Record authoritative sources, date checked, and what still needs verification' "contract: compliance research records sources, date and uncertainty"
+proto_clause 'unresolved safety, security or compliance.{0,60}cannot be relabeled .deferred. just to pass sign-off' "contract: deferral cannot hide unresolved obligations"
+proto_has 'Monitoring & support.*alerts.*incident responsibility' "contract: operations includes alerts, support and incident ownership"
+proto_has 'Maintenance & handover.*security patches.*documentation' "contract: maintenance includes patching and handover"
+proto_has 'Retirement & exit.*export/transfer/deletion including backups.*billing' "contract: retirement covers data, access and service shutdown"
+proto_clause 'zero .open. items or unresolved conflicts.{0,60}Capture explicit final approval of the.{0,20}latest review[[:space:]]+revision' "contract: finalization needs resolved items and latest-review approval"
+proto_clause 'any material change reopens the affected review and.{0,30}invalidates final approval until the changed revision is accepted' "contract: approval cannot survive a material unreviewed change"
+proto_clause 'spec validator checks build-input structure;.{0,40}does not prove understanding, legal compliance, lifecycle coverage or owner approval' "contract: structural validation does not prove owner understanding"
+proto_has 'concern.*proposed protection.*how we will check it' "contract: security concerns are explained with protection and proof"
+proto_clause 'Record a measurable NFR and a negative test.{0,70}for each applicable.{0,20}protection' "contract: security promises become requirements and refusal tests"
+spec_has 'Cross-user/tenant checks exercise direct API access' "contract: security tests exercise server boundaries"
+spec_has 'validate-handoff.sh .* build --require-pass' "contract: generated security requirements lead to the completion gate"
+
 for m in "$REPO_ROOT/.claude/skills/forge/references/elicitation-protocol.md" \
          "$REPO_ROOT/.agents/skills/forge/references/elicitation-protocol.md" \
          "$REPO_ROOT/plugins/forge/skills/forge/references/elicitation-protocol.md" \

@@ -11,6 +11,8 @@ let count = 0, sequence = 0;
 const check = id => ({ id, status: 'pass', evidence: 'evidence/check.txt' });
 const core = source => ({ version: '3.1.0', source, timestamp: '2026-09-11T12:00:00Z', status: 'COMPLETE' });
 const audit = () => ({ ...core('security'), security: { verdict: 'PASS', fail_on: 'high', checks: [check('auth')], findings: [] } });
+const buildReport = (source = 'build') => ({ ...core(source), status: 'CONVERGED', results_tsv: 'build-results.tsv',
+  metric: { name: 'fullstack_pass_rate', value: 1 }, config: {}, coverage: { requirements: 1, design: 1 }, security: audit().security });
 const digest = 'sha256:' + '2'.repeat(64);
 const delivery = () => ({ ...core('ship'), ship: { action: 'ship', target: 'repo:fixture/env:staging', artifact: digest,
   readiness: [check('tests')], verification: [check('smoke')],
@@ -50,6 +52,46 @@ test('blocked audit is representable and fails readiness gate', () => { const j 
 test('resolved finding permits PASS after retest', () => { const j = audit(); j.security.findings = [{ id: 'F1', severity: 'critical', status: 'resolved', evidence: 'evidence/check.txt' }]; expect(j, 0, true); });
 test('finding below chosen threshold remains reportable', () => { const j = audit(); j.security.findings = [{ id: 'F1', severity: 'medium', status: 'open', evidence: 'evidence/check.txt' }]; expect(j, 0, true); });
 test('stricter threshold blocks the same finding', () => { const j = audit(); j.security.fail_on = 'medium'; j.security.findings = [{ id: 'F1', severity: 'medium', status: 'open', evidence: 'evidence/check.txt' }]; expect(j, 1); });
+for (const source of ['build', 'feature']) {
+  for (const status of ['COMPLETE', 'CONVERGED']) {
+    test(source + '/' + status + ' requires passing security even without readiness flag', () => {
+      const j = buildReport(source); j.status = status; expect(j, 0); expect(j, 0, true);
+      delete j.security; expect(j, 1);
+    });
+  }
+  for (const [name, change] of [
+    ['empty planned checks', j => { j.security.checks = []; }],
+    ['critical-only threshold', j => { j.security.fail_on = 'critical'; }],
+    ['failed audit', j => { j.security.verdict = 'FAIL'; j.security.checks[0].status = 'fail'; }],
+    ['unrun audit', j => { j.security.verdict = 'BLOCKED'; j.security.checks[0].status = 'not_run'; }],
+    ['skipped hardening check', j => { j.security.checks[0].status = 'skip'; }],
+    ['missing evidence reference', j => { delete j.security.checks[0].evidence; }],
+    ['unresolved high', j => { j.security.verdict = 'FAIL'; j.security.findings = [{ id: 'F1', severity: 'high', status: 'open', evidence: 'evidence/check.txt' }]; }],
+    ['accepted high', j => { j.security.verdict = 'FAIL'; j.security.findings = [{ id: 'F1', severity: 'high', status: 'accepted', evidence: 'evidence/check.txt' }]; }]
+  ]) test(source + ' completion rejects ' + name, () => { const j = buildReport(source); change(j); expect(j, 1); });
+  for (const threshold of ['medium', 'low', 'info']) test(source + ' permits stricter threshold ' + threshold, () => {
+    const j = buildReport(source); j.security.fail_on = threshold; expect(j, 0, true);
+  });
+  for (const status of ['BOUNDED', 'BLOCKED', 'ERROR']) test(source + '/' + status + ' stays readable without security, never ready', () => {
+    const j = buildReport(source); j.status = status; delete j.security; expect(j, 0); expect(j, 1, true);
+  });
+  test(source + ' cannot call incomplete work ready even with a passing audit', () => {
+    const j = buildReport(source); j.status = 'BOUNDED'; expect(j, 0); expect(j, 1, true);
+  });
+  test(source + ' passing security cannot bypass missing or incomplete coverage', () => {
+    const j = buildReport(source); delete j.coverage; expect(j, 1, true);
+    j.coverage = { requirements: 1, design: 0.5 }; expect(j, 1, true);
+  });
+  test('legacy ' + source + ' stays readable but cannot bypass readiness', () => {
+    const j = buildReport(source); j.version = '2.3.1'; delete j.security; expect(j, 0); expect(j, 1, true);
+    j.security = audit().security; expect(j, 1, true);
+  });
+  for (const [name, change] of [
+    ['missing', dir => fs.unlinkSync(path.join(dir, 'evidence/check.txt'))],
+    ['empty', dir => fs.writeFileSync(path.join(dir, 'evidence/check.txt'), '')],
+    ['directory', dir => { fs.unlinkSync(path.join(dir, 'evidence/check.txt')); fs.mkdirSync(path.join(dir, 'evidence/check.txt')); }]
+  ]) test(source + ' completion rejects ' + name + ' evidence without readiness flag', () => expect(buildReport(source), 1, false, change));
+}
 test('verified bound shipment passes', () => expect(delivery(), 0, true));
 for (const [name, change] of [
   ['core-only ship cannot complete', j => { delete j.ship; }],
@@ -93,12 +135,14 @@ for (const make of [audit, delivery]) {
     ['directory', dir => { fs.unlinkSync(path.join(dir, 'evidence/check.txt')); fs.mkdirSync(path.join(dir, 'evidence/check.txt')); }]
   ]) test(make().source + ' gate rejects ' + name + ' evidence', () => expect(make(), 1, true, change));
 }
+for (const make of [audit, buildReport]) {
 for (const p of ['../outside.txt', '/tmp/outside.txt', 'C:/outside.txt', 'https://example.test/proof', 'evidence/../check.txt'])
-  test('gate rejects evidence path ' + p, () => { const j = audit(); j.security.checks[0].evidence = p; expect(j, 1, true); });
-test('gate rejects symlink escape', () => { const j = audit(); j.security.checks[0].evidence = 'outside/proof.txt'; expect(j, 1, true, dir => {
+  test(make().source + ' gate rejects evidence path ' + p, () => { const j = make(); j.security.checks[0].evidence = p; expect(j, 1, j.source === 'security'); });
+test(make().source + ' gate rejects symlink escape', () => { const j = make(); j.security.checks[0].evidence = 'outside/proof.txt'; expect(j, 1, j.source === 'security', dir => {
   const outside = path.join(temp, 'outside'); fs.mkdirSync(outside, { recursive: true }); fs.writeFileSync(path.join(outside, 'proof.txt'), 'outside');
   fs.symlinkSync(outside, path.join(dir, 'outside'), process.platform === 'win32' ? 'junction' : 'dir');
 }); });
+}
 for (const source of ['ship', 'security']) test('legacy ' + source + ' is readable but not readiness evidence', () => { const j = { ...core(source), version: '2.3.1' }; expect(j, 0); expect(j, 1, true); });
 for (const source of ['loop', 'forge', 'debug', 'plan']) test('existing ' + source + ' contract stays valid', () => expect(core(source), 0));
 for (const tree of ['.claude', 'claude-plugin', '.agents', '.opencode', 'plugins/forge'])

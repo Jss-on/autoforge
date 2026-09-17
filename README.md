@@ -181,7 +181,7 @@ See [guide/hooks.md](guide/hooks.md) for full reference.
 |---------|--------------|--------------------|
 | `/forge` | **Classic:** Core iterate loop: modify → verify → keep/discard · **Orchestrator:** free-form goal → auto-select pipeline → loop until predicate met | 25 / goal-bounded |
 | `/forge:plan` | Convert goal into validated config | one-shot |
-| `/forge:requirements` | Interview client (no assumptions) → validated build spec via a mechanical gate | one-shot |
+| `/forge:requirements` | Review assumptions, stories and scenarios with the client → approved requirements → validated build spec | one-shot |
 | `/forge:build` | Build greenfield full-stack software via the full SDLC to passing acceptance (6 weighted dims, logic-gated) | 40 |
 | `/forge:feature` | Add a feature to existing software — delta acceptance + hard non-regression ratchet | 25 |
 | `/forge:test` | Full QA engagement on existing software — risk-based plan, RTM, formal test design, execution + defect ledger, exit-criteria verdict (ISO 29119/ISTQB-aligned) | 20 |
@@ -296,17 +296,19 @@ state machines). While **any** `logic` golden-vector row fails, the headline sco
 mask broken domain logic. Convergence additionally requires `REQ_COVERAGE == 1.00` and
 `DESIGN_COVERAGE == 1.00` (`score-build.sh coverage`) and the iteration bound respected.
 
-### Step 1 — Requirements (no assumptions — and no reliance on the client knowing everything)
+### Step 1 — Requirements (show the assumptions, then agree the picture)
 
 ```
 /forge:requirements Brief: "<what the client wants>"
 ```
-Researches the domain first, then interviews you back-and-forth until requirements saturate — via the
-latent-intent elicitation protocol: day-in-the-life walkthroughs, the must-be checklist, throwaway
-wireframes you react to, an ambiguity audit, and a provenance ledger so every derived requirement is
-read back for confirmation. Classifies functional vs non-functional, maps NFRs to the six dimensions,
-prioritizes with MoSCoW, and emits a validated `evals/fullstack/<name>.spec.yaml`. A **mechanical
-gate** releases the spec only when all six dimensions are present + weighted.
+First shows what Forge understands, all currently known assumptions across the system's whole life,
+and draft user stories with step-by-step scenarios — in simple words. You correct a living
+`client-review.md`; Forge updates the linked assumptions, stories and scenarios and shows what
+changed each round. The review covers daily use, failures, recovery, deployment, security,
+compliance, support and retirement. Nothing becomes agreed scope through silence. After you approve
+the final playback, Forge finalizes the technical requirements and generates
+`evals/fullstack/<name>.spec.yaml`; the mechanical validation gate must pass before build starts.
+See the [requirements guide](guide/forge-requirements.md) for an example.
 
 ### Step 2 — Build (greenfield)
 
@@ -318,6 +320,10 @@ requirements (SRS + RTM) → design (HLD/LLD + a `DESIGN.md`) → implement
 (TDD) → debug (root-cause) → comprehensive test → deploy (human-gated) → operate/maintain (runbook +
 change-request path). One atomic slice per iteration,
 `git commit experiment:` before verify, keep if `pass_rate` rises + guard green else auto-revert.
+Security is a separate completion gate: current build and feature handoffs require all planned
+security checks to pass, saved evidence, and no unresolved Critical/High findings. A lower target
+score cannot waive it. Client security scenarios become negative tests; release checks also cover
+the intended production configuration. See the [security guide](guide/forge-security.md).
 
 ### Step 3 — Feature (brownfield — the ratchet)
 
@@ -369,7 +375,7 @@ A bare goal routes itself: `/forge build me a notes app` → orchestrator classi
 ### Worked example
 
 ```
-# 1. Requirements → validated spec (interactive, no assumptions)
+# 1. Review assumptions + stories → approve requirements → validated spec
 /forge:requirements Brief: "personal money tracker, offline"
 
 # 2. Build the app to passing acceptance
@@ -552,34 +558,40 @@ Walks through 5 steps: capture goal → define scope → define metric → defin
 
 ## /forge:requirements — Requirements Engineering
 
-Turn a client brief into a validated build spec — **no assumptions, and no reliance on the client
-knowing what they want.** A raw interview captures only *stated* intent; the expensive misses are the
-must-be needs clients assume ("obviously it has refunds"), the taste they cannot verbalize, and the
-domain rules neither party said out loud. The command runs `references/elicitation-protocol.md`
-against all three:
+Turn a client brief into agreed requirements by **showing the client Forge's understanding before
+asking detailed questions**. Like a diagnosis, the first picture is something to correct: what the
+client is trying to achieve, what Forge thinks is true, and how people would use the system.
 
-- **Domain recon before the first question** — category table-stakes, glossary, the statutory layer
-  with citations; derived items enter the interview as one-click confirmations, not open questions.
-- **Day-in-the-life walkthroughs** per role — the unhappy paths, the end-of-shift/month rituals, the
-  paper trail. Each becomes a numbered scenario → SRS use case → e2e acceptance journey.
-- **Must-be (Kano) checklist** dispositioned item by item — password reset, permissions, correction
-  paths, exports, audit trail, backup, import, offline… silently absent = protocol violation.
-- **Artifact-reaction loop for design** — taste by selection and correction, never adjectives:
-  reference triage plus throwaway HTML wireframes screenshotted via Playwright, reactions per screen.
-- **Ambiguity audit** — adjective→number (with a load model), rule→boundary, workflow→failure path,
-  mutation→correction path, pronoun test.
-- **Provenance ledger + client-language playback** — every requirement tagged `stated` /
-  `derived-domain` / `default-confirmed`; sign-off happens on re-told scenarios, screenshots and
-  worked-example tables, never on the SRS document itself.
+- **A living client review:** `client-review.md` separates what the client said from assumptions
+  and unknowns. Assumptions have stable `A-` IDs, their source or reason, their consequence if wrong,
+  and a visible confirmation state. Suggested defaults stay proposals until accepted.
+- **Stories and scenarios from the start:** `US-` stories explain who needs what and why; `SC-`
+  scenarios show the steps, system response and expected result. Cover success, failures,
+  correcting mistakes, and operating the service. Use simple words, screenshots and worked
+  examples that the client can react to.
+- **The whole system life:** review goals/scope/cost; users/access; screens/accessibility;
+  rules/data/integrations; testing/acceptance; environments/deployment/rollback;
+  security/privacy/compliance; monitoring/support/backups/recovery; and maintenance/handover/
+  retirement. Compliance questions include location, evidence and a responsible reviewer;
+  unverified obligations stay open.
+- **Correction rounds:** the client can say “that is wrong” or explain their day in their own
+  words. Forge updates the linked assumptions, stories and scenarios, shows changes each round,
+  and asks a few focused follow-ups. Silence is never confirmation; missing information stays
+  visible. Exclusions and not-applicable areas need a recorded reason.
+- **Final playback before the SRS is finalized:** approve the complete client-language review,
+  including assumptions and exclusions. New decisions or changed
+  meaning reopen the affected review and approval. The approved `A-` / `US-` / `SC-` trail continues
+  into requirements and acceptance checks.
 
 ```
 /forge:requirements Brief: "internal expense tracker with SSO" --chain build
 ```
 
-Then: classify functional vs non-functional, map NFRs to the six build dimensions, prioritize with
-MoSCoW, emit + mechanically validate `evals/fullstack/<name>.spec.yaml`. The **mechanical** `validate`
-gate (all six dimensions present + weighted, golden `logic` rows for computational domains) releases
-the spec — never a subjective "looks complete".
+After approval, Forge classifies functional and non-functional requirements, maps them to the build
+dimensions, sets priorities, and emits `evals/fullstack/<name>.spec.yaml`. The **mechanical**
+`validate` gate checks the required weighted dimensions and golden `logic` rows for computational
+domains before handoff. `--chain build` waits for both client approval and a valid spec.
+See the [requirements guide](guide/forge-requirements.md) for a booking example and asset planning.
 
 ---
 
@@ -935,7 +947,7 @@ handoff's `security.verdict` for readiness:
 | `FAIL` | A check failed or an unresolved finding meets the threshold. | Repair, retest, and re-audit. |
 | `BLOCKED` | Planned checks are incomplete, unavailable, or not run. | Restore the missing tool/access/evidence and rerun. |
 
-A top-level `status: COMPLETE` means the report finished; that report can still have a `FAIL`
+A security audit's top-level `status: COMPLETE` means the report finished; it can still have a `FAIL`
 verdict. Zero findings alone is also insufficient if planned checks could not run.
 
 Use the validator as the shell/CI gate after the agent has produced the handoff. Set `AUDIT_RUN`
@@ -951,6 +963,13 @@ The first command validates the report's structure. The second must exit zero be
 claim or downstream work other than already-authorized remediation. Evidence must be nonempty
 regular files inside that run directory; unavailable checks cannot be recorded as passing.
 The validator checks the recorded results and evidence files; it does not perform the audit.
+
+For current `build` and `feature` handoffs, both `COMPLETE` and `CONVERGED` require the same typed
+`security` record, a High-or-stricter threshold and evidence inside their own run directory. This
+gate runs even without `--require-pass`; failed, skipped or unavailable checks block completion.
+Historical handoffs remain readable, but cannot pass the readiness flag. The audit must cover the
+current candidate and applicable security requirements; the gate cannot prove a reported test result
+is true. Release consumers inspect the evidence and recheck the artifact and deployment settings.
 
 Full audit protocol: [Security guide](guide/forge-security.md).
 
