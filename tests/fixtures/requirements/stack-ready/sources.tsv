@@ -1,0 +1,11 @@
+id	tier	type	year	title	venue	locator	depth	status
+S-01	T1	standard	2024	SPDX License List	SPDX / ISO 5962	url:https://spdx.org/licenses/	full	read
+S-02	T2	official	2026	OSV vulnerability records for fastify	OSV.dev	url:https://osv.dev/list?ecosystem=npm&q=fastify	full	read
+S-03	T2	official	2026	OSV vulnerability records for next	OSV.dev	url:https://osv.dev/list?ecosystem=npm&q=next	full	read
+S-04	T3	vendor-doc	2026	Fastify long-term support policy	fastify.dev	url:https://fastify.dev/docs/latest/Reference/LTS/	full	read
+S-05	T3	vendor-doc	2026	Next.js app router docs	nextjs.org	url:https://nextjs.org/docs/app	full	read
+S-06	T3	benchmark	2025	TechEmpower Framework Benchmarks round 23 — FROZEN snapshot (repo archived 2026-03-24), synthetic micro-benchmark, Stripped entries excluded	techempower.com	url:https://www.techempower.com/benchmarks/	full	read
+S-07	T3	reference	2026	Node.js release schedule	endoflife.date	url:https://endoflife.date/nodejs	full	read
+S-08	T3	survey	2025	Stack Overflow Developer Survey 2025 — web frameworks	stackoverflow.co	url:https://survey.stackoverflow.co/2025/	full	read
+S-09	T4	forum	2025	Migrating off framework X — forum thread	forum.example	url:https://forum.example/t/migrating-off-x	secondary	read
+S-10	T3	vendor-doc	2026	Django release process and LTS	djangoproject.com	url:https://www.djangoproject.com/download/	full	read

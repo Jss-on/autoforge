@@ -200,7 +200,9 @@ Extract from $ARGUMENTS:
 - `Spec:` / `--spec` — eval spec file/glob (`evals/fullstack/*.spec.yaml`). Declares stack + acceptance.
 - `Goal:` / `--goal` — free-text product description when no spec file is given (a PRD is derived).
 - `Scope:` / `--scope` — directory the build may write into (default: a fresh subdir, never the skill repo).
-- `Stack:` / `--stack` — stack hint (e.g. `node+postgres+react`).
+- `Stack:` / `--stack` — stack hint (e.g. `node+postgres+react`). A **candidate carrying a
+  constraint, never a bypass** of the evidence-based selection (`references/stack-selection-protocol.md`
+  §1): it enters the option set, gets scored against real alternatives, and the owner approves.
 - `Design:` / `--design` — DESIGN.md source: a catalog slug (getdesign.md / `awesome-design-md`,
   e.g. `linear`), a file path, a URL — a **Figma URL** routes through the design bridge
   (integrations-protocol §2: variables/components/frames → DESIGN.md) — or `generate`. Default:
@@ -228,7 +230,13 @@ do not silently restore excluded features. Explain any actual conflict and resol
 
 If neither Spec nor Goal is provided, ask only "What should I build?", then use the requirements
 route above. Stack, design and launch choices belong in that visible review.
-If a spec file is provided → derive everything from it and skip setup.
+If a spec file is provided → derive everything from it and skip setup — **except the stack**: run
+`REQUIRE_STACK_DECISION=1 scripts/score-requirements.sh validate <spec>` on intake. A spec whose
+`stack.decision` is missing, BLOCKED (no evidence, approval missing or stale) or still marked
+`NEEDS CLARIFICATION` has an **unjustified stack**: run `references/stack-selection-protocol.md`
+(research → knock-outs → cited matrix → recommendation → owner approval via AskUserQuestion) in
+`<run-dir>/stack/` until `STACK_DECISION: READY`, write `decision:` into the spec, and only then
+continue. A hand-written `stack:` block is a hint, not a decision.
 
 ## Precondition Checks
 
@@ -265,12 +273,24 @@ A lightweight **go/no-go spike**, not a study (the agile adaptation of the Feasi
 Business Case): prove the build can succeed in THIS environment before iterations are committed.
 - **Technical** — the toolchain boots: runtime + package manager resolve, DB/docker reachable (or a
   fallback picked), a hello-world of the target stack compiles and runs.
+- **Stack confirmation (the decision's *Confirmation* section — protocol §9)** — the approved
+  `stack-decision.md` pre-registered spike hypotheses (load model from the usage-model `A-n`,
+  thresholds from the performance/functional-fit drivers). Run them now on the scaffold: identical
+  hardware and load model for every candidate still in play, thresholds fixed **before** the run,
+  ≥5 runs reported as a distribution (p50/p95), the harness's proficiency asymmetry disclosed (it
+  writes its favourite stack's spike better). Append the measured results to the record and commit
+  it to the output repo as `docs/adr/0001-tech-stack.md` (the spec's `stack.adr`). A miss against
+  a pre-registered threshold **supersedes the decision**: stop, show the numbers, AskUserQuestion
+  (approve anyway as accepted risk · switch to the runner-up · re-scope) — never pin a stack that
+  failed its own test, never adjust the threshold to fit the result.
 - **Operational** — ports free, throwaway dev creds obtainable via env, Playwright available for e2e.
 - **Schedule** — acceptance-row estimate vs the iteration budget (a 200-row rule matrix does not fit
   10 iterations); surface the mismatch now, not at iteration 39.
-- **Legal/licensing** — direct dependencies carry permissive licenses (no copyleft surprise).
-**Gate:** verdict recorded in `charter.md` as **GO** (chosen stack pinned) or **NO-GO** →
-AskUserQuestion to re-scope/re-stack. Never enter Phase 3 on an unproven toolchain.
+- **Legal/licensing** — direct dependencies carry permissive licenses (no copyleft surprise) — the
+  decision's licence knock-out re-checked against the actual lockfile (SPDX ids).
+**Gate:** verdict recorded in `charter.md` as **GO** (stack pinned = the approved decision with its
+spike results appended, ADR committed) or **NO-GO** → AskUserQuestion to re-scope/re-stack (a new
+record, owner re-approval). Never enter Phase 3 on an unproven toolchain or an unapproved stack.
 
 ## Phase 3 — Requirements Analysis
 Turn the Spec/Goal into a concrete **SRS/PRD** + an enumerated **acceptance** list (every assertion tagged
@@ -294,7 +314,8 @@ nothing = gate FAIL). Baseline metric:
 ## Phase 4 — Design (HLD + LLD + UI/UX + data)
 Design the system **and** the interface before coding:
 - **HLD (high-level design)** — modules, data model, API contract, data flow, dependency boundaries
-  (repository pattern), tech stack.
+  (repository pattern), tech stack = the approved decision record (`docs/adr/0001-tech-stack.md`),
+  cited not re-argued; every new major dependency is checked against the record's rejected options.
 - **LLD — domain model (logic-heavy apps)** — identify bounded contexts and a **pure, side-effect-free
   calculation engine** (tax / contribution / ledger / pricing rules) separate from the app shell.
   Write the **rule matrix** — tables, formulas, multipliers, caps — with source citations; this is
@@ -620,7 +641,7 @@ living — never heavyweight documents for their own sake.
 | # | Phase | Reuses | Key deliverables | Exit gate (must all pass) |
 |---|---|---|---|---|
 | 1 | **Planning / Initiation** | `plan`, `predict` | **Project charter** (`charter.md`): vision, in/out scope, stakeholders/ICP, iteration budget, risk register | charter committed with objectives, in/out scope, iteration budget, ≥3 risks + mitigations; build target dir resolved (never the skill repo) |
-| 2 | **Feasibility** | — | **Feasibility verdict** in `charter.md` (spike results: technical, operational, schedule, licensing) | toolchain spike boots (runtime + DB/docker + Playwright); acceptance-size vs iteration budget sane; licenses permissive; verdict **GO** with stack pinned (NO-GO → re-scope with the user) |
+| 2 | **Feasibility** | `requirements` Phase 2b (stack decision) | **Feasibility verdict** in `charter.md` (spike results: technical, **stack confirmation**, operational, schedule, licensing) + the **stack ADR** (`docs/adr/0001-tech-stack.md`) | toolchain spike boots (runtime + DB/docker + Playwright); the approved `stack-decision.md` is `STACK_DECISION: READY` (evidence ledgers valid, owner approval pinned) and its pre-registered spike thresholds are met (≥5 runs, results appended; a miss supersedes the decision → owner re-approval); acceptance-size vs iteration budget sane; licenses permissive; verdict **GO** with stack pinned (NO-GO → re-scope with the user) |
 | 3 | **Requirements Analysis** | `probe`, `predict` | **SRS** (`requirements.md`, IEEE 830 / ISO 29148-shaped) + **RTM** (the `traces` column + coverage report) | every requirement carries a stable `FR-`/`NFR-` ID; **for logic-heavy domains, logic diagrams (ER + state machines + sequence + decision flowcharts) with every state transition / decision branch mapped to a golden vector**; every acceptance assertion enumerated + tagged `dimension`+`weight`+`traces`; `REQ_COVERAGE == 1.00` (every ID traced, no orphan assertion); baseline `build-results.tsv` seeded (`fail`) → pass-rate `0.00` |
 | 4 | **Design** | `design system`, `reason` | **HLD** (architecture) + **LLD** (domain engine + rule matrix, diagrams) + **DB schema** + **UI/UX system** (`DESIGN.md` via the direction protocol + tokens + wireframes) | `DESIGN.md` (architecture: modules, data model, API contract; **for logic-heavy domains, a pure calculation engine + the rule matrix with citations**) **and** UI/UX design system (visitor mode per surface; machine-readable tokens: type, color+contrast pairs, spacing, radius, motion, component states; `DESIGN_LINT: VALID`; wireframes) committed; `DESIGN_COVERAGE == 1.00` (every token group incl. `design:floor` traced by ≥1 `ux` assertion) |
 | 5 | **Implementation** | TDD ladder | **Source code + build artifacts + CI** (lint, tests, container) | domain engine built first and **every `logic` golden case green** (incl one end-to-end case proving it is wired in); each accepted slice turns a red assertion green; guard green; no green→red regression; the app is wired to a **real persisted datastore** (UI→API→DB) with full CRUD + accounts + settings + onboarding (**fresh account starts empty**), not a seed-only/in-memory demo; headline pass-rate stays capped at 0.50 until the `logic` gate clears |

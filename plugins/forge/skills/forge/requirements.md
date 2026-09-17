@@ -7,8 +7,8 @@ argument-hint: "[Brief: <text|file>] [Name: <slug>] [Stack: <hint>] [--chain bui
 EXECUTE IMMEDIATELY.
 
 The front end of the SDLC. Takes a client's brief, transcript or doc and runs
-**understand → show assumptions and stories → correct together → specify → validate**,
-then **generates the arguments for `/forge:build`**: a validated
+**understand → show assumptions and stories → correct together → select the stack on evidence →
+specify → validate**, then **generates the arguments for `/forge:build`**: a validated
 `evals/fullstack/<name>.spec.yaml` plus the exact build invocation. Output is documents and a spec,
 never product code (throwaway elicitation mockups in the run dir are instruments, not product).
 
@@ -31,7 +31,9 @@ The validator checks spec structure; it cannot establish owner understanding or 
 
 - `Brief:` / `--brief` — the client requirements (inline text or a file path).
 - `Name:` / `--name` — slug for the project + generated spec (derived from the brief if omitted).
-- `Stack:` / `--stack` — preferred stack (asked/derived if omitted).
+- `Stack:` / `--stack` — a preferred stack. It is a **candidate carrying a constraint,
+  never a bypass**: Phase 2b still researches real alternatives with evidence and the owner still approves
+  (`references/stack-selection-protocol.md` §1). "This is decided" → the owner-mandated path.
 - `Assets: N|off` — attempt budget for scoped generation (default 12); inherit it into the build spec.
 - `--chain build` — after generating + validating the spec, invoke `/forge:build` with it.
 
@@ -179,6 +181,65 @@ retain unchanged confirmations. Preserve decision history and the review revisio
   exactly the gaps a later `test` engagement would otherwise file as open SRS questions.
 - **Prioritize with MoSCoW** (Must / Should / Could / Won't). "Won't" becomes out-of-scope.
 
+## Phase 2b — Technology selection (evidence-based, owner-approved)
+The stack is the build's biggest one-way door and it is **never chosen silently** — not from a
+`Stack:` hint, not from the model's habit. Run `references/stack-selection-protocol.md` end to end
+in `forge/requirements-{YYMMDD}-{HHMM}/stack/`; its release is decided by
+`scripts/score-requirements.sh stack <dir>` → `STACK_DECISION: READY`, never by "looks reasonable".
+- **Elicit first (protocol §2):** the usage model (requests/day, peak concurrency, storage, egress,
+  region, growth), support horizon in years, the delivering **and** receiving/ops teams' skills,
+  licence policy, compliance regime + data residency, existing hosting/systems the stack must fit,
+  and the monthly budget ceiling — as `A-n` decisions in `client-review.md`. Refuse to score while
+  any is open; a `?` cell is a work item, never a guess.
+- **Candidates (protocol §3):** 3–5 whole stacks pinned to majors — the boring default for the
+  archetype is always in and is the datum, an owner hint/mandate is always in, ≥1 comes from a
+  different paradigm, no dummy alternatives, ≤1 innovation token per candidate.
+- **Research the way `research` does (protocol §5):** `sources.tsv` / `claims.tsv` / `queries.tsv` /
+  `evidence/S-*.md` with tiers, accessed dates and biases — deps.dev + OSV/GHSA (licence, advisories,
+  Scorecard), endoflife.date (LTS vs horizon), registry stats (ordinal only), surveys (self-selected,
+  context only), official release policies, price APIs under the owner's usage model, relicensing
+  and governance history; vendor "X vs Y" pages are T4 and never a cell's sole source; TechEmpower
+  is a frozen snapshot (archived 2026-03) at `low` only. Run the **disconfirmation pass per
+  candidate** and log empty results too. Stop when every driver is answered for every candidate or
+  two query rounds add nothing (scarcity note per gap).
+- **Knock-out gates, then drivers (protocol §4):** licence policy · EOL outside the horizon ·
+  maintained/not archived · zero unpatched reviewed advisories for the pinned major · platform,
+  accessibility and compliance constraints — pass/fail before any scoring. Drivers = one refutable
+  scenario per NFR-shaped concern (stimulus → response → threshold), weight H/M/L → 3/2/1 **locked as
+  an `A-n` before scoring**, `traces` to NFR/FR/A/C ids, ISO 25010 families covered or `N-A-because`,
+  plus reuse coverage and the harness's own delivery record / AI-proficiency (weighted, never a k.o.).
+- **Score by Pugh convergence, not a bare weighted sum (protocol §6):** anchors fixed per driver,
+  never relative to the other options; every cell cites `[S-nn]`; the weighted total is a labelled
+  secondary view; run the sensitivity sweep (±1 weight · drop-a-driver · swap datum · unweighted) →
+  `Robustness: robust | fragile — <what flips it>`; declare `Confidence: high | moderate | low`.
+- **Write `stack-decision.md` (protocol §7 — MADR-shaped):** Y-statement, context, knock-out table,
+  drivers, options, cited matrix, decision outcome, **pros and cons of the options (why not the
+  others)**, consequences with `- Bad:`/`- Risk:` lines + mitigations + revisit triggers + exit path
+  per one-way component, failure-mode checks (résumé-driven · microservice/polyglot envy ·
+  innovation tokens · rewrite trap · LLM self-preference disclosed), disconfirmation log,
+  **Confirmation** = the pre-registered spike build Phase 2 will run (hypotheses, load model,
+  thresholds, ≥5 runs), and the "no good evidence exists for …" list the owner decides on judgment.
+- **Owner approval (protocol §8) — the playback, in the client's words:** the Y-statement, the top-3
+  drivers each with its evidence, the accepted downsides and risks, what the runner-up would give
+  and cost, the money/hosting consequences under their usage model, reversibility and exit path,
+  the robustness verdict in plain words, the judgment-call list, and the weights they may change.
+  One `AskUserQuestion`: **approve** (`Approval: approved by owner — rev N (A-n), date,
+  ledger:<hash>`, provenance `default-confirmed`) · **revise weights/criteria** (re-run, replay) ·
+  **need more evidence / spike first** (`?` work item, replay) · **mandate another stack** → the
+  owner-mandated path: same gates and matrix, the 18F questions answered, every negative
+  consequence recorded, a one-paragraph premortem, knock-out failures recorded as accepted risk in
+  the owner's words, `Approval: owner-mandated (A-n, date) … ledger:<hash>`, provenance `stated`.
+  The approval **pins the ledger hash** (`cat sources.tsv claims.tsv | tr -d '\r' | sha256sum | cut -c1-16`):
+  evidence edited afterwards makes the gate BLOCKED until the playback runs again. Two-way-door
+  components (UI kit, test runner, linter) get one Y-statement each and one bulk `A-n`.
+- **Reopen on change:** a material change to a driver's NFR/constraint, a candidate added or
+  removed, a changed weight, an edited ledger or a failed build spike supersedes the record
+  (`Status: superseded by …`, a new record, playback again). Phase 4 sign-off and Phase 5 spec
+  generation wait while the gate is not READY.
+**Gate:** `STACK_DECISION: READY` (ledgers valid · ≥3 options · ≥3 traced weighted drivers · every
+cell cited, no orphans · every driver claimed · recommendation, confidence, robustness declared ·
+≥1 negative consequence · owner approval pinned to the current ledger).
+
 ## Phase 3 — Specification (draft `requirements.md`)
 Translate the reviewed flows into a draft SRS/PRD; Phase 4 approves the corresponding client
 playback and finalizes this document. No new scope may enter through translation. Include:
@@ -215,10 +276,12 @@ playback and finalizes this document. No new scope may enter through translation
   tagged `stated` / `derived-domain` / `default-confirmed`, linked A-n decisions and US-n/SC-n flows,
   plus the dispositioned full lifecycle + must-be checklist (in / out / N-A-because per item).
   Keep excluded/deferred items and their reasons outside the in-scope acceptance set.
-- **Stack & reuse constraints** — name the expected battle-tested packages for the solved problems in
-  scope (validation, auth, money/date math, ORM, uploads) in the spec's `stack:` notes, so `build`
+- **Stack & reuse constraints** — the stack is the Phase 2b decision (`stack/stack-decision.md`,
+  gate READY), summarised here as its Y-statement + the pinned majors + the accepted downsides, with
+  a link to the record; name the expected battle-tested packages for the solved problems in scope
+  (validation, auth, money/date math, ORM, uploads) in the spec's `stack:` notes, so `build`
   adopts them instead of reinventing; hand-rolled code is reserved for the domain rules the `logic`
-  golden vectors pin.
+  golden vectors pin. No stack claim enters the SRS that the record does not carry.
 - **Acceptance criteria** per requirement in **Given/When/Then** form (mechanically verifiable)
 - **Traceability**: reviewed assumption/decision → story/scenario where applicable → FR/NFR →
   acceptance criteria → build dimension. Operational NFRs may trace directly to an A-n decision.
@@ -230,8 +293,10 @@ day-in-the-life scenarios re-told **with the system in place** ("Maria scans 3 i
 shows an SC card, the screen shows ₱X because …"), (b) the wireframe screenshots, (c) the
 worked-example table for every money rule, (d) the **derived-requirements list read back item by
 item** — `derived-domain` provenance is where miscommunication lives, so each gets its own yes/no —
-(e) the Won't/deferred list with consequences, and (f) delivery, deployment, security/compliance,
-operation and exit scenarios/decisions. Clients correct narratives and pictures far more reliably than clauses;
+(e) the Won't/deferred list with consequences, (f) delivery, deployment, security/compliance,
+operation and exit scenarios/decisions, and (g) the **stack decision** as approved in Phase 2b
+(its Y-statement, accepted downsides and what would reopen it) — sign-off cannot proceed while
+`score-requirements.sh stack` is not READY. Clients correct narratives and pictures far more reliably than clauses;
 sign-off on the playback IS sign-off on the SRS. Check **complete, consistent, testable, feasible,
 unambiguous** — every requirement verifiable, traced, and provenance-tagged with zero `open` items
 or unresolved conflicts; all lifecycle concerns dispositioned and in-scope stories/scenarios reviewed.
@@ -251,7 +316,9 @@ checked by `scripts/score-requirements.sh validate`):
 ```yaml
 name: <slug>
 summary: <one line>
-stack: { language: <…>, framework: <…>, datastore: <…> }
+stack: { language: <…@major>, framework: <…@major>, datastore: <…>, hosting: <…>,
+         decision: forge/requirements-<ts>/stack,          # the Phase 2b record dir — `stack` gate must be READY
+         adr: docs/adr/0001-tech-stack.md }                 # where build commits the record in the output repo
 design: { source: catalog|file|url|generate, ref: <slug/path/url>, mode: operate|persuade|read|experience,
           dislikes: [ <reactions the client rejected> ] }   # build adopts as DESIGN.md via the direction protocol
                                                             # a Figma URL is source: url — build routes it through the design bridge
@@ -265,7 +332,10 @@ acceptance:
   monitoring: [ { id, assert, weight, traces } … ]
   hardening:  [ { id, assert, weight, traces } … ]        # SECURITY + PERFORMANCE layers
 ```
-- `name`, `summary`, `stack` (chosen in analysis)
+- `name`, `summary`, `stack` — the **Phase 2b decision**, never a hint copied through: every
+  component pinned to a major, `decision:` pointing at the record dir (the `stack` gate re-runs on
+  intake; READY = evidence ledgers valid + owner approval pinned to them), `adr:` the path build
+  commits it to. No `NEEDS CLARIFICATION` marker may remain in the block.
 - `design:` — the chosen design reference from elicitation: `{ source: catalog|file|url|generate,
   ref: <slug/path/url>, mode, dislikes }`. `mode` is the app's default **visitor mode** (Operate for
   task UI, Persuade for a marketing surface — decided per surface, protocol §1 of
@@ -314,8 +384,10 @@ acceptance:
   the shipped seam dir — first existing of `${CLAUDE_PLUGIN_ROOT}/skills/forge/scripts/`,
   `.claude/skills/forge/scripts/`, or repo `scripts/`; for a computational domain
   — payroll, accounting, POS, billing — run it with `REQUIRE_LOGIC=1` so a missing `logic` block is a
-  hard failure). It MUST print `VALIDATION: VALID` (all five operational dimensions present + weighted;
-  any declared `logic` block carries ≥1 `gate: true` golden row). If `INVALID`, fix the flagged
+  hard failure). **Always run it with `REQUIRE_STACK_DECISION=1`** so a spec whose `stack.decision`
+  is missing, BLOCKED (evidence or approval missing/stale) or still carries `NEEDS CLARIFICATION` is
+  INVALID. It MUST print `VALIDATION: VALID` (all five operational dimensions present + weighted;
+  any declared `logic` block carries ≥1 `gate: true` golden row; `stack_decision=ready`). If `INVALID`, fix the flagged
   dimension and re-run — repeat until VALID. The spec is handed to `build` only on the validator's VALID
   verdict AND the current owner-approved review. Fixing syntax needs no new interview; changing
   scope, a rule or an expected outcome returns to playback. VALID alone does not authorize handoff.
@@ -326,8 +398,9 @@ Print the ready invocation:
 /forge:build Spec: evals/fullstack/<name>.spec.yaml Iterations: 40
 ```
 Write handoff.json to the output dir (`forge/requirements-{YYMMDD}-{HHMM}/`): version "3.1.0",
-source "requirements", status COMPLETE, `spec` = generated spec path, config{name, stack}, traceability
-summary. Schema: `references/handoff-schema.md`; after writing, `scripts/validate-handoff.sh
+source "requirements", status COMPLETE, `spec` = generated spec path, config{name, stack,
+stack_decision: {verdict: READY, record: <path>, recommendation: O-n, approval: <Approval line>}},
+traceability summary. Schema: `references/handoff-schema.md`; after writing, `scripts/validate-handoff.sh
 <run-dir>/handoff.json requirements` must print VALID.
 Only emit COMPLETE, ready build arguments or `--chain build` after both the current owner approval
 and VALID spec gate. If input is still needed, save the draft review and open items; do not label
@@ -346,6 +419,8 @@ out-of-scope. Deployment downstream stays human-gated.
 Lead with the plain-language agreed scope, key decisions/exclusions and how the system will be used
 and run. Link the approved client review and SRS. Then print: # functional reqs, # NFRs (by dimension), MoSCoW counts, **provenance counts (stated /
 derived-domain / default-confirmed — zero open)**, must-be checklist disposition tally, # scenarios +
-# wireframes reacted to, generated spec path, validation verdict, and the `/forge:build`
-invocation. Open assumptions mean the draft is unfinished; list them with the next needed answer,
+# wireframes reacted to, **the stack decision** (`STACK_DECISION` verdict, the recommended option's
+Y-statement, confidence + robustness, # candidates / # drivers / # sources by tier, the approval line
+— `approved` or `owner-mandated`, never "chosen by Forge"), generated spec path, validation verdict,
+and the `/forge:build` invocation. Open assumptions mean the draft is unfinished; list them with the next needed answer,
 never as risks attached to a COMPLETE handoff.

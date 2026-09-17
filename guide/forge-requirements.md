@@ -105,7 +105,37 @@ Forge shows the change: `A-001` is rejected; `A-002` is corrected to require sta
 happens to competing requests, and adds the staff story and approval/rejection scenarios. The
 owner can correct those revised flows before approving the complete picture.
 
-## 4. Approve the playback, then generate requirements
+## 4. Choose the stack on evidence — you approve it
+
+Before the technical requirements are written, Forge chooses the technology stack the way it
+chooses everything else: visibly, with evidence, and with your sign-off. A `Stack:` hint is a
+candidate, not a decision; if you say "this is decided", Forge validates it and records the risks
+instead of overruling you.
+
+First it asks the things only you know: how many people and requests, how many years the system
+must live, who will run it after handover, which licences are acceptable, which laws apply, where
+it must be hosted, and the monthly budget. Then it forms three to five real candidate stacks — the
+boring, proven default is always one of them — and researches each with dated, tier-graded sources:
+licence, support window, open security advisories, maintenance health, hosting cost under your
+numbers, and whether the harness has delivered that stack before. Candidates that fail a hard gate
+(licence, end-of-life inside your horizon, unmaintained, unpatched advisories, platform or
+compliance) are eliminated first.
+
+What you see is a short playback: one sentence stating the choice and what it gives up, the three
+strongest reasons each with its source, the downsides Forge accepts on your behalf, what the
+runner-up would give and cost, the money consequences, how hard it would be to change later, and
+whether the ranking is robust or flips if you weigh something differently. Forge also lists the
+questions no evidence can answer — team familiarity, hiring, five-year viability — so you decide
+those knowingly. You can **approve**, **change the weights**, **ask for more evidence**, or
+**mandate your own stack**.
+
+Example: for the repair-booking service, Forge recommends a Node + Fastify + Postgres stack over a
+Next.js stack and a Django stack: "Your VPS already runs Node, every part is supported past your
+three-year horizon, and the runner-up would give a longer support window but cost you a second
+runtime nobody on your side operates." You approve; the approval is pinned to the exact evidence
+you saw, so if a source or a weight changes later, Forge must show you the decision again.
+
+## 5. Approve the playback, then generate requirements
 
 Forge reads back the complete agreed picture: understanding, assumption decisions, stories,
 success/failure/recovery/operations scenarios, screen examples, worked rules, lifecycle decisions
@@ -118,8 +148,11 @@ acceptance checks. If translation reveals a new decision or changes the agreed m
 returns to the client review and obtains approval for the changed version.
 
 The final `evals/fullstack/<name>.spec.yaml` must pass the existing requirements validator before
-Forge hands it to build. Client approval establishes what to build; mechanical validation checks
-the build spec's structure and acceptance coverage. Both are required.
+Forge hands it to build — including the stack gate: the spec points at the approved
+`stack-decision.md`, and `score-requirements.sh stack` must print `STACK_DECISION: READY` (every
+score cites a source, your approval is pinned to that exact evidence). Client approval establishes
+what to build and on what stack; mechanical validation checks the build spec's structure,
+acceptance coverage and the stack record. All are required.
 
 ## Specify images, icons and UI motion
 

@@ -1,0 +1,8 @@
+id	rq	claim	confidence	sources	evidence
+C-01	RQ-1	Fastify's LTS policy covers every major for 6 months after the next major ships, matching Node's active/maintenance windows	low	S-04,S-07	evidence:evidence/S-04.md
+C-02	RQ-1	Next.js app router is the documented default; no LTS policy is published beyond the current major	low	S-05	evidence:evidence/S-05.md
+C-03	RQ-2	Fastify sustains higher plaintext/JSON throughput than Next.js route handlers in the community benchmark (vendor-neutral, single-node)	low	S-06	evidence:evidence/S-06.md
+C-04	RQ-3	OSV lists no open critical advisories for the current fastify major at the checked date	moderate	S-02	evidence:evidence/S-02.md
+C-05	RQ-3	OSV lists resolved advisories for next with fixes in the current major	moderate	S-03	evidence:evidence/S-03.md
+C-06	RQ-4	All three candidates ship under permissive SPDX-listed licenses (MIT / BSD-3-Clause)	moderate	S-01,S-04	evidence:evidence/S-01.md
+C-07	RQ-2	Django's release process publishes explicit LTS lines with 3-year support	low	S-10	evidence:evidence/S-10.md

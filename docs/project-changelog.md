@@ -2,6 +2,50 @@
 
 All notable changes to the forge project are documented here.
 
+## v3.7.0 — Evidence-based technology selection, owner-approved (2026-09-18, unreleased)
+
+**Theme:** the tech stack was the one build decision nobody researched — a `Stack:` hint or the
+model's habit became the spec's `stack:` block with no alternatives, no evidence and no owner
+decision. Now it is chosen the way the harness chooses everything: research → knock-out gates →
+cited comparison → recommendation with reasons → **the owner approves** → build confirms by spike.
+
+**Added:**
+
+- `references/stack-selection-protocol.md` — the contract: elicited inputs before scoring (usage
+  model, support horizon, delivering + receiving teams, licence policy, compliance/residency,
+  hosting, budget); candidate generation (3–5 whole stacks pinned to majors, boring default = datum,
+  hint/mandate always in, ≥1 different paradigm, no dummy alternatives, ≤1 innovation token);
+  knock-out gates (SPDX licence policy, EOL vs horizon, maintained, unpatched reviewed advisories,
+  platform/accessibility/compliance); drivers as refutable ATAM-style scenarios weighted H/M/L and
+  locked before scoring, ISO 25010 coverage; an evidence playbook with tiers, biases and freshness
+  (deps.dev, OSV/GHSA, endoflife.date, OpenSSF Scorecard, SPDX/ClearlyDefined, registry stats
+  ordinal-only, surveys, price APIs, relicensing/governance history; vendor comparisons T4;
+  TechEmpower frozen since its 2026-03 archival); Pugh controlled convergence instead of a bare
+  weighted sum (fixed anchors, `?` cells, sensitivity sweep → `Robustness:`, `Confidence:`); the
+  MADR-shaped `stack-decision.md`; the owner playback + state machine (approve / revise weights /
+  more evidence / mandate — a mandate is validated and its risks recorded, never overruled; the
+  approval pins the ledger hash); build's Confirmation spike with pre-registered thresholds.
+  §10 cites the sources the protocol itself rests on.
+- `scripts/score-requirements.sh stack <dir>` → `STACK_DECISION: READY | BLOCKED` (ledgers valid via
+  `score-research.sh`, ≥3 options, ≥3 traced weighted drivers, every matrix cell cited with no
+  orphans, every driver claimed, recommendation/confidence/robustness declared, ≥1 negative
+  consequence, approval `approved`/`owner-mandated` **pinned to the current ledger hash**);
+  `validate` gains `REQUIRE_STACK_DECISION=1` (`decision:` must point at a READY dir; no
+  `NEEDS CLARIFICATION` in the stack block) — default off, so legacy specs stay VALID.
+- `requirements` Phase 2b — Technology selection (evidence-based, owner-approved) between Analysis
+  and Specification; Phase 4 playback item (g); Phase 5 spec `stack: { …, decision:, adr: }` and
+  `REQUIRE_STACK_DECISION=1`; handoff `config.stack_decision`; summary prints the verdict.
+- `build` — spec intake re-runs the gate and runs the protocol when a spec's stack is unjustified;
+  Phase 2 Feasibility = the record's Confirmation (identical load model, thresholds fixed before the
+  run, ≥5 runs as a distribution, results appended, ADR committed to `docs/adr/0001-tech-stack.md`;
+  a miss supersedes the decision and re-asks the owner); Phase 4 HLD cites the record.
+- `tests/fixtures/requirements/stack-ready/` (the exemplar record + ledgers) and 55 new rows in
+  `tests/test-requirements.sh` (gate on good + planted-defect clones, validate coupling, spec and
+  protocol pins, five-surface parity); `tests/test-build.sh` pins the build wiring.
+
+Product 3.6.0 → 3.7.0 at release (no new command; manifests unchanged until `release.sh`); handoff
+schema stays 3.1.0 (new `config.stack_decision` is additive).
+
 ## v3.6.0 — /forge:android: web app → Android app (2026-09-06)
 
 **Theme:** any forge-built web app becomes a store-ready Android app without being re-implemented.

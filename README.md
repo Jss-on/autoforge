@@ -305,9 +305,15 @@ First shows what Forge understands, all currently known assumptions across the s
 and draft user stories with step-by-step scenarios — in simple words. You correct a living
 `client-review.md`; Forge updates the linked assumptions, stories and scenarios and shows what
 changed each round. The review covers daily use, failures, recovery, deployment, security,
-compliance, support and retirement. Nothing becomes agreed scope through silence. After you approve
+compliance, support and retirement. Nothing becomes agreed scope through silence. **The tech stack is
+chosen the same way — on evidence, with your approval:** Forge researches 3–5 candidate stacks
+against your requirements (licence, support window, advisories, cost under your usage model,
+team and hosting fit, the harness's own delivery record), shows a cited comparison with the reasons
+and the accepted downsides, and asks you to approve, change the weights, ask for more evidence, or
+mandate your own stack (recorded with its risks, never overruled). After you approve
 the final playback, Forge finalizes the technical requirements and generates
-`evals/fullstack/<name>.spec.yaml`; the mechanical validation gate must pass before build starts.
+`evals/fullstack/<name>.spec.yaml`; the mechanical validation gate — including
+`STACK_DECISION: READY` — must pass before build starts.
 See the [requirements guide](guide/forge-requirements.md) for an example.
 
 ### Step 2 — Build (greenfield)
@@ -315,7 +321,8 @@ See the [requirements guide](guide/forge-requirements.md) for an example.
 ```
 /forge:build Spec: evals/fullstack/<name>.spec.yaml
 ```
-Runs the standard SDLC as an forge loop: plan (charter) → feasibility (go/no-go spike) →
+Runs the standard SDLC as an forge loop: plan (charter) → feasibility (go/no-go spike that also
+confirms the approved stack decision against its pre-registered thresholds) →
 requirements (SRS + RTM) → design (HLD/LLD + a `DESIGN.md`) → implement
 (TDD) → debug (root-cause) → comprehensive test → deploy (human-gated) → operate/maintain (runbook +
 change-request path). One atomic slice per iteration,
@@ -620,6 +627,22 @@ client is trying to achieve, what Forge thinks is true, and how people would use
   including assumptions and exclusions. New decisions or changed
   meaning reopen the affected review and approval. The approved `A-` / `US-` / `SC-` trail continues
   into requirements and acceptance checks.
+- **The stack is a decision you approve, not a hint Forge copies through:** after analysis, Forge
+  runs the [stack-selection protocol](.claude/skills/forge/references/stack-selection-protocol.md)
+  — elicits the inputs only you know (usage model, support horizon, who runs it after handover,
+  licence policy, compliance, hosting, budget), forms 3–5 real candidate stacks (the boring default
+  always in; your hint or mandate always in), researches them with the same tier-graded, cited
+  ledgers `/forge:research` uses (deps.dev, OSV/GHSA advisories, endoflife.date, Scorecard, price
+  APIs, official release policies — vendor "X vs Y" pages never count alone), applies knock-out
+  gates (licence, EOL inside your horizon, unmaintained, unpatched advisories, platform/compliance),
+  scores against fixed thresholds with a sensitivity sweep, and writes a MADR-shaped
+  `stack-decision.md`: Y-statement, cited matrix, why not the others, consequences and exit paths,
+  confidence and robustness. You see it in plain words and **approve / revise weights / ask for more
+  evidence / mandate your own** (a mandate is validated and its risks recorded, never overruled).
+  The mechanical gate `score-requirements.sh stack` → `STACK_DECISION: READY` requires every score
+  to cite a source and your approval to be pinned to the exact evidence you saw; build's
+  feasibility spike then confirms the pick against pre-registered thresholds and re-asks you if it
+  misses.
 
 ```
 /forge:requirements Brief: "internal expense tracker with SSO" --chain build
