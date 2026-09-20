@@ -344,13 +344,16 @@ Design the system **and** the interface before coding:
 - **DESIGN.md is machine-readable** (protocol §4): YAML frontmatter (`name`, `mode`, `colors` with
   every `on-X` pair + a muted text token budgeted for the lightest surface, `typography` roles,
   `spacing`, `rounded`, optional `components`) + prose sections (Overview · Colors · Typography ·
-  Layout · Elevation & Depth · Shapes · Components · Motion · States · Do's and Don'ts) + the
+  Layout · Elevation & Depth · Shapes · Imagery · Components · Motion · States · Do's and Don'ts) + the
   direction-contract comment in the root layout. `scripts/score-design.sh lint DESIGN.md` must print
   `DESIGN_LINT: VALID` (schema + computed contrast pairs).
 - **Tokens FROM DESIGN.md** — translate its typography scale, color palette (with contrast targets),
   spacing, radius, motion, and component states (loading / empty / error / success) into the app's
   style tokens. The UI is built from these tokens, never improvised. Per `references/uiux-checklist.md`.
-- **Asset pass** (scoped assets or mode-required imagery — integrations-protocol §1): adopt the
+- **Asset pass** — always run design-protocol §3a's imagery opportunity pass, including app surfaces.
+  Plan a small coherent set of real photos, illustrations or artworks in DESIGN.md `## Imagery`,
+  with purpose, placement, mobile crops and task-specific omissions. For selected slots or scoped
+  motion (integrations-protocol §1), adopt the
   existing inventory or write `assets/manifest.json` plus `assets/PLAN.md`. Reuse approved files and
   the existing icon family first; `asset-check.cjs select` chooses code for SVG/icons/UI motion and
   prefers Codex-native imagegen for raster work, with an available media MCP fallback. API generation
@@ -365,6 +368,9 @@ Design the system **and** the interface before coding:
   and resolve paths into the Target. Throwaway moodboards are direction evidence, not automatically
   approved product assets. Carry the manifest/report paths, providers, attempts/cap, kept count and
   motion evidence in the optional handoff `assets` object (handoff-schema.md).
+  Wire kept files into their declared routes during implementation. Every required image slot gets
+  a `ux` row tracing `design:floor` that checks loading and visible rendering at its route/selector;
+  inspect desktop/mobile crops and task hierarchy in Phase 6. A manifest or chat preview is not delivery.
 - **Archetype rows** — every screen maps to a surface archetype (dashboard, list+CRUD, record,
   form/wizard, POS/kiosk, settings, auth, onboarding/empty, landing …; protocol §2) whose required
   patterns become `ux` acceptance rows now, alongside the seven `design:*` coverage rows.
@@ -463,6 +469,9 @@ IEEE-829-style incident report, right-sized to its `iterations.tsv` line.
   stricter failure threshold, the baseline from `references/fullstack-hardening-checklist.md`, and
   every applicable security acceptance assertion. Include real negative tests for access, session
   revocation, data exposure and integration boundaries; secret/dependency scans alone are insufficient.
+  When the spec or existing audit selects Strix, run security with `--strix` using the isolated-scan
+  protocol in `references/security-checklist.md`; carry `config.strix: true`, its check, native reports
+  and findings into the build handoff.
   `scripts/validate-handoff.sh <audit>/handoff.json security --require-pass` must pass. Record the
   candidate commit/digest and relevant config; re-audit affected checks after changes. Copy the typed
   `security` record and its redacted evidence into the build run (paths relative to that run), then

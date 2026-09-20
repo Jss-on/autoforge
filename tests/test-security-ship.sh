@@ -52,6 +52,99 @@ test('blocked audit is representable and fails readiness gate', () => { const j 
 test('resolved finding permits PASS after retest', () => { const j = audit(); j.security.findings = [{ id: 'F1', severity: 'critical', status: 'resolved', evidence: 'evidence/check.txt' }]; expect(j, 0, true); });
 test('finding below chosen threshold remains reportable', () => { const j = audit(); j.security.findings = [{ id: 'F1', severity: 'medium', status: 'open', evidence: 'evidence/check.txt' }]; expect(j, 0, true); });
 test('stricter threshold blocks the same finding', () => { const j = audit(); j.security.fail_on = 'medium'; j.security.findings = [{ id: 'F1', severity: 'medium', status: 'open', evidence: 'evidence/check.txt' }]; expect(j, 1); });
+
+// Synthetic native Strix records; exercise the real gate without Docker, paid models or targets.
+const strixAudit = (source = 'security') => {
+  const j = source === 'security' ? audit() : buildReport(source);
+  j.config = { ...j.config, strix: true };
+  j.security.checks.push({ id: 'strix', status: 'pass', evidence: 'evidence/strix/run.json', exit_code: 0 });
+  return j;
+};
+function expectStrix(j, code, alter = () => {}, gate = true, files = () => {}) {
+  const native = {
+    run: { run_id: 'fixture-scan', status: 'completed', non_interactive: true, scope_mode: 'full',
+      start_time: '2026-09-21T00:00:00Z', end_time: '2026-09-21T00:01:00Z', targets_info: [{ type: 'local', original: '/fixture' }],
+      scan_results: { scan_completed: true, success: true } },
+    sarif: { version: '2.1.0', runs: [{ tool: { driver: { name: 'Strix', version: 'test-fixture' } },
+      invocations: [{ executionSuccessful: true }], results: [] }] }
+  };
+  alter(j, native);
+  expect(j, code, gate, dir => {
+    fs.mkdirSync(path.join(dir, 'evidence/strix'));
+    for (const [name, value] of [['run.json', native.run], ['findings.sarif', native.sarif]])
+      if (value !== undefined) fs.writeFileSync(path.join(dir, 'evidence/strix', name), JSON.stringify(value));
+    files(dir);
+  });
+}
+function strixFinding(j, native, severity = 'medium') {
+  j.security.checks[1].exit_code = 2;
+  native.sarif.runs[0].results.push({ properties: { strix: { id: 'vuln-0001', severity } } });
+  j.security.findings.push({ id: 'strix:fixture-scan:vuln-0001', severity, status: 'open', evidence: 'evidence/check.txt' });
+}
+for (const source of ['security', 'build', 'feature']) {
+  test(source + ' accepts a completed clean Strix run', () => expectStrix(strixAudit(source), 0, undefined, source === 'security'));
+  test(source + ' rejects a budget-stopped Strix run even with exit 0', () => expectStrix(strixAudit(source), 1,
+    (_, n) => { n.run.status = 'stopped'; }, source === 'security'));
+  test(source + ' cannot drop a selected Strix check', () => expectStrix(strixAudit(source), 1,
+    j => { j.security.checks.pop(); }, source === 'security'));
+}
+for (const [name, alter] of [
+  ['running', (_, n) => { n.run.status = 'running'; }],
+  ['failed', (_, n) => { n.run.status = 'failed'; }],
+  ['interrupted', (_, n) => { n.run.status = 'interrupted'; }],
+  ['unfinished scan', (_, n) => { n.run.scan_results.scan_completed = false; }],
+  ['unsuccessful scan', (_, n) => { n.run.scan_results.success = false; }],
+  ['interactive exit 0', (_, n) => { n.run.non_interactive = false; }],
+  ['implicit diff scope', (_, n) => { n.run.scope_mode = 'auto'; }],
+  ['missing end time', (_, n) => { n.run.end_time = null; }],
+  ['numeric timestamps', (_, n) => { n.run.start_time = 0; n.run.end_time = 1; }],
+  ['wrong time order', (_, n) => { n.run.end_time = '2026-09-20T00:00:00Z'; }],
+  ['missing targets', (_, n) => { n.run.targets_info = []; }],
+  ['incomplete coverage', (_, n) => { n.sarif.runs[0].invocations[0].executionSuccessful = false; }],
+  ['missing invocation', (_, n) => { delete n.sarif.runs[0].invocations; }],
+  ['open coverage follow-up', (_, n) => { n.sarif.runs[0].results = [{ kind: 'open', properties: { strix: { coverage_outcome: 'needs_follow_up' } } }]; }],
+  ['unknown result kind', (_, n) => { n.sarif.runs[0].results = [{ kind: 'unknown' }]; }],
+  ['unrecognized pass result', (_, n) => { n.sarif.runs[0].results = [{ kind: 'pass' }]; }],
+  ['null result', (_, n) => { n.sarif.runs[0].results = [null]; }],
+  ['missing native run', (_, n) => { delete n.run; }],
+  ['missing native SARIF', (_, n) => { delete n.sarif; }],
+  ['wrong SARIF tool', (_, n) => { n.sarif.runs[0].tool.driver.name = 'other'; }],
+  ['missing tool version', (_, n) => { delete n.sarif.runs[0].tool.driver.version; }],
+  ['wrong SARIF version', (_, n) => { n.sarif.version = '1.0'; }],
+  ['multiple native runs', (_, n) => { n.sarif.runs.push(n.sarif.runs[0]); }],
+  ['wrong results type', (_, n) => { n.sarif.runs[0].results = {}; }],
+  ['fatal exit', j => { j.security.checks[1].exit_code = 1; }],
+  ['missing exit', j => { delete j.security.checks[1].exit_code; }],
+  ['string exit', j => { j.security.checks[1].exit_code = '0'; }],
+  ['inconsistent findings exit', j => { j.security.checks[1].exit_code = 2; }],
+  ['dropped finding', (j, n) => { strixFinding(j, n); j.security.findings = []; }],
+  ['downgraded finding', (j, n) => { strixFinding(j, n); j.security.findings[0].severity = 'low'; }],
+  ['unknown severity', (j, n) => { strixFinding(j, n); n.sarif.runs[0].results[0].properties.strix.severity = 'unknown'; }],
+  ['duplicate native finding', (j, n) => { strixFinding(j, n); n.sarif.runs[0].results.push(n.sarif.runs[0].results[0]); }],
+  ['finding from wrong run', (j, n) => { strixFinding(j, n); n.run.run_id = 'another-run'; }],
+  ['finding with clean exit', (j, n) => { strixFinding(j, n); j.security.checks[1].exit_code = 0; }]
+]) test('Strix gate rejects ' + name, () => expectStrix(strixAudit(), 1, alter));
+test('Strix evidence is enforced without the config hint', () => expectStrix(strixAudit(), 1, (j, n) => { delete j.config; n.run.status = 'stopped'; }));
+test('Strix medium finding uses the existing high threshold', () => expectStrix(strixAudit(), 0, strixFinding));
+test('Strix high finding blocks readiness', () => expectStrix(strixAudit(), 1, (j, n) => { strixFinding(j, n, 'high'); j.security.verdict = 'FAIL'; }));
+test('Strix high finding can pass only with a recorded retest', () => expectStrix(strixAudit(), 0, (j, n) => { strixFinding(j, n, 'high'); j.security.findings[0].status = 'resolved'; }));
+test('Strix passing coverage rows are not vulnerabilities', () => expectStrix(strixAudit(), 0, (_, n) => {
+  n.sarif.runs[0].results = ['no_issue_found', 'ruled_out', 'not_applicable'].map(outcome => ({
+    kind: outcome === 'not_applicable' ? 'notApplicable' : 'pass', properties: { strix: { coverage_outcome: outcome } }
+  }));
+}));
+test('Strix unavailable preflight stays readable and blocks readiness', () => {
+  const j = strixAudit(); j.status = 'BLOCKED'; j.security.verdict = 'BLOCKED';
+  Object.assign(j.security.checks[1], { status: 'blocked', exit_code: null, evidence: 'evidence/check.txt' });
+  expect(j, 0); expect(j, 1, true);
+});
+test('Strix native sidecar cannot escape via symlink', () => expectStrix(strixAudit(), 1, undefined, true, dir => {
+  const file = path.join(dir, 'evidence/strix/findings.sarif'), outside = path.join(temp, 'outside.sarif');
+  fs.copyFileSync(file, outside); fs.unlinkSync(file); fs.symlinkSync(outside, file);
+}));
+test('Strix validation does not reinterpret optional ship metadata', () => {
+  const j = delivery(); j.security = { checks: 'historical audit summary' }; expect(j, 0, true);
+});
 for (const source of ['build', 'feature']) {
   for (const status of ['COMPLETE', 'CONVERGED']) {
     test(source + '/' + status + ' requires passing security even without readiness flag', () => {

@@ -136,7 +136,8 @@ The audit is fast because it never verifies the same fact twice, not because it 
    run the self-check ("could someone guess this from the category alone, or from category-plus-
    avoidance?"); derive candidates from the audience's actual world across ≥3 material families.
 5. **List 5–7 directions** (thesis · palette strategy + 3 named colors · type · material · first
-   viewport · signature interaction · honest risk), keep the rut out, and **roll**:
+   viewport · imagery medium/subject/placement or omit reason per protocol §3a · signature
+   interaction · honest risk), keep the rut out, and **roll**:
    `scripts/score-design.sh seed "<spec name>|<brief text>" <n>` → build the indexed direction. A
    user- or brief-pinned direction beats the roll; re-roll only on named product-truth grounds. With
    a human present, present the pick + the standing exit (the category standard, played straight,
@@ -144,7 +145,7 @@ The audit is fast because it never verifies the same fact twice, not because it 
 6. **Write `DESIGN.md`** per protocol §4 (frontmatter: `name`, `description`, `mode`, `colors`
    with every `on-X` pair + a muted text token budgeted for the lightest surface, `typography` roles
    with fontFamily+fontSize, `spacing`, `rounded`, optional `components`; sections Overview · Colors ·
-   Typography · Layout · Elevation & Depth · Shapes · Components · Motion · States · Do's and Don'ts;
+   Typography · Layout · Elevation & Depth · Shapes · Imagery · Components · Motion · States · Do's and Don'ts;
    named rules; ≥3 Do + ≥3 Don't grounded in the world). Put the **direction contract** comment
    (THESIS · OWN-WORLD · STORY · FIRST VIEWPORT · FORM with the seed key · FINISH) first in the root
    layout. `Design:` catalog/URL/file sources are copied to the project root as `DESIGN.md` and
@@ -156,7 +157,11 @@ The audit is fast because it never verifies the same fact twice, not because it 
    acceptance rows every build must carry (protocol §2 archetype rows + the 7 `design:*` coverage
    groups incl. `design:floor` = `SLOP_GATE: PASS`) into `design-results.tsv` as `fail` baseline
    rows for `build`/`feature` to fold in.
-8. **Asset pass** (scoped assets or mode-required imagery; integrations-protocol §1): adopt/write
+8. **Asset pass**: always run the imagery opportunity pass in design-protocol §3a, even without an
+   `Assets:` hint. Choose a small, coherent set of actual photos, illustrations or artworks during
+   direction design; record purpose, placement, medium, count, mobile crops and reasoned omissions
+   in `## Imagery`. Follow §3a's restraint and existing authorization; reuse approved art on existing
+   surfaces. For selected slots or scoped motion (integrations-protocol §1), adopt/write
    `assets/manifest.json` and `assets/PLAN.md` for images, icons and declared UI motion. Reuse existing
    approved files/icon families first. `asset-check.cjs select` prefers Codex-native imagegen for
    raster work, matching media MCP when needed, and code for SVG/icons/motion. Follow the current
@@ -164,6 +169,8 @@ The audit is fast because it never verifies the same fact twice, not because it 
    asset**, copy outputs into the Target, then record actual receipts/provenance in the manifest and
    `assets/CREDITS.md`. No balance/model exposed means unknown, not blocked. Required unfinished
    slots remain failing rows for build; system planning does not claim application delivery.
+   Required image slots get `ux` rows tracing `design:floor`: the actual file must load and be
+   visibly rendered at its declared route/selector. Planning files and chat previews are not delivery.
    Define normal/reduced motion together and preserve task feedback and focus in both.
 9. **`--refresh`** (existing app): scan the incumbent — CSS custom properties, Tailwind theme,
    token files, the main button/input/nav/card/table components, and the **live computed styles**
@@ -197,7 +204,8 @@ DESIGN.md + the app; not the build thread's summary), and never softens the disp
    state → `evidence/axe-*.json` (zero serious/critical is the row). Keyboard-only walk of the primary
    task (focus visible, order logical, dialogs trap + Esc + return focus, nothing obscured by sticky
    bars). Every counted finding becomes a defect row (structural repeats = one systemic defect).
-   Imagery: where the mode requires real imagery, an unlabeled stock-alike, a div-built fake
+   Imagery: review the opportunity/omit decisions and selected slots from protocol §3a. Where the
+   direction requires imagery, an unlabeled stock-alike, a div-built fake
    screenshot, or a runtime file missing manifest/provenance is a finding. With a scoped manifest,
    run `scripts/score-design.sh assets <target>` fresh and scan with `--assets <target>`; this validates
    files and triggers declared motion in `no-preference` and `reduce` at every applicable viewport.
@@ -205,6 +213,9 @@ DESIGN.md + the app; not the build thread's summary), and never softens the disp
    task outcome in both profiles. A required placeholder is a finding even if generation is absent;
    optional slots retain a named reason (integrations-protocol §1). Audit reports defects and never
    generates or replaces app assets; remediation owns those changes.
+   Inspect relevance, coherent art treatment, desktop/mobile crops and task hierarchy in the
+   captures. File generic filler, visual crowding and missing promised art with concrete evidence;
+   an image count or a green scanner alone does not establish visual quality.
 4. **Phase 3 — heuristic critique**: score Nielsen's ten 0–4 with a key issue each (`na` only where
    the mode cannot apply, renormalized), the cognitive-load eight, and write `design-critique.tsv`;
    `scripts/score-design.sh critique design-critique.tsv` → `DESIGN_HEALTH: N/M (Band)`. Where a

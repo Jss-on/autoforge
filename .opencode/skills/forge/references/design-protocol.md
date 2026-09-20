@@ -37,17 +37,16 @@ Decide the mode from the requested surface (§0), record it in the surface's bri
 | Type | display face with a point of view; ≤2 families | **one workhorse family**, fixed rem scale (ratio 1.125–1.2), tabular numerals for data | reading measure 60–75ch first | display may carry voice |
 | Layout | asymmetric/fluid composition earns its place; ≥4 layout families across 8 sections; hero fits the viewport | predictable structure, stable density, standard nav (top bar + side nav / tabs / breadcrumbs / command palette), responsive is **structural** (collapse, reflow), not fluid type | linear, one reading path, TOC | artifact first viewport |
 | Motion | one authored focal moment; scroll-reveal ok; ≤1 marquee | 150–250 ms state transitions only; **no page-load choreography**, no decorative motion | none beyond feedback | may be the material |
-| Imagery | real imagery required (reuse → Codex-native imagegen / matching media MCP per `integrations-protocol.md` §1 → licensed photo; required placeholders stay unmet); no div-built fake screenshots | none required; icons from one library, one stroke | diagrams when they explain | the work itself |
+| Imagery | a purposeful lead image plus selective supporting imagery (§3a); real files, no div-built fake screenshots | consider product photos, project covers or a small authored artwork on overview/onboarding/empty surfaces (§3a); dense work areas stay clear | explanatory figures and occasional editorial artwork that supports the subject | the work itself; curate scale, sequence and breathing room |
 | Kickers/eyebrows | **banned** | rationed: ≤ ceil(sections/3), never above every heading | rare | rare |
 | Cards | identical icon+heading+text grids and hero-metric tiles are tells | KPI tiles allowed when the numbers ARE the content; still no nested cards | avoid | avoid |
 | Modal | for interruption/protected focus only | **modal-first is laziness**: inline / slide-over / progressive disclosure first | no | no |
 
-Operate is autoforge's home mode (payroll, POS, intake, admin). Its failure mode is not flatness
-but **strangeness without purpose** — over-decorated buttons, mismatched controls, display faces in
-labels, invented affordances for standard tasks. The bar is **earned familiarity**: a category-fluent
-user trusts it immediately and never pauses at a subtly-off component. Familiar and effective is a
-legitimate destination there; expression lives in precise details (a considered accent, a good empty
-state, tabular numbers, a fast keyboard path).
+Operate is autoforge's home mode (payroll, POS, intake, admin). The bar is **earned familiarity**:
+a category-fluent user trusts the controls and finds the task immediately. Give the product a
+recognizable visual identity through a considered accent, purposeful imagery, a good empty state,
+tabular numbers and a fast keyboard path. Art can carry warmth and richer color while the UI stays
+restrained; it must not obscure data, invent affordances or slow repeated work.
 
 ## 2. Surface archetypes — required patterns → acceptance rows
 
@@ -84,16 +83,62 @@ Cross-archetype product truths (from `forge-real-product-not-demo`): create → 
 5. **Choose a color strategy before choosing colors**: Restrained (neutrals + one accent — Operate/Read default) · Committed (one saturated color owns 30–60% of the surface) · Full palette (3–4 named roles) · Drenched (the surface IS the color). Color commits at page scale (fields owning regions), not accents sprinkled on neutral. Max one accent in Restrained; saturation < 80%; **never pure #000/#fff**; **one accent, one radius system, one theme per page** (no light section inside a dark page); tint shadows to the ground.
 6. **Choose type like an object from the subject's world.** Operate/Read: a workhorse UI family (system stack, Inter/Geist-class faces are *fine* here — familiarity is the feature) with a fixed rem scale and tabular numerals. Persuade/Experience: a face with a point of view; treat as **already spent** the training-data reflexes (Inter-as-display, Space Grotesk, DM Sans/Serif, Plus Jakarta, Outfit, Fraunces, Playfair, Cormorant, Lora, Instrument Serif/Sans, Syne, IBM Plex, Space Mono) unless the brief names one; serif only when the brand or a genuinely editorial/luxury register asks and you can say why this serif; emphasis inside a headline = italic/bold of the same family, never a random serif word.
 7. **Calibrate against the saturated looks.** The three attractors any model lands in when the brief is free: *warm cream + high-contrast serif + terracotta/oxblood accent* · *near-black + one neon accent + glowing edges* · *broadsheet hairlines + italic serif + tracked mono labels*. Legitimate when chosen; a **failure of the self-check** when reached by reflex. Test: *could someone guess this aesthetic from the category alone (payroll → navy/blue shadcn; cookware → cream/brass; AI → purple glow)? or from category-plus-avoidance?* If yes to either, rework from the audience's actual world (its notation, publications, identity programs, screens it reads daily, physical objects), spanning ≥3 material families before choosing.
-8. **List 5–7 candidate directions**, each: thesis (one idea + the category default it refuses) · palette strategy + 3 named colors · type · material/depth · first-viewport composition · signature interaction · honest risk. Keep the category's predictable page AND its predictable opposite out of the list (they are the rut).
+8. **List 5–7 candidate directions**, each: thesis (one idea + the category default it refuses) · palette strategy + 3 named colors · type · material/depth · first-viewport composition · imagery medium, subject and placement (or omit reason, §3a) · signature interaction · honest risk. Keep the category's predictable page AND its predictable opposite out of the list (they are the rut).
 9. **Roll**: `scripts/score-design.sh seed "<spec name + brief hash text>" <n>` → the 1-based index picks the direction to build. The roll breaks the ranking rut while staying reproducible; a user- or brief-pinned direction always beats the roll; re-roll only on **named product-truth grounds** (the direction cannot carry the task), never taste. Present the pick + the standing exit (the category standard, played straight, never recommended) when a human is in the loop; unattended, build the roll and record the assumption.
 10. **Commit and record.** Write `DESIGN.md` per §4 (tokens + prose + named rules + Do/Don't), and put the **direction contract** as the first HTML comment in the root layout: `THESIS · OWN-WORLD · STORY · FIRST VIEWPORT · FORM (candidate index + seed key) · FINISH ("unreviewed and undocumented is unfinished")` — ≤150 words, must survive the production build (grep the built output for the seed key). Then `scripts/score-design.sh lint DESIGN.md` → `DESIGN_LINT: VALID` is the Phase 4 gate. In a redesign, the old look is evidence of what the subject is, never authority over what it becomes; a coherent world already in code (even without a DESIGN.md) is inherited and documented, not replaced.
-11. **Asset pass.** For scoped assets/motion or imagery required by the mode, follow
-   `integrations-protocol.md` §1: reuse first, write `assets/manifest.json` + `assets/PLAN.md`, select
+11. **Asset pass.** Always run the imagery opportunity pass (§3a) while choosing the direction,
+   even without an `Assets:` hint; record it in DESIGN.md before the gate in step 10.
+   For the selected slots and scoped motion, follow `integrations-protocol.md` §1: reuse first,
+   write `assets/manifest.json` + `assets/PLAN.md`, select
    Codex-native imagegen for raster work or available media MCP tools, preserve SVG/icons and UI
    motion in code. Prompts derive from the DESIGN.md style contract. Count every attempt, inspect
    copied project files, keep actual receipts/provenance in the manifest and `assets/CREDITS.md`.
    Approved hashes are pinned; required missing slots remain failing rows regardless of provider
    availability. Declare normal/reduced motion together; do not require generation on every surface.
+
+## 3a. Purposeful imagery — a small, coherent set
+
+**Default to considering actual images, not an icon-only interface.** On a new app/site or an
+authorized redesign, inspect the primary entry/overview and relevant content, onboarding and
+empty states for opportunities. Choose slots during direction design, before laying out the UI;
+do not leave art as an optional finishing task. Existing approved imagery counts: feature work
+inherits it and considers only touched surfaces, without adding a fresh quota of decoration.
+
+- **Start with 1–3 distinctive editorial images across a small app/site**, one lead and at most
+  two supporting pieces. This is a starting point, not a quota or a generation-job budget.
+  Product/catalog photos and gallery content follow the content need. A dense work screen can
+  use zero; record an `omit — <task-specific reason>` decision in DESIGN.md. An explicit text-only
+  preference wins. Avoid quietly making every surface image-free by default.
+- **Give each slot a job:** identify a real product/place, explain a concept, orient someone,
+  welcome a first-time user, or establish a named brand atmosphere. Consider real photography,
+  original illustration, collage, painting or a licensed artwork. Pick the medium and subject
+  from the product's world, with consistent treatment, lighting, palette and crops; do not mix
+  stock photography, clay renders and watercolor by habit. Photography that claims to show an
+  actual product/person/place uses authentic supplied or licensed material; generated art is
+  illustrative, never fabricated product evidence, customer portraits or UI screenshots.
+- **Compose with restraint:** at most one decorative focal image per viewport, whitespace around
+  it, primary content and actions easy to find. Keep tables, forms, settings and error recovery
+  clear; do not add a hero to every app route, an illustration to every card, or a repeated
+  wallpaper behind work. A quiet painting or a tightly cropped photograph can be the whole visual
+  gesture. Keep text and controls in accessible HTML, not baked into an image.
+- **Write `## Imagery` in DESIGN.md:** medium/treatment, subject, purpose, placement, intended
+  count, mobile crop/focal point, and explicit omit decisions. Put selected slots in the existing
+  `assets/PLAN.md` and manifest with their route/selector and required/optional status. Once a slot
+  is part of the agreed direction, it is required; a missing image cannot be reclassified as
+  optional merely to finish. Icons, gradients, CSS blobs and placeholder frames do not fulfill
+  a photo/artwork slot. Reuse or source suitable real files, or generate them through the existing
+  asset lifecycle; respect `Assets: off`, approved assets and existing provider permissions.
+- **Deliver in the app:** the file must be copied into the project and rendered at its declared
+  route/selector. A prompt, moodboard, manifest entry or chat preview is not delivery. Add a `ux`
+  acceptance row per required slot (trace `design:floor`): the intended asset loads, decodes and is
+  visibly rendered on the declared surface. Inspect desktop/mobile captures for useful crop,
+  visual coherence, legible text, preserved task hierarchy and no crowding or layout shift.
+  Respect intrinsic dimensions, alt/decorative semantics and payload budgets (§1.4 of the asset
+  protocol). Below-fold images load lazily; the lead image must not be needlessly delayed.
+- **Curate, do not count:** remove an image that adds neither meaning nor the intended atmosphere.
+  Flag generic filler, artifacts, mismatched art styles or a missing promised focal piece against
+  the brief with screenshot evidence. Image count is not a quality score, and zero scanner errors
+  do not prove that an asset is relevant or well composed.
 
 ## 4. DESIGN.md — the machine-readable design source
 
@@ -138,6 +183,7 @@ components:                        # optional; 8 sub-props: backgroundColor text
 ## Layout              — grid/container/breakpoints (375/768/1024/1440)/density/spacing rhythm/responsive collapse per archetype
 ## Elevation & Depth   — flat vs tonal vs shadow; the shadow vocabulary; tinted shadows
 ## Shapes              — the ONE radius system; borders; form language
+## Imagery             — medium/treatment, subjects, purposes, slots/count, mobile crops and explicit omissions (§3a); inventory in assets/manifest.json
 ## Components          — buttons/inputs/nav/table/chip/card/dialog: shape, color, states (default hover focus active disabled loading error success)
 ## Motion              — durations (100–150 feedback · 150–300 state · 300–500 overlay/view), easing (exponential ease-out; no bounce), the ONE authored moment (Persuade), prefers-reduced-motion behaviour
 ## States              — loading (skeleton, not spinner-in-content) · empty (what/why/how) · error (what failed/why/recover) · success — per component family
@@ -222,6 +268,9 @@ persona walk are the inputs; the builder's summary is never evidence.
    captures even for same-sized replacements; declared motion always reruns with `--prev`.
    Also assert the actual keyboard task outcome in both profiles and inspect their captures.
    Canvas/custom JS timelines need app-owned tests (integrations-protocol §1.6).
+   Check each required image at its declared route/selector: loaded and visibly rendered, not just
+   present on disk. Review the §3a imagery decisions against desktop/mobile captures; file evidence
+   for missing promised art, generic filler, incoherent treatment, bad crops or crowded task areas.
 3. **Heuristic critique** — score Nielsen's ten 0–4 (be honest: most real UIs land 20–32/40; a 4 is genuinely excellent; `na` only for heuristics the mode cannot apply, e.g. 7 and 10 on Persuade/Experience, renormalizing the max) with one **key issue** per row; run the **cognitive-load** eight (single focus · chunking ≤4 · grouping · hierarchy · one thing at a time · ≤4 visible options per decision · no working-memory bridge · progressive disclosure; 0–1 fails low, 2–3 moderate, 4+ high); write `design-critique.tsv` (`item kind score max note`; H1..H10 required). Where a `reason`-style blind panel is available, let two isolated assessors score before seeing the detector output — detector findings anchor judgment.
    Heuristic reminders: H1 status (feedback on every action, progress, current location) · H2 real-world language · H3 control/freedom (undo, cancel, back, clear filters) · H4 consistency (same control = same look everywhere) · H5 error prevention (confirm destructive, constrain input, autosave) · H6 recognition over recall (visible options, labels on icons, recents) · H7 flexibility (shortcuts, bulk, power paths) · H8 minimalist (every element earns its pixel) · H9 error recovery (plain, specific, actionable, preserves work) · H10 help (contextual, task-focused).
 4. **Persona walk** — pick 2–3 by surface (dashboard/admin → Alex power user + Sam screen-reader/keyboard; forms/onboarding/checkout → Jordan first-timer + Sam + Casey one-thumb mobile; landing → Jordan + Riley stress-tester + Casey; data-heavy → Alex + Sam; add 1–2 project personas from the SRS stakeholders). Walk the primary task as each; report **specific red flags** (the exact element that failed them), never generic descriptions.

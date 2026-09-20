@@ -23,6 +23,9 @@ rows remain unmet until their actual requirements are satisfied. Existing workfl
 - **Availability is not approval.** A scoped generation need or mode-required imagery arms the
   bounded media pass; mere tool detection does not. Honor existing user authorization. An API key
   alone does not authorize an API fallback or a switch away from an explicitly requested provider.
+  The design-protocol §3a imagery opportunity pass can establish that need within the requested
+  design/build scope; it need not wait for a separate `Assets:` hint. Reuse settled design choices
+  and permissions; routine in-scope imagery needs no separate approval ceremony.
 - Keep actual receipts and report attempts/cap. Report model, service job ID, balance and cost as
   unknown when the tool does not expose them; do not invent values or require a native balance API.
   Tracker and outbound design writes retain their arming rules below.
@@ -68,6 +71,9 @@ Supply observed booleans and MCP kinds, not guesses. `existing`, when supplied, 
 
 Write project-local `assets/manifest.json` and a concise `assets/PLAN.md` view: slot, route/selector,
 subject, dimensions/aspect, required/optional, reuse decision, provider, candidate count and byte caps.
+Use design-protocol §3a to choose a restrained set of useful image/artwork slots, including app
+surfaces. The intended visible-image count is separate from the attempt cap; do not fill every
+slot merely because jobs remain. Include purpose, medium/treatment and mobile crop in PLAN.md.
 Default cap: **12 generation jobs** per engagement (`Assets: N` overrides). Start with one candidate
 per slot unless the brief needs variants. Count **every attempt**, including retries, edits, failures
 and rejected candidates; record pending before dispatch, then its real terminal outcome. Never
@@ -99,7 +105,9 @@ Reuse dedicated edit/cutout/reframe/upscale tools only when available and needed
 still count. Prefer slot-sized WebP/AVIF for photos, PNG for transparency or a justified fixture,
 SVG for true vectors; never rename an extension to claim conversion. Set intrinsic dimensions,
 responsive sizes/srcset where useful, informative alt text or decorative empty alt, and eager/lazy
-loading by placement. Verify actual image decoding and layout in the browser, including mobile.
+loading by placement. Wire the file into its declared route/selector; verify actual image decoding,
+visible rendering, crop and task hierarchy in the browser, including mobile. A file on disk or in
+the manifest alone cannot pass a required image slot's `ux` acceptance row.
 
 Videos need a poster, muted playback where appropriate, controls/pause when required, and a reduced
 motion alternative; audio and 3D keep their scoped formats and loading rules. No file ≥50 MB in git;

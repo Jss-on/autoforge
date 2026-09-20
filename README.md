@@ -1,12 +1,12 @@
 <div align="center">
 
+<img src="docs/assets/autoforge-logo.png" alt="AutoForge logo: an ember-orange AF monogram with a returning arrow" width="160" height="160">
+
 # AutoForge
 
-**Turn [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [OpenCode](https://opencode.ai), or [OpenAI Codex](https://developers.openai.com/codex) into a relentless improvement engine.**
+**Research the decision. Build the product. Verify every improvement.**
 
-AutoForge is the product; `forge` is its command namespace — every command is `/forge:*` (renamed from `/autoresearch:*` in v3.0.0).
-
-Based on [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) — constraint + mechanical metric + autonomous iteration = compounding gains.
+An autonomous iteration engine for Claude Code, OpenCode, and OpenAI Codex.
 
 [![Claude Code Skill](https://img.shields.io/badge/Claude_Code-Skill-blue?logo=anthropic&logoColor=white)](https://docs.anthropic.com/en/docs/claude-code)
 [![OpenCode](https://img.shields.io/badge/OpenCode-Skill-purple)](https://opencode.ai)
@@ -14,81 +14,68 @@ Based on [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) —
 ![Version](https://img.shields.io/badge/version-3.6.0-blue.svg)
 [![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 
-[![Based on](https://img.shields.io/badge/Based_on-Karpathy's_Autoresearch-orange)](https://github.com/karpathy/autoresearch)
+**21 commands · 3 agent platforms · bounded iteration · evidence-backed gates**
 
-<br>
-
-*"Set the GOAL → The agent runs the LOOP → You wake up to results"*
-
-*You don't need AGI. You need a goal, a metric, and a loop that never quits.*
-
-**Supports Claude Code, OpenCode, and OpenAI Codex. 21 commands. 9 safety hooks. Thin-router token architecture — command bodies load only when invoked.**
-
-> **v3.0.0 — The `forge` rename.** Every command moved from the `autoresearch` namespace to `forge`: `/forge:build`, `/forge:test`, `/forge:fix`, … (`forge_*` on OpenCode, `$forge` on Codex). Same engine, same protocol — new name matching the product. Run outputs now land in `forge/<cmd>-<timestamp>/`; pre-3.0 `autoresearch/` run dirs stay valid as history. Reinstall the plugin (`/plugin marketplace add Jss-on/autoforge`, then install `forge`) to pick up the new commands. Env vars keep the `AR_` prefix.
->
-> **v2.4 — The unattended delivery loop.** `/forge:test` runs a full **QA engagement** (ISO 29119/ISTQB-shaped: risk-based plan, RTM, formal test design, evidence-anchored execution, defect ledger, mechanical `RELEASE_RECOMMENDED | RELEASE_BLOCKED` verdict) and `/forge:fix` is its **builder counterpart** — defect-ledger remediation, root-cause iron law, an independence ceiling (fix may mark `fixed`, only a `test` re-engagement grants `verified`). PRs the loop opens **merge themselves once every CI check is green** (branch protection always wins; deploying stays human-gated). `requirements` now runs a **latent-intent elicitation protocol** — domain recon before the first question, day-in-the-life walkthroughs, the Kano must-be checklist, throwaway-wireframe reaction rounds — so what the client *couldn't articulate* still lands in the SRS. All browser verification runs on **Playwright**, so the same gates pass on a workstation and in CI. You supply requirements and a command; the loop does the rest.
->
-> **v2.3 — Logic-first acceptance:** the build pipeline grades **six weighted dimensions** with a **gating `logic` dimension** — golden vectors derived from the SRS must all compute correctly, or the headline score is hard-capped at 0.50. See **[Logic-first (v2.3)](#logic-first-v23)**.
->
-> **v2.2 — Autonomous Orchestrator:** Type a plain-language goal to `/forge` and it classifies your goal, derives a Success predicate, confirms it once, then loops across subcommands until done. `Metric:`/`Verify:` invocations run the classic loop unchanged. See [guide/forge-orchestrator.md](guide/forge-orchestrator.md).
->
-> **Build pipeline:** a full **SDLC engine** for building complex software — `/forge:requirements` → `/forge:build` (greenfield) or `/forge:feature` (existing app) → `/forge:test` ↔ `/forge:fix` (independent QA ↔ remediation) → `regression` → `ship`. Builds to **passing acceptance across six weighted dimensions** (logic · functional · UI/UX · devops · monitoring · hardening), conforms to a `DESIGN.md`, and verifies live in a real browser with **Playwright**. See **[Building Complex Software](#building-complex-software)**.
-
-<br>
-
-[How It Works](#how-it-works) · [Commands](#commands) · [Build Software](#building-complex-software) · [Quick Start](#quick-start) · [Secure & Ship](#security-and-shipping-guide) · [Publish AutoForge](#publishing-and-releasing-autoforge) · [Guides](guide/) · [FAQ](#faq)
+[Capabilities](#capabilities) · [Scenarios](#practical-scenarios) · [Install](#quick-start) · [Commands](#commands) · [Build Software](#building-complex-software) · [Secure & Ship](#security-and-shipping-guide) · [Guides](guide/)
 
 </div>
 
 ---
 
-```
-     PLAN             LOOP            DEBUG             FIX             SECURE            SHIP
- ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
- │   Goal   │     │  Modify  │     │   Find   │     │   Fix    │     │  STRIDE  │     │  Stage   │
- │  Metric  │────▶│  Verify  │────▶│   Bugs   │────▶│  Errors  │────▶│  OWASP   │────▶│  Deploy  │
- │  Scope   │     │Keep/Drop │     │  Trace   │     │  Repair  │     │ Red Team │     │ Release  │
- └──────────┘     └──────────┘     └──────────┘     └──────────┘     └──────────┘     └──────────┘
- /forge:   /forge    /forge:   /forge:   /forge:   /forge:
-   plan                              debug            fix              security         ship
+AutoForge turns a goal into a repeatable **modify → verify → keep/discard** loop. Use it to build
+and extend software, improve a measurable result, research a decision, or prepare a release.
+`forge` is the command namespace; work happens inside your existing coding agent and repository.
 
- ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
- │  Probe   │     │ Scenario │     │ Predict  │     │  Reason  │
- │ Require- │     │   Edge   │     │ 5-Expert │     │  Debate  │
- │  ments   │     │  Cases   │     │  Swarm   │     │ Converge │
- └──────────┘     └──────────┘     └──────────┘     └──────────┘
- /forge:   /forge:   /forge:   /forge:
-   probe            scenario         predict          reason
+Start with a plain-language goal, or provide an exact scope, metric, verification command and
+iteration budget. Each run leaves a history of changes, results and evidence for the next step.
 
- ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
- │  Learn   │     │ Improve  │     │   Eval   │     │ Baseline │
- │   Docs   │     │ Research │     │ Analyze  │     │   Diff   │
- │   Gen    │     │   PRDs   │     │ Results  │     │ Verdict  │
- └──────────┘     └──────────┘     └──────────┘     └──────────┘
- /forge:   /forge:   /forge:   /forge:
-   learn            improve          evals            regression
+## Recent changes
 
-   ── Build pipeline (full SDLC) ──────────────────────────────
+These changes are in the current source under **unreleased v3.7.0**. The version badge reflects
+the packaged release; see the [project changelog](docs/project-changelog.md) for release status.
 
- ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
- │ Require- │     │  Build   │     │ Feature  │     │   Test   │     │   Fix    │
- │  ments   │────▶│Greenfield│────▶│ Brownfld │────▶│ QA / RTM │────▶│  Defect  │
- │  → spec  │     │full SDLC │     │ +ratchet │  ┌─▶│ Verdict  │     │  Ledger  │──┐
- └──────────┘     └──────────┘     └──────────┘  │  └──────────┘     └──────────┘  │
- /forge:   /forge:   /forge:│  /forge:   /forge:│
-   requirements     build            feature     │    test             fix         │
-                                                 └─────── verified ◀───────────────┘
-```
+- **Requirements you can review:** a living client review makes assumptions, user stories,
+  success/failure scenarios, security concerns and operational needs visible before the spec.
+- **Technology choices with evidence:** compare 3–5 real stacks, explain the recommendation and
+  tradeoffs, and record your decision. Approval pins both the evidence and decision record;
+  build confirms the choice with a measured spike. [Requirements guide](guide/forge-requirements.md).
+- **More life in the interface:** design considers a restrained set of actual photos,
+  illustrations or artworks, with coherent treatment, mobile crops and clear working areas.
+  Selected assets must be delivered and visibly rendered. [Design guide](guide/forge-design.md).
+- **Stronger security completion:** build and feature completion require current passing checks
+  and saved evidence. Optional **Strix** adds isolated dynamic testing; incomplete scans, missing
+  reports and unresolved blocking findings prevent readiness. [Security guide](guide/forge-security.md).
+
+## Capabilities
+
+| Area | What AutoForge covers | Start here |
+|---|---|---|
+| Goals and iteration | Natural-language orchestration, explicit metric loops, scope and guard checks, bounded runs, rollback and results analysis | `forge`, `plan`, `evals` |
+| Requirements and stack selection | Client review, assumptions, stories, lifecycle scenarios, evidence-based stack comparisons, owner approval, SRS and acceptance specs | `requirements`, `probe` |
+| Research and decisions | Primary-source reading, cited claims and confidence, disconfirmation, expert perspectives, blind judging, Markdown dossiers and arXiv/IEEE paper output | `research`, `predict`, `reason` |
+| Product discovery | Customer problems, competitor gaps, ranked improvements and selected feature PRDs | `improve` |
+| Software delivery | Greenfield builds and existing-app features; logic, functional, UX, DevOps, monitoring and hardening acceptance; non-regression ratchets | `build`, `feature` |
+| Visual design and assets | Design direction, `DESIGN.md`, purposeful imagery, asset provenance and budgets, responsive crops, accessible motion, browser design audits and remediation | `design` |
+| QA and debugging | Scenario exploration, risk-based plans, requirements traceability, domain-logic vectors, exploratory tests, defect ledgers, root-cause repairs and independent retesting | `scenario`, `test`, `debug`, `fix` |
+| Security | STRIDE, OWASP/ASVS-guided checks, authorization and tenant isolation, secrets/dependencies, deployment boundaries and optional Strix verification | `security` |
+| Stability and release | Baseline/candidate comparisons, performance regression checks, release checklists, dry runs, artifact-bound execution evidence, live verification and rollback | `regression`, `ship` |
+| Android delivery | PWA preparation, Trusted Web Activity packaging, Digital Asset Links, signed bundles, emulator verification and store materials | `android` |
+| Documentation and memory | Codebase docs, navigable wikis, checked links, run history and scoped procedures retained from verified recoveries | `learn`, [procedural lessons](.claude/skills/forge/references/procedural-lessons.md) |
+| Integrations and runtime | Native image tools or media MCP, Figma import, GitHub/Linear tracking, environment checks, safety hooks and validated command handoffs | [Integrations and assets](#integrations-assets-and-memory), [hooks](#hooks--safety) |
+
+The [command reference](#commands) lists all 21 commands. Required checks remain required when
+a tool or integration is unavailable; the run reports what is blocked instead of assuming success.
 
 ---
 
 ## Why This Exists
 
-[Karpathy's autoresearch](https://github.com/karpathy/autoresearch) demonstrated that a 630-line Python script could autonomously improve ML models overnight — **100 experiments per night** — by following simple principles: one metric, constrained scope, fast verification, automatic rollback, git as memory.
+Inspired by [Karpathy's autoresearch](https://github.com/karpathy/autoresearch), AutoForge applies
+constrained experiments and measurable feedback to software and other domains. It adds the
+requirements, design, research, testing and delivery workflows needed to take a project further.
 
-**AutoForge generalizes these principles to ANY domain.** Not just ML — code, content, marketing, sales, HR, DevOps, or anything with a number you can measure.
-
-**v2.1.0 was a major architecture rebuild.** The monolithic SKILL.md, loaded in full on every invocation, was replaced with a thin router (~8KB, always resident) plus self-contained command files (~3–35KB, loaded only when invoked) and reference files pulled on demand — the same capability surface at a fraction of the tokens.
+A thin skill router loads command bodies and references only when needed. Git history and run
+artifacts preserve the work between iterations and sessions.
 
 ---
 
@@ -110,7 +97,7 @@ Every improvement stacks. Every failure auto-reverts. Progress is logged in TSV 
 
 ### The Setup Phase
 
-Before looping, Claude performs a one-time setup:
+Before looping, the agent performs a one-time setup:
 
 1. **Read context** — reads all in-scope files
 2. **Define goal** — extracts or asks for a mechanical metric
@@ -179,35 +166,38 @@ See [guide/hooks.md](guide/hooks.md) for full reference.
 
 | Command | What it does | Default Iterations |
 |---------|--------------|--------------------|
-| `/forge` | **Classic:** Core iterate loop: modify → verify → keep/discard · **Orchestrator:** free-form goal → auto-select pipeline → loop until predicate met | 25 / goal-bounded |
+| `/forge` | Improve a measured result, or route a plain-language goal through the appropriate workflows | 25 / goal-bounded |
 | `/forge:plan` | Convert goal into validated config | one-shot |
-| `/forge:requirements` | Review assumptions, stories and scenarios with the client → approved requirements → validated build spec | one-shot |
-| `/forge:build` | Build greenfield full-stack software via the full SDLC to passing acceptance (6 weighted dims, logic-gated) | 40 |
-| `/forge:feature` | Add a feature to existing software — delta acceptance + hard non-regression ratchet | 25 |
-| `/forge:test` | Full QA engagement on existing software — risk-based plan, RTM, formal test design, execution + defect ledger, exit-criteria verdict (ISO 29119/ISTQB-aligned) | 20 |
-| `/forge:design` | UI/UX designer + design QA — mode-aware direction protocol → machine-readable `DESIGN.md` (`system`); independent audit of a running app: valid captures, mechanical anti-slop floor (`SLOP_GATE`), heuristic critique, personas, defect ledger, `SHIP|FIX|REBUILD` verdict (`audit`); bounded remediation (`--fix`) | 12 (`--fix`) |
-| `/forge:research` | Deep research engagement — decompose questions, sweep scholarly + web sources, read the primary literature, build a source-anchored claims ledger, synthesize a cited dossier gated by `DOSSIER_READY|DOSSIER_BLOCKED` | 15 |
-| `/forge:android` | Web app → Android app (Trusted Web Activity) — PWA-ify the deployed app, Digital Asset Links trust, signed AAB/APK via Bubblewrap, emulator gate in CI, release workflow + store pack; `STORE_READY|BLOCKED`, native-only needs reported honestly | 12 |
+| `/forge:requirements` | Review assumptions and scenarios, research and approve the stack, then validate the SRS and build spec | one-shot |
+| `/forge:build` | Build a new app through the SDLC, with six acceptance dimensions and separate logic/design/security gates | 40 |
+| `/forge:feature` | Extend an existing app with new acceptance checks and a hard non-regression ratchet | 25 |
+| `/forge:test` | Plan and execute independent QA, trace requirements, record defects and gate release readiness | 20 |
+| `/forge:design` | Create `DESIGN.md`, plan imagery, audit a running UI and remediate design/accessibility defects | 12 (`--fix`) |
+| `/forge:research` | Produce a cited dossier with checked claims; optionally generate arXiv/IEEE papers | 15 |
+| `/forge:android` | Package a deployed web app as a verified, signed Android TWA with a store pack | 12 |
 | `/forge:debug` | Hunt bugs via hypothesis iteration | 15 |
 | `/forge:fix` | Remediate defects to zero, root-cause first | 20 |
-| `/forge:security` | STRIDE + OWASP audit with red-team | 15 |
-| `/forge:ship` | Ship through 8 phases | linear |
+| `/forge:security` | Audit security boundaries, optionally run Strix, and gate readiness on checks and unresolved findings | 15 |
+| `/forge:ship` | Check, preview, authorize, execute and verify a shipment; handle rollback | linear |
 | `/forge:scenario` | Generate edge cases across 12 dimensions | 20 |
 | `/forge:predict` | 5 expert personas debate | one-shot |
-| `/forge:learn` | Scout → generate docs → validate → fix | 10 |
+| `/forge:learn` | Create, update, check or summarize documentation; build a navigable codebase wiki | 10 |
 | `/forge:reason` | Adversarial debate with blind judges | 8 |
-| `/forge:probe` | 8 personas interrogate requirements | 15 |
+| `/forge:probe` | Interrogate assumptions and constraints with adversarial personas | 15 |
 | `/forge:improve` | Research ICP, discover improvements, generate PRDs | 15 |
 | `/forge:evals` | Analyze iteration results: trends, plateaus | one-shot |
 | `/forge:regression` | Stability gate: baseline vs candidate, verdict STABLE/UNSTABLE | one-shot |
 
 **Universal flags:** `Iterations: N`, `Iterations: unlimited`, `--evals`, `--evals-interval N`, `--chain <targets>`, `--<subcommand>` shorthand.
 
-**All commands use interactive setup when invoked without arguments.** Just type the command — the agent asks for what it needs with smart defaults based on your codebase.
+Commands use available project context and ask for missing inputs. Enter them in the agent's chat;
+they are workflows, not a standalone `forge` shell executable.
 
-> **OpenCode users:** Commands use underscore naming (`/forge_debug`, `/forge_fix`, etc.). All 21 commands available.
->
-> **Codex users:** Invoke via `$forge` mention syntax. Subcommands are keywords: `$forge debug`, `$forge plan`, etc.
+| Platform | Core loop / goal | Subcommand example |
+|---|---|---|
+| Claude Code | `/forge` | `/forge:design` |
+| Codex | `$forge` | `$forge design` |
+| OpenCode | `/forge` | `/forge_design` |
 
 ### Quick Decision Guide
 
@@ -215,6 +205,7 @@ See [guide/hooks.md](guide/hooks.md) for full reference.
 |--------------|-----|
 | Build a new full-stack app from scratch (full SDLC) | `/forge:build` |
 | Turn a client brief into a validated build spec | `/forge:requirements` |
+| Compare technology stacks and approve the reasons for the choice | `/forge:requirements` with your constraints and any `Stack:` hint |
 | Add a feature to an existing app without regressions | `/forge:feature` |
 | Run a full QA engagement on an existing app (plan → RTM → verdict) | `/forge:test` |
 | Research a topic into a cited, source-anchored dossier | `/forge:research` |
@@ -224,6 +215,8 @@ See [guide/hooks.md](guide/hooks.md) for full reference.
 | Run bounded iterations | Add `Iterations: N` to any command |
 | Don't know what metric to use | `/forge:plan` |
 | Run a security audit | `/forge:security` |
+| Add dynamic penetration testing to the audit | `/forge:security --strix --strix-budget <USD>` |
+| Give the interface a coherent visual direction and purposeful imagery | `/forge:design system` → `/forge:design audit --fix` |
 | Ship a PR / deployment / release | `/forge:ship` |
 | Optimize without breaking existing tests | Add `Guard: npm test` |
 | Hunt all bugs in a codebase | `/forge:debug` |
@@ -237,6 +230,7 @@ See [guide/hooks.md](guide/hooks.md) for full reference.
 | Get expert opinions before starting | `/forge:predict` |
 | Analyze from multiple angles then debug | `/forge:predict --chain debug` |
 | Generate docs for a new codebase | `/forge:learn --mode init` |
+| Create a navigable codebase knowledge base | `/forge:learn --mode wiki` |
 | Update existing docs after changes | `/forge:learn --mode update` |
 | Debate an architecture decision | `/forge:reason --domain software` |
 | Surface hidden constraints before starting | `/forge:probe` |
@@ -251,20 +245,194 @@ See [guide/hooks.md](guide/hooks.md) for full reference.
 
 ---
 
+## Practical scenarios
+
+These examples use **Codex chat syntax**. Use the platform equivalents above for Claude Code or
+OpenCode. Run one command at a time; replace paths, domains and budgets with your project's values.
+Each scenario names the evidence you should expect, so progress is more than a finished response.
+
+<details>
+<summary><strong>1. Turn a product idea into a working app</strong></summary>
+
+You want a booking service, but the cancellation rules, staff access and technology choices are
+still unclear. Start by reviewing the business behavior before implementation.
+
+```text
+$forge requirements
+Brief: A booking service for small studios with availability, deposits, cancellations and staff access.
+Name: studio-booking
+--chain build
+```
+
+**Expected:** a corrected client review, concrete success/failure scenarios, an evidence-backed
+stack decision you approve, and a validated spec. Build then confirms the stack, implements the
+app and verifies acceptance, design and security. Requirements approval precedes the build handoff.
+
+</details>
+
+<details>
+<summary><strong>2. Add a feature without breaking existing behavior</strong></summary>
+
+An existing booking app needs staff roles and exports that cannot leak another studio's data.
+
+```text
+$forge feature Target: apps/booking
+Feature: Add staff roles and tenant-isolated booking exports.
+Iterations: 25
+```
+
+**Expected:** new role/export acceptance checks, negative access tests, current security evidence
+and a regression comparison against the existing green baseline. Passing checks become part of
+the permanent acceptance set; a change that breaks an existing check is reverted.
+
+</details>
+
+<details>
+<summary><strong>3. Make a useful but bland interface feel considered</strong></summary>
+
+The app works, but looks generic. Give it a clear visual direction and a few relevant images while
+keeping booking tables and forms easy to use.
+
+```text
+$forge design system Target: apps/booking Mode: operate Assets: 6 --refresh
+Brief: A calm studio workspace with a few authentic photos or editorial illustrations. Keep schedules and forms clear.
+```
+
+Then apply and verify the direction:
+
+```text
+$forge design audit Target: apps/booking --fix Iterations: 12
+```
+
+**Expected:** `DESIGN.md` with an imagery plan, actual approved assets in the app, desktop/mobile
+crops, accessible contrast and motion, and a design defect ledger with a fresh verdict. `Assets: 6`
+caps generation attempts; it does not request six decorative images.
+
+</details>
+
+<details>
+<summary><strong>4. Find failures before customers encounter them</strong></summary>
+
+Two customers can reserve the last slot while payment callbacks are retried. Explore the awkward
+cases, then assess the implementation independently.
+
+```text
+$forge scenario Scenario: Two customers reserve the last slot while payment callbacks are retried.
+--domain software --format test-scenarios Iterations: 20
+```
+
+Use the resulting scenarios in the QA plan:
+
+```text
+$forge test Target: apps/booking --chain fix
+```
+
+**Expected:** concurrency, duplicate-event, failed-payment and recovery scenarios; a test plan and
+traceability matrix; reproducible defects; root-cause repairs. A separate QA re-engagement verifies
+fixes. If the failure needs investigation first, start with `debug --fix` and the observed symptom.
+
+</details>
+
+<details>
+<summary><strong>5. Check security before preparing a release</strong></summary>
+
+The app handles multiple customers' private records. Audit the source and integration boundaries,
+and add Strix when Docker, a model/provider and authorized scan scope are available.
+
+```text
+$forge security --strix --strix-budget 5 --fail-on high
+Scope: src/**, tests/**, package.json, package-lock.json, Dockerfile
+Focus: cross-tenant access, session revocation, exports and payment callback replay
+Depth: standard
+```
+
+**Expected:** the normal security baseline plus an isolated Strix scan, redacted native reports
+and one findings ledger. Budget stops and missing evidence block readiness; unresolved High/Critical
+findings require repair and retest. Once security passes, run `regression`, then `ship --dry-run`
+for the intended destination before authorizing the actual shipment.
+
+</details>
+
+<details>
+<summary><strong>6. Research a technical decision or a product opportunity</strong></summary>
+
+You need sources and tradeoffs before choosing a synchronization approach.
+
+```text
+$forge research Topic: Offline-first synchronization approaches for a multi-user scheduling app.
+Audience: The engineering team choosing a conflict-resolution strategy.
+Iterations: 15
+--chain reason
+```
+
+**Expected:** accessed sources, reading notes, a claims ledger with confidence and counterevidence,
+a cited dossier and a reasoned comparison. Add `Format: arxiv,ieee` when paper output is useful;
+PDF compilation needs a LaTeX toolchain. For customer-problem discovery instead, use `improve` with
+an `ICP:`; it ranks opportunities and writes PRDs for the features you select.
+
+</details>
+
+<details>
+<summary><strong>7. Bring an existing web app to Android</strong></summary>
+
+The production web app already works and you want an Android package using the same experience.
+
+```text
+$forge android Target: apps/booking Url: https://booking.example.com
+Package: com.example.booking Track: none Iterations: 12
+```
+
+**Expected:** PWA checks, verified site/app trust, signed AAB/APK artifacts, emulator evidence and
+store materials. Replace the example domain with the app's actual deployed HTTPS origin. Native-only
+requirements remain visible blockers; `Track: none` produces artifacts without a Play upload.
+
+</details>
+
+<details>
+<summary><strong>8. Improve a measurable result and keep the project understandable</strong></summary>
+
+The API is slow, and you want an optimization budget with a guard against broken checkout behavior.
+
+```text
+$forge plan Goal: Bring API p95 latency below 200ms while keeping checkout tests green.
+Scope: src/api/**
+```
+
+**Expected:** a config using your actual benchmark, a direction, a regression guard and a dry-run
+baseline. Run that config with `$forge` and an iteration budget; use `evals` to inspect improvement
+and plateaus. After the changes, refresh the team's documentation:
+
+```text
+$forge learn --mode wiki --depth standard Scope: src/**, docs/**
+```
+
+This produces a navigable codebase wiki. Documentation generation is separate from procedural
+memory, which retains only recoveries supported by verified evidence.
+
+</details>
+
+More examples: [scenario walkthroughs](guide/scenario/), [software build playbook](guide/building-software-with-forge.md),
+[examples by domain](guide/examples-by-domain.md), [security and shipping](#security-and-shipping-guide).
+
+---
+
 ## Building Complex Software
 
-Four commands turn forge into a full **software-development-lifecycle engine**. Software is an
+The build, design, QA and delivery workflows form a **software-development-lifecycle engine**. Software is an
 iteration process — so building it is just the forge loop applied to a *growing* acceptance set.
 
 > 📘 **Full playbook (15–20 pages):** [guide/building-software-with-forge.md](guide/building-software-with-forge.md) — end-to-end walkthrough, the acceptance model in depth, building large multi-service systems, troubleshooting, and a complete worked example.
 
 ### The pipeline
 
-```
-/forge:requirements  ─▶  /forge:build  ─▶  /forge:regression  ─▶  /forge:ship
-   client brief → spec           greenfield, full SDLC      stability gate                human-gated
-                                       │
-   grow it later  ─────────────────────┴────▶  /forge:feature  (brownfield, +ratchet) ─▶ regression → ship
+```mermaid
+flowchart TD
+    R[Requirements and approved stack] --> D[Design system and imagery]
+    D --> B[Build a new app or add a feature]
+    B --> V[QA, design and security verification]
+    V -->|Repair and retest| B
+    V -->|Passing evidence| G[Regression gate]
+    G --> S[Authorized shipment and live verification]
 ```
 
 ### The six acceptance dimensions
@@ -355,8 +523,9 @@ builder stay separate; that independence is what makes the verdict worth anythin
 ### Step 5 — Gate + Ship
 
 `/forge:regression` proves no green→red across 8 dimensions (STABLE / UNSTABLE).
-`/forge:ship` runs the 8-phase shipping workflow — **deployment is always human-gated**; nothing
-deploys or pushes autonomously.
+`/forge:ship` runs the 8-phase shipping workflow; deployment and publication require explicit
+authorization. Build/feature may push to the project's own private output repo and use reviewed
+CI/PR automation within their workflow. Those actions do not authorize a production deployment.
 
 ### DESIGN.md + the design floor (UI/UX)
 
@@ -373,6 +542,12 @@ cards, purple gradients, glow halos, side stripes, em-dash copy, placeholder nam
 text, unlabelled inputs, zoom locks, overflow, off-token colors/faces …) is a `ux` acceptance row,
 and `/forge:design audit` closes Phase 6 with valid captures, a heuristic critique, a persona
 walk, a defect ledger and a `SHIP | FIX | REBUILD` verdict.
+
+Design also considers a small set of purposeful **photos, illustrations or artworks**, even when
+the brief has no `Assets:` hint. One lead image and a few supporting images can be enough; this is
+a starting point, not a quota. `DESIGN.md` records the medium, purpose, placement and mobile crops,
+or explains why a surface needs no imagery. Dense tables and task flows stay clear. Selected
+images must exist in the project and render in the app; a prompt or chat preview is not delivery.
 
 ### Autonomy
 
@@ -412,6 +587,36 @@ never hold the whole thing in your head; the metric + the ratchet do.
 
 ---
 
+## Integrations, assets and memory
+
+These capabilities extend the same commands; they do not add separate command namespaces.
+
+| Capability | How to use it | Evidence and limits |
+|---|---|---|
+| Raster images and artwork | Use `Assets: N` in requirements, design, build or feature; reuse suitable assets before generating with available native image tools or media MCP | Attempt budget, prompts/receipts, provenance, approved file hashes, real browser rendering and mobile crops; video/audio/3D only when explicitly scoped and supported |
+| Icons and UI motion | Reuse the project's SVG/icon system; implement UI motion with CSS or Web Animations | Normal and reduced-motion checks, keyboard task verification and loading/payload budgets |
+| Figma design bridge | Supply `Design: <figma-url>` with an available connector; `--figma-out` supports an authorized review export | Source variables/components/frames map into `DESIGN.md`; compare the implementation to source frames |
+| Issue and project tracking | GitHub is the default; select `Tracker: linear` when the connector is available | Projects, phases and defect ledgers stay linked; a fix enters review, independent verification closes it |
+| Strix dynamic security | Select `security --strix` with an authorized target, configured provider and positive budget | Docker and CLI preflight, disposable source copies, native completion/SARIF checks and the existing severity/retest gate |
+| Procedural memory | Workflows retrieve applicable lessons using `scripts/lessons.cjs` | Project/workflow scope, pinned files, baseline/recovery/holdout evidence, checked reuse and retirement of failed or stale procedures |
+| Verification cadence | Default checks reuse applicable evidence; `--thorough` on test/fix/design restores exhaustive review | Changed routes/suites are checked first; full guards still run at checkpoints and completion |
+| Simplicity discipline | Build supports `Ponytail: lite`, `full`, `ultra` (default) or `off` | Prefer reuse and native facilities; required validation, security, accessibility and requested behavior stay in scope |
+
+`Assets: off` disables new generation, while retaining checked asset reuse, icons, motion and
+delivery checks. An unavailable provider leaves a required asset slot unmet. Figma and Linear are
+optional; file/catalog/generated design sources and GitHub remain available alternatives.
+
+Run state travels in a validated `handoff.json`; logs and nonempty evidence live under
+`forge/<command>-<timestamp>/`. A report's `COMPLETE` status and its passing disposition are separate.
+Release consumers inspect the current candidate and evidence before acting.
+
+Contracts: [assets and integrations](.claude/skills/forge/references/integrations-protocol.md),
+[procedural lessons](.claude/skills/forge/references/procedural-lessons.md),
+[verification cadence](.claude/skills/forge/references/speed-protocol.md),
+[handoffs](.claude/skills/forge/references/handoff-schema.md).
+
+---
+
 ## Prerequisites
 
 AutoForge is distributed from a **private repository** — [Jss-on/autoforge](https://github.com/Jss-on/autoforge).
@@ -425,6 +630,10 @@ Your git must be able to reach it: authenticate with `gh auth login`, or set up 
 | Playwright | **required for the build pipeline** — headless Chromium for live e2e, axe a11y and DESIGN.md conformance (the ux dimension). Installed per project: `npm i -D playwright && npx playwright install --with-deps chromium` |
 
 Optional, per spec: `docker` (devops dimension), `axe` CLI (accessibility), `k6` or `autocannon` (perf SLOs), `gh` (release tooling).
+Strix additionally needs its CLI, a working Docker runtime and a configured model/provider when
+selected. Android packaging needs the local or CI toolchain described in the
+[Android guide](guide/forge-android.md); research PDF output needs LaTeX. Native image and MCP
+availability is checked through the agent session's actual tools.
 
 Run the environment preflight any time:
 
@@ -750,10 +959,13 @@ honestly (an official design-system package when the brief reads as one), choose
 against the saturated AI looks (cream+oxblood · navy+blue shadcn · near-black+neon), list 5–7
 directions, roll (`score-design.sh seed`), commit — then write a **machine-readable `DESIGN.md`**
 (frontmatter tokens with every `on-X` contrast pair, prose sections, named rules, Do/Don't) that
-`score-design.sh lint` validates.
+`score-design.sh lint` validates. The imagery plan considers actual photography, illustration and
+artwork in a coherent treatment, with placement, quantity and mobile crops. Approved images flow
+through the managed asset inventory into the rendered app; generation is bounded by `Assets:`.
 
-**audit** — independent (app source read-only), evidence-first: **valid captures** at every viewport
-(settled motion, full page, every PNG opened — a blank capture is RECAPTURE, never scored) →
+**audit** — independent (app source read-only), evidence-first: **valid captures** at the required viewports
+(settled motion, contact-sheet review and individual inspection of changed/flagged captures;
+`--thorough` opens every PNG; a blank capture is RECAPTURE, never scored) →
 `design-scan.cjs` (the mechanical floor + DESIGN.md conformance; the impeccable detector rides along
 when the project has it) → `SLOP: N` / `SLOP_GATE` → axe + keyboard walk → Nielsen's ten scored 0–4
 + the cognitive-load eight (`DESIGN_HEALTH: 28/40 (Good)`) → persona walk (power user, first-timer,
@@ -983,6 +1195,9 @@ authorization for that target and action.
 | `--diff` | Audit files changed since the last audit; use after an initial full scoped audit. |
 | `--fix` | Chain confirmed Critical/High findings to remediation, then retest before claiming resolution. |
 | `--fail-on <severity>` | Block at `critical`, `high`, `medium`, `low`, or `info`; default `high`. |
+| `--strix` | Add Strix dynamic verification; selected checks must complete before readiness. |
+| `--strix-target <target>` | Authorized scan target (repeatable); defaults to a disposable project snapshot. |
+| `--strix-budget <USD>` | Positive authorized Strix spend cap, separate from Forge iterations. |
 | `--evals` | Add progress checkpoints and a final analysis. |
 
 For a follow-up review with authorized local repairs:
@@ -994,6 +1209,21 @@ $forge security --diff --fix --fail-on high Iterations: 15
 `--fail-on medium` makes unresolved Medium findings block too; it does not expand `--fix` beyond
 its Critical/High repair scope. Keep the threshold consistent across an audit and its retests.
 Marking a blocking finding as accepted risk does not make the security gate pass.
+
+### Add Strix dynamic testing
+
+```text
+$forge security --strix --strix-budget 5
+Scope: src/**, tests/**, package.json, package-lock.json
+Depth: standard
+```
+
+[Strix](https://github.com/usestrix/strix) adds autonomous penetration testing to the existing
+audit. It needs Docker and a configured model/provider. Forge uses a disposable candidate copy,
+authorized targets and synthetic data, saves redacted native reports, and carries findings into
+the same severity/retest gate. A stopped scan or missing evidence blocks readiness, even with zero
+findings. The spend cap is a best-effort estimate; a selected Strix check also follows the candidate
+through build/feature completion. See [setup and execution](guide/forge-security.md#strix-dynamic-verification).
 
 ### Read the result and enforce it
 
@@ -1307,14 +1537,17 @@ Simulates a team (Architect, Security Analyst, Performance Engineer, Reliability
 
 ## /forge:learn — Autonomous Documentation Engine
 
-Scout codebase → generate docs → validate → fix → repeat. 4 modes: init (create from scratch), update (refresh existing), check (read-only health report), summarize (quick overview).
+Scout codebase → generate docs → validate → fix → repeat. Five modes: `init` (create), `update`
+(refresh), `check` (validate), `summarize` (overview), and `wiki` (a navigable codebase knowledge base).
 
 ```
-/forge:learn --mode init --depth deep
+/forge:learn --mode init --depth comprehensive
 Iterations: 10
 ```
 
 Dynamic doc discovery, project-type detection, validation-fix loop, git-diff scoping for updates, selective single-doc update with `--file`. Auto-generates Mermaid architecture diagrams, API reference, testing guide, config guide, and cross-reference links.
+Wiki mode supports `--modules <list>` to choose modules and `--force` to regenerate its pages.
+Documentation generation is separate from the verified procedural memory described above.
 
 ---
 
@@ -1504,7 +1737,7 @@ autoforge/
 ├── LICENSE                                        ← proprietary license
 ├── NOTICE                                         ← upstream MIT attribution (forge engine)
 ├── guide/                                         ← guides — one per command + the build playbook
-├── docs/                                          ← design + release documentation
+├── docs/                                          ← design + release documentation; assets/ holds the logo + generation prompt
 ├── evals/fullstack/                               ← build specs (*.spec.yaml)
 ├── tests/                                         ← harness self-tests (parity, hooks, scorers)
 ├── scripts/
@@ -1516,6 +1749,9 @@ autoforge/
 │   ├── score-test.sh                              ← defect-ledger validator + exit-criteria verdict (test)
 │   ├── score-design.sh · design-scan.cjs           ← DESIGN.md lint · live-DOM design floor (SLOP_GATE) · critique/verdict (design)
 │   ├── score-requirements.sh                      ← build-spec validator (requirements)
+│   ├── asset-check.cjs                            ← asset provenance, attempts, file hashes and delivery checks
+│   ├── lessons.cjs                                ← evidence-backed procedural memory
+│   ├── score-research.sh · score-android.sh        ← research dossier/paper and Android readiness gates
 │   ├── score-regression.sh                        ← regression stability verdict
 │   ├── validate-handoff.sh                        ← chain-handoff contract validator
 │   ├── run-index.sh · smoke-seam.sh · smoke-model.sh  ← run inventory + seam/model smokes
@@ -1551,14 +1787,22 @@ A: Run `/forge:plan` — it analyzes your codebase, suggests metrics, and dry-ru
 **Q: How do I build a whole app, not just optimize one metric?**
 A: Use the build pipeline — `/forge:requirements` (brief → validated spec via the latent-intent elicitation protocol) → `/forge:build` (greenfield, full SDLC, six weighted acceptance dimensions with the gating `logic` golden vectors, `DESIGN.md`, verified live with Playwright) → `/forge:feature` to add features under a hard non-regression ratchet → `/forge:test --chain fix` (independent QA engagement ↔ defect remediation, PRs auto-merged on green CI) → `/forge:regression` → `/forge:ship` (human-gated). See [Building Complex Software](#building-complex-software).
 
-**Q: What changed in v2.3?**
-A: Logic-first acceptance. The build pipeline now grades **six** weighted dimensions — logic, functional, ux, devops, monitoring, hardening. The new `logic` dimension is **gating**: golden vectors derived from the SRS must all compute correctly, and while any fails the headline score is hard-capped at 0.50. Convergence additionally requires `REQ_COVERAGE == 1.00` and `DESIGN_COVERAGE == 1.00`. The requirements → build → feature chain carries these gates end-to-end: `requirements` emits the golden vectors, `build` drives them green, `feature` ratchets them.
+**Q: Will Forge choose a technology stack without me?**
+A: Requirements compares real options, explains the evidence, tradeoffs and recommendation, and
+records your approval or mandate. Build checks that decision again through a measured spike.
 
-**Q: What changed in v2.2.0?**
-A: The root `/forge` command now supports an autonomous orchestrator mode. Type a plain-language goal (e.g., `/forge help me fix the login bug`) instead of `Metric:`/`Verify:` and the orchestrator classifies your goal, derives a verifiable Success predicate, confirms it once, then loops across subcommands until done. Classic metric-loop behavior is unchanged when `Metric:` or `Verify:` are present.
+**Q: Can it add real images without cluttering the app?**
+A: Yes. Design plans a restrained set of relevant photos, illustrations or artworks, keeps dense
+work areas clear, and checks the actual files, provenance, browser rendering and mobile crops.
 
-**Q: What changed in v2.1.0?**
-A: Architecture rebuild. The monolithic SKILL.md was replaced with a thin router that stays resident (~8KB) plus self-contained command files — now 20 commands whose bodies (~3–35KB each) load only when invoked, with reference files pulled on demand. A new `/forge:evals` command analyzes iteration results. Every looping command now has a bounded default instead of running unlimited.
+**Q: Does a passing security audit guarantee the app is secure?**
+A: No. It means the planned checks passed for the recorded candidate and environment, with no
+unresolved findings at the chosen threshold. Strix adds dynamic evidence; incomplete scans block
+readiness. Production configuration and future changes still need their own verification.
+
+**Q: Where is the release history?**
+A: See the [project changelog](docs/project-changelog.md). The current source can include unreleased
+work; the version badge and plugin manifests continue to identify the packaged release.
 
 **Q: How do bounded defaults work?**
 A: Every looping command ships with a sensible default (e.g., `/forge` defaults to 25 iterations). Override inline: `Iterations: 50` for more, `Iterations: unlimited` for the old unbounded behavior.
@@ -1582,7 +1826,8 @@ A: `Ctrl+C` or add `Iterations: N` to your inline config. Claude commits before 
 A: Absolutely. Sales emails, marketing copy, HR policies, runbooks — anything with a measurable metric. See [Examples by Domain](guide/examples-by-domain.md).
 
 **Q: Does /forge:security modify my code?**
-A: No. Read-only by default. Use `--fix` to opt into auto-remediation of confirmed Critical/High findings.
+A: The audit keeps application source read-only by default. Strix scans use disposable copies
+because its local targets are writable. Use `--fix` for remediation of confirmed Critical/High findings.
 
 **Q: What's the difference between /forge:predict and /forge:reason?**
 A: Predict is a one-shot analysis — 5 experts debate your existing code. Reason is an iterative refinement loop — competing candidates are generated, critiqued, synthesized, and blind-judged over multiple rounds until convergence. Use predict for analysis before acting; use reason for decisions where no objective metric exists.

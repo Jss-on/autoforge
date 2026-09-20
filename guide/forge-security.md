@@ -114,10 +114,53 @@ REPORT:
 | `--diff` | Only audit files changed since last audit (fast PR checks) |
 | `--fix` | Auto-fix confirmed Critical/High findings after audit |
 | `--fail-on <severity>` | Audit threshold: `critical`, `high` (default), `medium`, `low`, `info`; build/feature readiness requires high or stricter |
+| `--strix` | Add required Strix dynamic verification to this audit once selected |
+| `--strix-target <target>` | Repeatable authorized target; default is a disposable snapshot of the scoped project |
+| `--strix-budget <USD>` | Positive authorized spend cap; separate from Forge's iteration budget |
 | `--evals` | Analyze security-audit-results.tsv after completion |
 | `--chain <targets>` | Chain to next command(s) after completion |
 
 Flags combine: `--diff --fix --fail-on high`
+
+---
+
+## Strix dynamic verification
+
+[Strix](https://github.com/usestrix/strix) adds autonomous penetration testing and reproducible
+vulnerability evidence to the existing audit. Enable it for an application with:
+
+```text
+/forge:security --strix --strix-budget 5
+Scope: src/**, tests/**, package.json, package-lock.json
+Depth: standard
+Iterations: 15
+```
+
+In Codex, use `$forge security` with the same arguments. The CLI requires a working Docker runtime
+and a configured model/provider; [upstream setup](https://github.com/usestrix/strix#quick-start)
+covers installation. Forge's doctor reports whether `strix` is available; the audit checks the
+runtime and existing target/provider/budget authorization before launching it. Installation is
+optional unless the spec or audit selects this check. Missing prerequisites then block readiness.
+
+Local scans use a disposable copy of the candidate because Strix mounts local targets writable.
+Forge keeps application source unchanged and records snapshot integrity. Add `--strix-target`
+only for explicitly authorized targets; URLs discovered in code or API specifications need the
+same scope review. Use synthetic accounts/data and a restricted instruction file for credentials.
+Telemetry is disabled for the invocation; the authorized model provider still processes context.
+
+Strix runs headless with explicit full scope, even alongside Forge's `--diff`. `Depth:` sets its
+scan mode; `Iterations:` bounds only Forge's loop. The positive USD budget limits estimated model
+spend, can overshoot in-flight calls, and is never automatically extended. A timeout, budget stop,
+missing report or uncovered follow-up remains blocked rather than becoming a clean audit.
+
+Forge saves redacted native `run.json` and `findings.sarif` under `evidence/strix/`, imports findings
+into the existing ledger and checks native completion/coverage during handoff validation. Exit 2
+means findings, whose severities use the audit's `--fail-on` threshold; exit 0 alone cannot pass.
+Fixes require a fresh retest, and build/feature carry this check and its reports into completion.
+Strix supplements the security baseline and app-specific tests; it is not a security guarantee.
+
+Execution and supported report format:
+[Strix protocol](../claude-plugin/skills/forge/references/security-checklist.md#strix-dynamic-verification---strix).
 
 ---
 

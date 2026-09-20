@@ -104,6 +104,9 @@ When the feature's assertions are green and `regression` is `STABLE`:
 - **Security completion gate:** reuse build Phase 6's audit baseline and High-or-stricter threshold.
   Recheck the current candidate, including all existing and new applicable security assertions and
   affected shared boundaries. Require `validate-handoff.sh <audit>/handoff.json security --require-pass`.
+  Preserve a selected Strix check across the feature audit; rerun `security --strix` on the changed
+  candidate using `references/security-checklist.md`, and carry `config.strix: true`, its check,
+  native reports and findings into the feature handoff.
   Copy the typed `security` record and redacted evidence beneath the feature run, with paths relative
   to that run; `validate-handoff.sh <run>/handoff.json feature --require-pass` must pass before
   COMPLETE/CONVERGED. A lower Target-rate, `skip`, an accepted risk or an old audit cannot waive this.

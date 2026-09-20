@@ -36,6 +36,9 @@ system (Phase 4), the audit (Phase 6 / any existing app) and the bounded remedia
       duration ceiling, essentiality and reduced behavior); native CSS/Web Animations are preferred
 - [ ] **Component states** — every interactive family specifies default / hover / focus / active /
       disabled / **loading / empty / error / success**
+- [ ] **Imagery** — the opportunity pass ran even without an `Assets:` hint (design-protocol §3a).
+      `## Imagery` records a small coherent photo/artwork set with purpose, placement and mobile
+      crop, or task-specific omit decisions; existing approved art is reused. Dense work areas stay clear
 - [ ] `scripts/score-design.sh lint DESIGN.md` → `DESIGN_LINT: VALID` (schema + contrast pairs)
 
 ## 2. Responsive
@@ -84,6 +87,10 @@ system (Phase 4), the audit (Phase 6 / any existing app) and the bounded remedia
       browser decoding, dimensions, alt/decorative meaning and loading verified on mobile + desktop
 - [ ] Codex-native raster tools are preferred when generation is needed; icons reuse the established
       vector family. Attempts (including failures/edits) and payloads stay within their declared caps
+- [ ] Required image slots are visibly rendered at their declared route/selector; a manifest, icon,
+      gradient or chat preview does not fulfill a photo/artwork slot. Their `ux` rows trace `design:floor`
+- [ ] Viewed desktop/mobile captures show relevant subjects, coherent art treatment, useful crops
+      and clear task hierarchy; no generic filler or visual crowding. Image counts are not a taste gate
 
 ## 6. DESIGN.md conformance + design QA (Phase 6)
 

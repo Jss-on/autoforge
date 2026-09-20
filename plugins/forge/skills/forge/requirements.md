@@ -141,7 +141,11 @@ retain unchanged confirmations. Preserve decision history and the review revisio
   bridge (§2) and its key frames become reaction artifacts too. Outcome = the
   `DESIGN.md` source + density/navigation/states patterns, each traced to a client reaction —
   taste is captured by **selection and correction, never adjectives**.
-- **Asset and motion brief** (integrations-protocol §1): record required/optional image slots,
+- **Asset and motion brief** (design-protocol §3a, integrations-protocol §1): proactively consider
+  a small, coherent set of real photos, illustrations or artworks for the primary entry/overview
+  and appropriate content/empty states, even without an `Assets:` hint. Use the existing reaction
+  loop to learn the preferred medium and subjects; inherit settled preferences instead of asking
+  again. Keep dense work areas clear and record task-specific omissions. Record required/optional image slots,
   supplied brand files, the existing icon family, allowed sources, byte/attempt budgets, routes and
   loading/alt expectations. Elicit each meaningful interaction's trigger, duration, essentiality,
   reduced behavior and keyboard task outcome. Carry these into `assets/manifest.json` as a planning

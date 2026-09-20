@@ -82,6 +82,7 @@ check opt axe axe             "a11y scans for ux rows (axe CLI)"
 check opt k6 k6               "perf SLO load tests (or autocannon)"
 check opt autocannon autocannon "perf SLO load tests (alternative)"
 check opt gh gh               "release tooling / private marketplace auth"
+check opt strix strix         "optional dynamic security checks (--strix; also needs Docker + a configured model)"
 
 printf '\nANDROID (/forge:android — local TWA build + certificate fingerprints; CI builds the bundle either way)\n'
 check opt keytool keytool     "android: upload keystore + SHA-256 certificate fingerprints (any JDK)"

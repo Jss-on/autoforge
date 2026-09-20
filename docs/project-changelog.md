@@ -54,6 +54,27 @@ Approved bundles are tracked beside specs and copied whole into the output repo;
 measurements stay separate so successful spikes do not invalidate approval. Handoff metadata
 carries the bundle path; build re-runs the gate instead of trusting a copied verdict.
 
+**Design follow-up (2026-09-21):** design now considers a small, coherent set of purposeful photos,
+illustrations or artworks on app surfaces as well as landing pages, even without an `Assets:` hint.
+DESIGN.md records imagery choices and justified omissions; dense work areas remain clear. Selected
+slots flow through the existing asset inventory, generation budget, provenance and browser checks.
+Required images must be visibly rendered in the app, with desktop/mobile review of crops,
+relevance and visual crowding; prompts, icons and chat previews do not substitute for delivered art.
+
+**Security follow-up (2026-09-21):** optional `security --strix` adds isolated dynamic penetration
+testing with an explicit target/provider/budget, full-scope headless execution and redacted native
+reports. The existing handoff gate validates Strix completion/SARIF coverage and requires every
+finding in the severity/retest ledger; stopped scans, missing output and uncarried findings block
+readiness. Build/feature preserve selected checks, and doctor reports the optional CLI. No scanner
+dependency is bundled; static/baseline checks remain required. Compatibility is tested with local
+synthetic reports, without a live Strix scan or external target.
+
+**Documentation and identity (2026-09-21):** README now opens with the current capability map and
+recent source changes, lists all 21 commands, and includes eight practical scenarios. Asset/motion
+delivery, integrations, wiki generation and verified procedural memory are documented together.
+Added a transparent AutoForge logo and its generation prompt under `docs/assets/`; checked local
+links, command coverage, the workflow diagram and desktop/mobile rendering in light/dark previews.
+
 ## v3.6.0 — /forge:android: web app → Android app (2026-09-06)
 
 **Theme:** any forge-built web app becomes a store-ready Android app without being re-implemented.

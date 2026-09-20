@@ -45,8 +45,27 @@ above every heading, nested cards, em-dash copy, "Acme". Axe and responsive chec
 | **Read** | understands | 60–75ch measure, linear structure, TOC/current-location marker | docs, help, changelog |
 | **Experience** | is inside the work | the artifact leads from the first viewport; UI recedes | portfolio, gallery, showcase |
 
-Autoforge's home mode is **Operate**. Its failure mode is not flatness but *strangeness without
-purpose*; familiar and effective is a legitimate destination, and expression lives in precise details.
+Autoforge's home mode is **Operate**. Controls stay familiar and task areas stay clear; a few
+purposeful images can give the product identity and warmth without slowing the work.
+
+## Purposeful imagery, with restraint
+
+Every new design or authorized redesign considers actual photos, illustrations, collage, paintings
+or licensed artwork, even without an `Assets:` hint. Start with **1–3 distinctive editorial images
+across a small app/site**: one lead piece and up to two supporting pieces. Choose the medium and
+subject to fit the product, then keep the treatment coherent. Product photos and gallery content
+follow their content needs; this is not a quota, and existing approved art counts.
+
+Good opportunities include an overview, a relevant project/product cover, onboarding or a first-use
+empty state. Keep dense tables, forms and settings clear; avoid a decorative hero on every route
+or an illustration in every card. A text-only preference or a task-specific reason to omit art is
+recorded in DESIGN.md. The 12-job generation budget counts attempts, not pictures to display.
+
+`## Imagery` in DESIGN.md records purpose, medium, placement and mobile crop. Selected slots use
+the existing asset manifest and provider workflow. Required slots must become real files rendered
+in the app, with browser checks and viewed desktop/mobile captures; prompts and chat previews do
+not count as delivery. Review relevance, consistency and crowding as well as loading, accessibility
+and file size. A low image count or a green scanner alone does not prove good art direction.
 
 ---
 
@@ -72,7 +91,7 @@ typography:  { display: {fontFamily: "IBM Plex Sans", fontSize: 32px, …}, body
 spacing:     { base: 4px, sm: 8px, md: 16px, lg: 24px }
 rounded:     { sm: 4px, md: 8px }
 ---
-## Overview · Colors · Typography · Layout · Elevation & Depth · Shapes · Components · Motion · States · Do's and Don'ts
+## Overview · Colors · Typography · Layout · Elevation & Depth · Shapes · Imagery · Components · Motion · States · Do's and Don'ts
 ```
 
 `lint` checks the schema (colors ≥ 4, typography roles ≥ 2 with family + size, spacing, `rounded`),
@@ -131,7 +150,7 @@ DESIGN_VERDICT: SHIP
 
 ## Running the seams by hand
 
-For scoped images, icons or UI motion, adopt/create `assets/manifest.json` using the
+For the imagery selected during design, plus scoped icons or UI motion, adopt/create `assets/manifest.json` using the
 [asset protocol](../claude-plugin/skills/forge/references/integrations-protocol.md). `Assets: N|off`
 sets the generation-attempt cap (default 12); reuse approved assets first. Raster creation/edits
 prefer available Codex-native imagegen, with actual tool receipts and copied project files. SVG

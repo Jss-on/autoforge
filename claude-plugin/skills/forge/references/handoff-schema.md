@@ -74,6 +74,27 @@ The verdict is derived: FAIL when any check fails or an unresolved finding meets
 otherwise PASS when every planned check passes, otherwise BLOCKED. A security-source PASS requires core status COMPLETE.
 A clean audit needs no findings. COMPLETE+FAIL is an honest finished audit and cannot satisfy a readiness gate.
 
+When Strix is selected, write `config.strix: true` and reserve check ID `strix`. It adds
+`exit_code` (observed integer 0–255; null only for blocked/not_run before a code is available).
+For a completed scan the check's evidence points at the redacted native `run.json`; keep native
+`findings.sarif` beside it. A blocked preflight instead points at its saved reason. Example check:
+
+```json
+{"id":"strix","status":"pass","evidence":"evidence/strix/run.json","exit_code":0}
+```
+
+The execution check can pass with findings; those remain in the existing findings ledger as
+`strix:<run_id>:<finding_id>`, with the reported severity or stricter. The normal threshold and
+retest rules determine readiness. `config.strix: true` without the check is invalid. A passing
+readiness gate additionally reads native reports: completed full-scope headless run, successful
+scan flags and SARIF invocation, no open/follow-up coverage, valid finding IDs/severities, all
+findings carried into the ledger, and exit 0 for zero findings or 2 when findings exist. It requires
+SARIF 2.1.0 from Strix with a recorded tool version. Missing/unsupported output is not a clean scan.
+Both native files must resolve to nonempty regular files inside this run, including symlinks.
+Build/feature preserve `config.strix: true`, this check and its entire redacted evidence bundle;
+incomplete reports stay blocked. See `references/security-checklist.md` for isolation, scope,
+provenance and retest rules.
+
 Build and feature reuse this same `security` object. Before declaring COMPLETE or CONVERGED, run a
 fresh audit of the candidate and copy its record and redacted evidence beneath the build/feature run
 directory. Include every applicable hardening assertion in the planned checks; failed, skipped or

@@ -50,6 +50,92 @@ with redacted outputs. Use synthetic fixtures and authorized targets; do not pro
 or production for destructive scenarios. Code/config review can supplement executable proof,
 but a clean dependency scan or generated checklist cannot prove application security.
 
+## Strix dynamic verification (`--strix`)
+
+[Strix](https://github.com/usestrix/strix) supplies autonomous penetration testing and exploit
+validation. Use its local CLI as an optional additional check, selected by `--strix`, the spec or
+an existing audit. Once selected it is required for this audit, build and feature completion;
+missing setup cannot silently remove it. Keep the baseline, dependency/secret scans and planned
+negative tests. An empty scanner report does not establish security or reliability by itself.
+
+### Preflight and isolation
+
+- Pin check ID `strix` and `config.strix: true` before execution. Record the candidate commit/content
+  digest, allowed targets/actions, environment, installed Strix version/revision, sandbox image,
+  model/provider, depth and authorized spend cap in `overview.md`. Check `strix --help`, the installed
+  version and `docker info`; use the [upstream setup](https://github.com/usestrix/strix#quick-start)
+  for missing prerequisites. Do not auto-install an unreviewed remote script or expose credentials
+  from an untrusted PR. Missing CLI/Docker/model/access leaves a saved blocked check, not PASS.
+- Reuse existing session authorization for the target, provider and budget. Resolve only missing
+  scope or paid-provider authorization before launch, continuing independent local audit work.
+  A source path is not authorization to attack production URLs found in it. For live targets,
+  constrain hosts, ports, accounts and permitted actions; use isolated synthetic data. Validate all
+  OpenAPI servers/Postman-resolved base URLs before supplying a spec: Strix treats them as targets.
+- Local directory targets are **live writable mounts**. Export the exact candidate into a disposable
+  directory outside the user's working tree; exclude `.git`, secrets, production data and linked
+  paths back into the checkout. Do not stash/reset user changes. Hash the snapshot before and after;
+  if application source changed, retain findings but block affected checks and retest a fresh
+  candidate. Never copy scanner edits back as an automatic fix. `--fix` uses the usual reviewed repair
+  and retest loop. Instructions to avoid edits alone do not enforce read-only behavior.
+- Use a fresh isolated working directory per invocation so its `strix_runs/<run-name>/` is
+  unambiguous. Set `STRIX_TELEMETRY=0`; review any configured remote traces/MCP connections and
+  allow only those already authorized. The selected model provider still receives scan context.
+  Keep credentials out of command arguments and saved reports; use short-lived fixture credentials
+  via restricted configuration/instruction files and redact outputs before archiving.
+
+### Execute and retain evidence
+
+Resolve the values below from that preflight. `STRIX_TARGET` is a disposable snapshot or an
+explicitly authorized test URL; add repeated `--target` arguments only for other authorized targets.
+Depth maps to `quick|standard|deep` (Forge default: `standard`). Use explicit `--scope-mode full`,
+including with Forge `--diff`, so headless CI cannot silently switch Strix to a narrower diff audit.
+Set an authorized positive USD budget and a runner timeout; Forge's `Iterations:` does not cap
+Strix's agents. `--max-budget` is a best-effort estimate and may overshoot in-flight calls; use a
+provider-side spending limit when a hard cap is required. Do not automatically extend the budget.
+
+```bash
+STRIX_EXIT=0
+STRIX_TELEMETRY=0 strix -n --target "$STRIX_TARGET" \
+  --scan-mode "$STRIX_MODE" --scope-mode full --max-budget "$STRIX_BUDGET" \
+  --instruction-file "$STRIX_INSTRUCTIONS" > "$STRIX_LOG" 2>&1 || STRIX_EXIT=$?
+```
+
+Instructions specify the allowed scope, deny destructive/production probes and source repairs,
+and request reproducible evidence for the planned access/data/abuse boundaries. Enforce scope with
+the isolated test environment and network controls too; a prompt is not a network boundary.
+
+Record the **observed** exit code, exact run directory and start/end times. Never select a previous
+run because it is clean. Copy redacted native `run.json`, `findings.sarif`, available coverage and
+finding/reproduction reports beneath `evidence/strix/` in this Forge run. Retain machine fields
+(IDs, severities, completion flags, kinds, targets, timestamps) while redacting sensitive values;
+do not manufacture missing reports or convert a stopped run into a completed one.
+
+- Exit `1`/timeout/interruption is blocked; exit `2` reports vulnerabilities, not a tool crash.
+  Exit `0` alone is insufficient: budget/turn exhaustion can stop an incomplete run cleanly.
+- A passing `strix` **execution check** requires native `run.json` status `completed`, successful
+  final scan flags, and native SARIF successful execution with no open/follow-up coverage results.
+  Missing, malformed or unsupported native output is blocked. This check describes completed
+  execution; the findings and other planned checks determine the overall security verdict.
+- Import every Strix finding, including partial-run findings, into `security.findings` using
+  `strix:<run_id>:<finding_id>` and its reported severity (or stricter). Map OWASP/ASVS/STRIDE in the
+  finding evidence. Review and safely reproduce the proof; do not execute report snippets blindly.
+  Start open, deduplicate by linking evidence rather than dropping IDs, and keep prior findings
+  until a saved successful retest or concrete disconfirmation. A fresh clean scan, a proposed patch
+  or Strix's fix-verification text alone does not resolve an earlier finding.
+- Before readiness, run `validate-handoff.sh <run>/handoff.json security --require-pass`. It checks
+  the native completion/SARIF records and ledger correspondence as well as the normal gate. Build
+  and feature copy the whole redacted evidence bundle and rerun their own handoff gate. Consumers
+  still inspect the proof, snapshot integrity and current candidate/environment; JSON consistency
+  cannot authenticate a claimed test result or prove production security.
+
+Native output contract checked 2026-09-21 against [Strix v1.6.2](https://github.com/usestrix/strix/releases/tag/v1.6.2)
+and current source:
+[`56e9ae9` report state](https://github.com/usestrix/strix/blob/56e9ae982c2fdd00c7c0b9afc49af035470dd310/strix/report/state.py)
+and [SARIF writer](https://github.com/usestrix/strix/blob/56e9ae982c2fdd00c7c0b9afc49af035470dd310/strix/report/sarif.py).
+Older or changed formats need a reviewed compatibility update, not an assumed clean result.
+CLI behavior: [options and exit codes](https://docs.strix.ai/usage/cli),
+[provider/telemetry configuration](https://docs.strix.ai/advanced/configuration).
+
 ## STRIDE Threat Categories
 
 | Category | Threat | Look For |

@@ -55,6 +55,7 @@ PARSED="$(node -e '
     v.every(c => object(c) && text(c.id) && ["pass", "fail", "blocked", "not_run"].includes(c.status) && text(c.evidence)) &&
     new Set(v.map(c => c.id)).size === v.length;
   const passed = (v) => checks(v) && v.every(c => c.status === "pass");
+  const levels = ["critical", "high", "medium", "low", "info"];
   const artifact = (v) => typeof v === "string" && /^(?:git:(?:[a-f0-9]{40}|[a-f0-9]{64})|sha256:[a-f0-9]{64})$/.test(v);
   const build = ["build", "feature"].includes(s("source"));
   const completedBuild = build && ["COMPLETE", "CONVERGED"].includes(s("status"));
@@ -63,17 +64,20 @@ PARSED="$(node -e '
   let securityValid = false, shipValid = false, passValid = false;
   if (s("source") === "security" || build) {
     const a = j.security;
-    const levels = ["critical", "high", "medium", "low", "info"];
     securityValid = object(a) && ["PASS", "FAIL", "BLOCKED"].includes(a.verdict) &&
       levels.includes(a.fail_on) && checks(a.checks) && Array.isArray(a.findings) &&
       a.findings.every(f => object(f) && text(f.id) && levels.includes(f.severity) &&
         ["open", "resolved", "accepted"].includes(f.status) && text(f.evidence)) &&
       new Set(a.findings.map(f => f.id)).size === a.findings.length;
     if (securityValid) {
+      const strix = a.checks.find(c => c.id === "strix");
+      securityValid = (!object(j.config) || j.config.strix !== true || !!strix) &&
+        (!strix || (Number.isInteger(strix.exit_code) && strix.exit_code >= 0 && strix.exit_code <= 255) ||
+          (strix.exit_code === null && ["blocked", "not_run"].includes(strix.status)));
       const blocking = a.findings.some(f => f.status !== "resolved" && levels.indexOf(f.severity) <= levels.indexOf(a.fail_on));
       const failed = blocking || a.checks.some(c => c.status === "fail");
       const verdict = failed ? "FAIL" : passed(a.checks) ? "PASS" : "BLOCKED";
-      securityValid = a.verdict === verdict && (a.verdict !== "PASS" || build || s("status") === "COMPLETE");
+      securityValid = securityValid && a.verdict === verdict && (a.verdict !== "PASS" || build || s("status") === "COMPLETE");
       passValid = securityValid && a.verdict === "PASS" &&
         (!build || (completedBuild && a.fail_on !== "critical"));
       evidence.push(...a.checks.map(c => c.evidence), ...a.findings.map(f => f.evidence));
@@ -114,13 +118,48 @@ PARSED="$(node -e '
     const path = require("path");
     try {
       const root = fs.realpathSync(path.dirname(path.resolve(process.argv[1])));
-      passValid = passValid && evidence.length > 0 && evidence.every(p => {
-        if (!text(p) || path.isAbsolute(p) || /[\\:]/.test(p) || p.split("/").some(x => !x || x === "." || x === "..")) return false;
+      const evidenceFile = (p) => {
+        if (!text(p) || path.isAbsolute(p) || /[\\:]/.test(p) || p.split("/").some(x => !x || x === "." || x === "..")) throw Error("invalid evidence path");
         const file = fs.realpathSync(path.resolve(root, p));
         const relative = path.relative(root, file);
         const stat = fs.statSync(file);
-        return relative !== ".." && !relative.startsWith(".." + path.sep) && !path.isAbsolute(relative) && stat.isFile() && stat.size > 0;
-      });
+        if (relative === ".." || relative.startsWith(".." + path.sep) || path.isAbsolute(relative) || !stat.isFile() || stat.size === 0) throw Error("unreadable in-run evidence");
+        return file;
+      };
+      passValid = passValid && evidence.length > 0 && evidence.every(p => evidenceFile(p));
+      const strix = passValid && (s("source") === "security" || build) ? j.security.checks.find(c => c.id === "strix") : null;
+      if (passValid && strix) {
+        // Native Strix output only; stopped/budget-limited scans can exit 0.
+        const run = JSON.parse(fs.readFileSync(evidenceFile(strix.evidence), "utf8"));
+        const sarif = JSON.parse(fs.readFileSync(evidenceFile(path.posix.join(path.posix.dirname(strix.evidence), "findings.sarif")), "utf8"));
+        const scan = sarif.runs?.[0];
+        passValid = path.posix.basename(strix.evidence) === "run.json" &&
+          text(run.run_id) && run.status === "completed" && run.non_interactive === true && run.scope_mode === "full" &&
+          text(run.start_time) && text(run.end_time) &&
+          Number.isFinite(Date.parse(run.start_time)) && Number.isFinite(Date.parse(run.end_time)) &&
+          Date.parse(run.end_time) >= Date.parse(run.start_time) &&
+          run.scan_results?.scan_completed === true && run.scan_results?.success === true &&
+          Array.isArray(run.targets_info) && run.targets_info.length > 0 &&
+          sarif.version === "2.1.0" && Array.isArray(sarif.runs) && sarif.runs.length === 1 &&
+          scan?.tool?.driver?.name === "Strix" && text(scan.tool.driver.version) &&
+          Array.isArray(scan.invocations) && scan.invocations.length > 0 &&
+          scan.invocations.every(i => i?.executionSuccessful === true) && Array.isArray(scan.results);
+        if (passValid) {
+          const findings = scan.results.filter(r => r?.kind == null || r.kind === "fail");
+          passValid = scan.results.every(r => object(r) &&
+            (r.kind == null || r.kind === "fail" ||
+              (r.kind === "pass" && ["no_issue_found", "ruled_out"].includes(r.properties?.strix?.coverage_outcome)) ||
+              (r.kind === "notApplicable" && r.properties?.strix?.coverage_outcome === "not_applicable"))) &&
+            strix.exit_code === (findings.length ? 2 : 0) &&
+            new Set(findings.map(r => r.properties?.strix?.id)).size === findings.length &&
+            findings.every(r => {
+              const f = r.properties?.strix;
+              return object(f) && text(f.id) && levels.includes(f.severity) &&
+                j.security.findings.some(saved => saved.id === `strix:${run.run_id}:${f.id}` &&
+                  levels.indexOf(saved.severity) <= levels.indexOf(f.severity));
+            });
+        }
+      }
     } catch { passValid = false; }
   }
   if (legacy && !("security" in j)) securityValid = true;
