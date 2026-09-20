@@ -9,3 +9,4 @@ S-07	T3	reference	2026	Node.js release schedule	endoflife.date	url:https://endof
 S-08	T3	survey	2025	Stack Overflow Developer Survey 2025 — web frameworks	stackoverflow.co	url:https://survey.stackoverflow.co/2025/	full	read
 S-09	T4	forum	2025	Migrating off framework X — forum thread	forum.example	url:https://forum.example/t/migrating-off-x	secondary	read
 S-10	T3	vendor-doc	2026	Django release process and LTS	djangoproject.com	url:https://www.djangoproject.com/download/	full	read
+S-11	T2	official	2026	OSV vulnerability records for Django	OSV.dev	url:https://osv.dev/list?ecosystem=PyPI&q=django	full	read

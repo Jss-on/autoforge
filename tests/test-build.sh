@@ -141,7 +141,7 @@ spec_has "ship.*approval|approval|never deploy"   "spec: ship/deploy human-gated
 spec_has "stack-selection-protocol\.md"           "spec: stack selection is protocol-driven (evidence + owner approval)"
 spec_has "REQUIRE_STACK_DECISION=1"               "spec: spec intake re-runs the stack gate"
 spec_has "never a bypass"                         "spec: Stack: hint is a candidate, never a bypass"
-spec_has "docs/adr/0001-tech-stack\.md"           "spec: stack ADR committed to the output repo"
+spec_has "docs/adr/0001-tech-stack/stack-decision\.md" "spec: stack ADR bundle committed to the output repo"
 spec_has "supersedes the decision"                "spec: a failed stack spike supersedes the decision (owner re-asked)"
 spec_has "pre-registered"                         "spec: spike thresholds fixed before the run"
 spec_has "requirement"                            "spec: SDLC requirements phase"

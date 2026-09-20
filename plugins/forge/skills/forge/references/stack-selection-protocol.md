@@ -153,8 +153,9 @@ matrix cell cites `[S-nn]`, every criterion has ≥1 claim, `queries.tsv` logs t
 
 Rules: **(a)** popularity is ordinal context, never a score; **(b)** two independent sources for
 anything that swings the ranking (rows sharing a root source count once); **(c)** a one-sided
-post-mortem needs its rebuttal fetched or the claim is `contested`; **(d)** every row carries the
-accessed date — stale rows (table) are re-fetched or dropped; **(e)** the model's own prior toward
+post-mortem needs its rebuttal fetched or the claim is `contested`; **(d)** each reading note carries
+`accessed: YYYY-MM-DD` (the nine-column source ledger stays unchanged); stale sources in the table
+are re-fetched or dropped before approval; **(e)** the model's own prior toward
 high-training-data stacks is disclosed in the record's failure-mode checks; **(f)** a
 **disconfirmation pass per candidate** ("problems with X", "migrating away from X", breaking-change
 history, relicensing, retractions) is logged in the record — an empty result is logged too;
@@ -169,8 +170,9 @@ components get the full set; two-way doors get one query each.
    **never relative to the other candidates** (rank-reversal guard); re-run the matrix whenever a
    candidate is added or removed.
 2. **Unknown = `?`**, never a guess. A `?` cell is a work item: more evidence, an elicited input, or
-   a spike question pre-registered for build Phase 2. The gate rejects an uncited cell, so `?` cells
-   block approval by construction.
+   a disposable spike in the run directory before approval when the owner requests it. Record the
+   measurement as evidence, replace the `?`, then replay the decision. Product scaffolding still
+   waits for READY; unresolved cells never count as approved.
 3. **Run 1** eliminates dominated candidates against the datum (boring default); **run 2** uses the
    strongest survivor as datum. Weighted totals appear as a *secondary view* row and are labelled so.
 4. **Sensitivity sweep** (recorded): flex each weight ±1 · drop each driver once · swap the datum ·
@@ -182,10 +184,11 @@ components get the full set; two-way doors get one query each.
 
 ## §7 The record — `stack-decision.md` (MADR-shaped; the gate's contract)
 
-Lives in the run dir `forge/requirements-…/stack/` beside `sources.tsv`, `claims.tsv`,
-`queries.tsv`, `evidence/S-*.md`; `build` copies the record to the output repo as
-`docs/adr/0001-tech-stack.md`. Header lines are exact (the gate greps them); sections carry the
-tables it parses. Fixture: `tests/fixtures/requirements/stack-ready/`.
+Draft in `forge/requirements-…/stack/` beside `sources.tsv`, `claims.tsv`, `queries.tsv` and
+`evidence/S-*.md`. Requirements copies the approved bundle plus the relevant `client-review.md`
+beside the spec at tracked `evals/fullstack/<name>.stack/`; build copies the whole bundle to
+`docs/adr/0001-tech-stack/`. Header names are exact; sections carry the tables the gate parses.
+Fixture: `tests/fixtures/requirements/stack-ready/` (synthetic data, not live stack advice).
 
 ```
 # Stack decision — <project>
@@ -193,6 +196,7 @@ Status: proposed | approved | owner-mandated | superseded by <path>
 Date: <YYYY-MM-DD>
 Decision-makers: owner (client) · consulted: <who/what> · informed: build
 Recommendation: O-<n>
+Decision: O-<n>                         # the option actually selected by the owner
 Confidence: high | moderate | low — <why>
 Robustness: robust | fragile — <what flips it>
 Approval: pending | approved by owner — client-review rev <N> (A-<n>), <date>, ledger:<sha256-16>
@@ -206,24 +210,25 @@ to achieve <quality>, accepting <downside>.
 ## Decision drivers                   ← table: | RQ-n | refutable scenario + threshold | weight | traces |   (locked, A-n)
 ## Considered options                 ← `### O-n <name>` headings, one per whole stack, majors pinned
 ## Comparison matrix                  ← table: | RQ-n | <score> [S-nn] | … |  every cell cited; `weighted total` row = secondary view
+## Sensitivity sweep                  ← subsequent comparisons; the first matrix row per driver is the gated one
 ## Decision outcome                   ← chosen option + justification (k.o. criterion / resolves force / comes out best), incl. the spike it still needs
 ## Pros and cons of the options       ← why not the others — Good/Bad per rejected option, cited
 ## Consequences                       ← `- Good:` / `- Bad:` / `- Risk:` lines with mitigation + revisit trigger; exit path per one-way component
 ## Failure-mode checks                ← résumé-driven? microservice/polyglot envy? innovation tokens spent (≤1)? rewrite trap (life ≥ horizon)? LLM self-preference disclosed?
 ## Disconfirmation log                ← per option: what was searched against it, what came back
-## Confirmation                       ← pre-registered spike: hypotheses, load model, thresholds, ≥5 runs, identical hardware; build appends results; lockfile check
+## Confirmation                       ← pre-registered spike: hypotheses, load model, thresholds, ≥5 runs, identical hardware; results go in confirmation-results.md; lockfile check
 ## More information                   ← ledgers; "no good evidence exists for …" (owner judgment calls); two-way-door Y-statements
 ```
 
-`scripts/score-requirements.sh stack <dir>` → `STACK_DECISION: READY` iff: both ledgers valid
-(`score-research.sh sources|claims`) · ≥3 options · ≥3 weighted, traced drivers · every driver has a
-matrix row with one cited cell per option and no orphan citation · every driver covered by ≥1 claim
-· `Recommendation:` names an option · `Confidence:` and `Robustness:` declared · ≥1 `- Bad:`/`- Risk:`
-consequence · `Approval:` is `approved …`/`owner-mandated …` **and pins the current ledger hash**
-(`cat sources.tsv claims.tsv | tr -d '\r' | sha256sum | cut -c1-16` — CR-stripped so LF and CRLF
-checkouts agree). Zimmermann's ADR anti-patterns are what
-these rows catch: Sprint (one option), Fairy Tale (no cons), Free Lunch (no consequences), Dummy
-Alternative, Magic Tricks (numbers without measurement), undisclosed confidence.
+`scripts/score-requirements.sh stack <dir>` prints `STACK_DECISION: READY` only when every
+`criterion … PASS|FAIL` check passes. Use its `approval-pin` diagnostic for the `ledger:` hash;
+the gate owns the hash algorithm (ledgers plus record, excluding Status/Approval lines, CR-stripped).
+Finalise `Decision:` and all reasoning before taking the pin to the owner. `Status:` must match
+the approval type; a normal approval selects the recommendation, an owner mandate can select
+another considered option. An owner mandate never bypasses the evidence or approval gate:
+`decision:` in the spec always names a real decision directory, never a free-text mandate.
+The gate checks recorded evidence and approval shape; it cannot authenticate who answered or
+prove a source was actually read. Only the owner's real answer authorizes writing approval.
 
 ## §8 Owner approval — playback, choices, state machine
 
@@ -238,11 +243,11 @@ the owner may change.
 
 One `AskUserQuestion` (recommended default first):
 - **Approve O-n** → `Approval: approved by owner — rev N (A-n), date, ledger:<hash>`; `A-n` in
-  `client-review.md` with provenance `default-confirmed`.
+  `client-review.md` with provenance `default-confirmed`; `Decision: O-n`, `Status: approved`.
 - **Revise weights / criteria** → the owner's weights replace the locked set (new `A-n`), the matrix
   and sweep re-run, playback again.
 - **Need more evidence on X / run the spike first** → the driver becomes a `?` work item; sweep
-  continues or the spike question is pre-registered in *Confirmation*; playback again.
+  continues or run the disposable experiment from §6 now; record its evidence, then playback again.
 - **Mandate another stack** → owner-mandated path below.
 
 **Owner-mandated path.** The mandate is a force in *Context*, never overruled. Run the same gates
@@ -251,6 +256,8 @@ and receiving teams actually know; which alternatives were considered); list eve
 consequence with mitigation and a revisit trigger; run a one-paragraph premortem ("it is a year
 later and this stack failed us because …"). A knock-out failure is recorded as an accepted risk
 with the owner's words. `Approval: owner-mandated (A-n, date) … ledger:<hash>`, provenance `stated`.
+Set `Status: owner-mandated` and `Decision:` to the chosen option; keep `Recommendation:` as the
+research result and explain the override in Decision outcome. Pin this final record at playback.
 
 **What reopens the decision:** a material change to any driver's NFR/constraint, a new or removed
 candidate, a changed weight, an edited ledger (the pinned hash no longer matches → gate BLOCKED), or
@@ -260,17 +267,19 @@ and spec generation (Phase 5, `REQUIRE_STACK_DECISION=1`) are blocked while the 
 
 ## §9 Handoff to build, and the spike that confirms the decision
 
-- The spec's `stack:` block carries the pinned components **and** `decision: <run-dir>/stack`
-  (the gate re-runs on intake) and `adr: docs/adr/0001-tech-stack.md`; no `NEEDS CLARIFICATION`
-  remains. `handoff.json` `config.stack_decision` = the verdict + record path.
+- The spec's `stack:` block carries the pinned components **and**
+  `decision: evals/fullstack/<name>.stack` (tracked beside the spec; the gate re-runs on intake)
+  and `adr: docs/adr/0001-tech-stack/stack-decision.md`; no `NEEDS CLARIFICATION` remains.
+  `handoff.json` `config.stack_decision` is the decision-directory path, not a cached verdict.
 - **build Phase 2 (Feasibility) is the record's *Confirmation*:** the spike runs the **pre-registered**
   hypotheses — identical hardware and load model for every candidate still in play, thresholds
   written before the run, ≥5 runs reported as a distribution (p50/p95), the harness's proficiency
-  asymmetry disclosed (it writes its favourite stack's spike better) — and appends the measured
-  results to the record. A miss against a pre-registered threshold **supersedes the decision**:
+  asymmetry disclosed (it writes its favourite stack's spike better) — and writes measurements to
+  `confirmation-results.md` beside the immutable approved record. A miss against a pre-registered threshold **supersedes the decision**:
   build stops, shows the numbers, and re-asks the owner (approve anyway as accepted risk / switch to
   the runner-up / re-scope) — it never pins a stack that failed its own test.
-- build commits the record to the output repo (`docs/adr/0001-tech-stack.md`) at the Phase 2 gate;
+- build copies and commits the whole decision bundle to `docs/adr/0001-tech-stack/` at Phase 2,
+  points the target spec at that directory and re-runs validation from the target repo;
   later phases cite it (HLD "tech stack" = the record; code review checks new dependencies against
   the rejected options; the lockfile contains the chosen framework and none of the rejected ones).
 

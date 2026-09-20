@@ -588,8 +588,8 @@ stack:                       # the requirements Phase 2b decision, never a hint 
   datastore: postgres@16
   frontend: react
   test: vitest
-  decision: forge/requirements-260918-1200/stack   # stack-decision.md + evidence ledgers; `score-requirements.sh stack` must be READY
-  adr: docs/adr/0001-tech-stack.md                 # build commits the record here and confirms it by spike
+  decision: evals/fullstack/my-app.stack         # tracked record + ledgers + reading notes; `score-requirements.sh stack` must be READY
+  adr: docs/adr/0001-tech-stack/stack-decision.md   # build commits the whole bundle and confirms it by spike
 design:                      # optional; build adopts as DESIGN.md
   source: catalog            # catalog | file | url | generate
   ref: linear                # slug / path / url

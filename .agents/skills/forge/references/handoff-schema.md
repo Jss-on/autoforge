@@ -37,6 +37,12 @@ URL, …) is optional, additive, and must not be required by any consumer. `buil
 write `repo` (and `feature` the `pr`) so the chain and `run-index` can link straight to the
 transparent output.
 
+Stack-selection writers include `config.stack_decision` as the path to the complete approved
+decision directory (requirements: tracked beside the spec; build: `docs/adr/0001-tech-stack/`).
+This is additive metadata, so historical handoffs remain readable. Consumers re-run
+`REQUIRE_STACK_DECISION=1 score-requirements.sh validate <spec>`; the path is not a cached READY
+verdict and handoff validation alone does not establish stack approval.
+
 Required paths must be nonempty strings; required objects cannot be null or arrays.
 `errors_remaining` must be a nonnegative safe integer. Coverage fractions must be finite
 numbers in [0,1]; a converged build cannot claim incomplete coverage.

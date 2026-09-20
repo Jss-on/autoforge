@@ -5,4 +5,5 @@ C-03	RQ-2	Fastify sustains higher plaintext/JSON throughput than Next.js route h
 C-04	RQ-3	OSV lists no open critical advisories for the current fastify major at the checked date	moderate	S-02	evidence:evidence/S-02.md
 C-05	RQ-3	OSV lists resolved advisories for next with fixes in the current major	moderate	S-03	evidence:evidence/S-03.md
 C-06	RQ-4	All three candidates ship under permissive SPDX-listed licenses (MIT / BSD-3-Clause)	moderate	S-01,S-04	evidence:evidence/S-01.md
-C-07	RQ-2	Django's release process publishes explicit LTS lines with 3-year support	low	S-10	evidence:evidence/S-10.md
+C-07	RQ-1	Django's release process publishes explicit LTS lines with 3-year support	low	S-10	evidence:evidence/S-10.md
+C-08	RQ-3	OSV lists resolved advisories for Django with fixes in the current LTS line and no open critical at the checked date	moderate	S-11	evidence:evidence/S-11.md

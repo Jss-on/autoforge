@@ -56,6 +56,7 @@ sources() {
       split("read cited rejected unverified", sArr, " "); for (i in sArr) sOK[sArr[i]] = 1;
       errs = 0; total = 0; unv = 0;
     }
+    { sub(/\r$/, "") }                    # CRLF checkouts (core.autocrlf) must validate like LF
     /^#/ { next }
     $1 == "id" && $2 == "tier" { next }   # header
     NF == 0 || $0 ~ /^[[:space:]]*$/ { next }
@@ -103,6 +104,7 @@ claims() {
       split("high moderate low contested", cArr, " "); for (i in cArr) cOK[cArr[i]] = 1;
       errs = 0; total = 0; orphans = 0;
     }
+    { sub(/\r$/, "") }                    # CRLF checkouts (core.autocrlf) must validate like LF
     FNR == NR {   # first file: sources.tsv → tier + citability maps
       if ($0 ~ /^#/ || ($1 == "id" && $2 == "tier") || NF == 0 || $0 ~ /^[[:space:]]*$/) next;
       if (NF >= 9) { srcTier[$1] = $2; srcStatus[$1] = $9 }

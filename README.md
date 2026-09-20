@@ -639,10 +639,10 @@ client is trying to achieve, what Forge thinks is true, and how people would use
   `stack-decision.md`: Y-statement, cited matrix, why not the others, consequences and exit paths,
   confidence and robustness. You see it in plain words and **approve / revise weights / ask for more
   evidence / mandate your own** (a mandate is validated and its risks recorded, never overruled).
-  The mechanical gate `score-requirements.sh stack` → `STACK_DECISION: READY` requires every score
-  to cite a source and your approval to be pinned to the exact evidence you saw; build's
-  feasibility spike then confirms the pick against pre-registered thresholds and re-asks you if it
-  misses.
+  `score-requirements.sh stack` → `STACK_DECISION: READY` checks the evidence and decision record,
+  with your approval pinned to both. The approved bundle travels with the tracked spec; build's
+  feasibility spike records its measurements separately and re-asks you if it misses the
+  pre-registered thresholds.
 
 ```
 /forge:requirements Brief: "internal expense tracker with SSO" --chain build

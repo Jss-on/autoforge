@@ -148,9 +148,9 @@ acceptance checks. If translation reveals a new decision or changes the agreed m
 returns to the client review and obtains approval for the changed version.
 
 The final `evals/fullstack/<name>.spec.yaml` must pass the existing requirements validator before
-Forge hands it to build — including the stack gate: the spec points at the approved
-`stack-decision.md`, and `score-requirements.sh stack` must print `STACK_DECISION: READY` (every
-score cites a source, your approval is pinned to that exact evidence). Client approval establishes
+Forge hands it to build — including the stack gate: `decision:` points at the complete approved
+bundle in tracked `evals/fullstack/<name>.stack/`, and `score-requirements.sh stack` must print
+`STACK_DECISION: READY`. Your approval pins the ledgers and decision record. Client approval establishes
 what to build and on what stack; mechanical validation checks the build spec's structure,
 acceptance coverage and the stack record. All are required.
 

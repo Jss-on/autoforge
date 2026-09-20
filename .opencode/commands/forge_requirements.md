@@ -229,16 +229,18 @@ in `forge/requirements-{YYMMDD}-{HHMM}/stack/`; its release is decided by
   owner-mandated path: same gates and matrix, the 18F questions answered, every negative
   consequence recorded, a one-paragraph premortem, knock-out failures recorded as accepted risk in
   the owner's words, `Approval: owner-mandated (A-n, date) … ledger:<hash>`, provenance `stated`.
-  The approval **pins the ledger hash** (`cat sources.tsv claims.tsv | tr -d '\r' | sha256sum | cut -c1-16`):
-  evidence edited afterwards makes the gate BLOCKED until the playback runs again. Two-way-door
+  Set `Decision: O-n` to the option the owner selects (`Recommendation:` remains the researched
+  recommendation), and set `Status: approved` or `owner-mandated` to match the answer. The approval
+  **pins the ledgers and decision record**: use the `ledger:` hash printed by the gate's
+  `approval-pin` diagnostic after the record is final, and write it only after the owner's answer.
+  Editing either afterwards makes the gate BLOCKED until the playback runs again. Two-way-door
   components (UI kit, test runner, linter) get one Y-statement each and one bulk `A-n`.
 - **Reopen on change:** a material change to a driver's NFR/constraint, a candidate added or
   removed, a changed weight, an edited ledger or a failed build spike supersedes the record
   (`Status: superseded by …`, a new record, playback again). Phase 4 sign-off and Phase 5 spec
   generation wait while the gate is not READY.
-**Gate:** `STACK_DECISION: READY` (ledgers valid · ≥3 options · ≥3 traced weighted drivers · every
-cell cited, no orphans · every driver claimed · recommendation, confidence, robustness declared ·
-≥1 negative consequence · owner approval pinned to the current ledger).
+**Gate:** `scripts/score-requirements.sh stack <dir>` → `STACK_DECISION: READY`.
+The gate prints each measured criterion and PASS/FAIL; follow protocol §7 for the record shape.
 
 ## Phase 3 — Specification (draft `requirements.md`)
 Translate the reviewed flows into a draft SRS/PRD; Phase 4 approves the corresponding client
@@ -311,14 +313,16 @@ When Linear is the tracker, the signed-off SRS is also attached to the engagemen
 document.
 
 ## Phase 5 — Generate the build spec
+Copy the approved `stack/` directory, including ledgers, reading notes, query log and the relevant
+`client-review.md`, to tracked `evals/fullstack/<name>.stack/`; preserve the approved bytes.
 Emit `evals/fullstack/<name>.spec.yaml` for `forge:build`. Schema (consumed by `build` +
 checked by `scripts/score-requirements.sh validate`):
 ```yaml
 name: <slug>
 summary: <one line>
 stack: { language: <…@major>, framework: <…@major>, datastore: <…>, hosting: <…>,
-         decision: forge/requirements-<ts>/stack,          # the Phase 2b record dir — `stack` gate must be READY
-         adr: docs/adr/0001-tech-stack.md }                 # where build commits the record in the output repo
+         decision: evals/fullstack/<name>.stack,           # tracked decision bundle — `stack` gate must be READY
+         adr: docs/adr/0001-tech-stack/stack-decision.md }  # where build commits the bundle in the output repo
 design: { source: catalog|file|url|generate, ref: <slug/path/url>, mode: operate|persuade|read|experience,
           dislikes: [ <reactions the client rejected> ] }   # build adopts as DESIGN.md via the direction protocol
                                                             # a Figma URL is source: url — build routes it through the design bridge
@@ -334,7 +338,7 @@ acceptance:
 ```
 - `name`, `summary`, `stack` — the **Phase 2b decision**, never a hint copied through: every
   component pinned to a major, `decision:` pointing at the record dir (the `stack` gate re-runs on
-  intake; READY = evidence ledgers valid + owner approval pinned to them), `adr:` the path build
+  intake; the framework must match the selected `Decision:` option), `adr:` the path build
   commits it to. No `NEEDS CLARIFICATION` marker may remain in the block.
 - `design:` — the chosen design reference from elicitation: `{ source: catalog|file|url|generate,
   ref: <slug/path/url>, mode, dislikes }`. `mode` is the app's default **visitor mode** (Operate for
@@ -399,7 +403,7 @@ Print the ready invocation:
 ```
 Write handoff.json to the output dir (`forge/requirements-{YYMMDD}-{HHMM}/`): version "3.1.0",
 source "requirements", status COMPLETE, `spec` = generated spec path, config{name, stack,
-stack_decision: {verdict: READY, record: <path>, recommendation: O-n, approval: <Approval line>}},
+stack_decision: <tracked decision-directory path>},
 traceability summary. Schema: `references/handoff-schema.md`; after writing, `scripts/validate-handoff.sh
 <run-dir>/handoff.json requirements` must print VALID.
 Only emit COMPLETE, ready build arguments or `--chain build` after both the current owner approval
@@ -407,8 +411,11 @@ and VALID spec gate. If input is still needed, save the draft review and open it
 the requirements complete or chain. Include the review path/revision in the traceability summary.
 
 ## Safety
-Documents + spec only — no product code, no deploy. Throwaway wireframes are the ONE code-shaped
-artifact allowed: static HTML in the run dir, THROWAWAY-bannered, never copied into the build scope.
+Documents + spec only — no product code, no deploy. Throwaway wireframes may be static HTML in
+the run dir, THROWAWAY-bannered, never copied into the build scope.
+When the owner requests a spike before choosing a stack, a disposable feasibility experiment in
+`<run-dir>/stack/spike/` may resolve that named uncertainty. Record the result, then replay the
+decision; this exception does not authorize product scaffolding or a deployment.
 Optional moodboard rasters and their planning manifest/prompts/receipts also stay in the run dir;
 they are direction evidence, never automatically approved product assets.
 **Never proceed on unconfirmed assumptions** — expose them immediately, refine the linked stories

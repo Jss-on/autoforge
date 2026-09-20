@@ -24,12 +24,12 @@ cited comparison → recommendation with reasons → **the owner approves** → 
   weighted sum (fixed anchors, `?` cells, sensitivity sweep → `Robustness:`, `Confidence:`); the
   MADR-shaped `stack-decision.md`; the owner playback + state machine (approve / revise weights /
   more evidence / mandate — a mandate is validated and its risks recorded, never overruled; the
-  approval pins the ledger hash); build's Confirmation spike with pre-registered thresholds.
+  approval pins the ledgers and decision record); build's Confirmation spike with pre-registered thresholds.
   §10 cites the sources the protocol itself rests on.
 - `scripts/score-requirements.sh stack <dir>` → `STACK_DECISION: READY | BLOCKED` (ledgers valid via
   `score-research.sh`, ≥3 options, ≥3 traced weighted drivers, every matrix cell cited with no
   orphans, every driver claimed, recommendation/confidence/robustness declared, ≥1 negative
-  consequence, approval `approved`/`owner-mandated` **pinned to the current ledger hash**);
+  consequence, approval `approved`/`owner-mandated` **pinned to the ledgers and decision record**);
   `validate` gains `REQUIRE_STACK_DECISION=1` (`decision:` must point at a READY dir; no
   `NEEDS CLARIFICATION` in the stack block) — default off, so legacy specs stay VALID.
 - `requirements` Phase 2b — Technology selection (evidence-based, owner-approved) between Analysis
@@ -37,14 +37,22 @@ cited comparison → recommendation with reasons → **the owner approves** → 
   `REQUIRE_STACK_DECISION=1`; handoff `config.stack_decision`; summary prints the verdict.
 - `build` — spec intake re-runs the gate and runs the protocol when a spec's stack is unjustified;
   Phase 2 Feasibility = the record's Confirmation (identical load model, thresholds fixed before the
-  run, ≥5 runs as a distribution, results appended, ADR committed to `docs/adr/0001-tech-stack.md`;
+  run, ≥5 runs as a distribution, results saved separately, ADR bundle committed to `docs/adr/0001-tech-stack/`;
   a miss supersedes the decision and re-asks the owner); Phase 4 HLD cites the record.
-- `tests/fixtures/requirements/stack-ready/` (the exemplar record + ledgers) and 55 new rows in
+- `tests/fixtures/requirements/stack-ready/` (synthetic record + ledgers + reading notes + searches) and regression checks in
   `tests/test-requirements.sh` (gate on good + planted-defect clones, validate coupling, spec and
   protocol pins, five-surface parity); `tests/test-build.sh` pins the build wiring.
 
 Product 3.6.0 → 3.7.0 at release (no new command; manifests unchanged until `release.sh`); handoff
 schema stays 3.1.0 (new `config.stack_decision` is additive).
+
+**Review follow-up (2026-09-21):** approval now pins the record as well as the ledgers; changed or
+superseded records block intake. `Decision:` records the selected option, including owner mandates,
+and the spec framework must match it. The gate checks research depth, search logs, reasoning and
+reading-note files, and handles CRLF checkouts, repeated MADR headings and sensitivity tables.
+Approved bundles are tracked beside specs and copied whole into the output repo; confirmation
+measurements stay separate so successful spikes do not invalidate approval. Handoff metadata
+carries the bundle path; build re-runs the gate instead of trusting a copied verdict.
 
 ## v3.6.0 — /forge:android: web app → Android app (2026-09-06)
 

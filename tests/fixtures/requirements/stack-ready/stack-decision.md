@@ -1,12 +1,13 @@
-# Stack decision — sample-app (fixture; the shape references/stack-selection-protocol.md §4 prescribes)
+# Stack decision — sample-app (fixture; the record shape references/stack-selection-protocol.md §7 prescribes)
 
 Status: approved
 Date: 2026-09-18
 Decision-makers: owner (client) · consulted: Forge research pass, doctor.sh spike · informed: build
 Recommendation: O-1
+Decision: O-1
 Confidence: moderate — every driver has T2/T3 support; performance rests on a frozen synthetic benchmark until the spike
 Robustness: robust — winner unchanged under ±1 weight on every driver, drop-any-one-criterion, and O-3 as datum
-Approval: approved by owner — client-review rev 4 (A-12), 2026-09-18, ledger:bc7029049a42b136
+Approval: approved by owner — client-review rev 4 (A-12), 2026-09-18, ledger:794b91a0b8c5e28f
 
 **Y-statement:** In the context of an internal expense tracker for ~40 staff on the owner's Node VPS,
 facing a 3-year support horizon with no in-house ops team, we decided for O-1 (Node + Fastify +
@@ -14,6 +15,9 @@ Postgres + React) and neglected O-2 and O-3, to achieve a supportable stack the 
 host, accepting that Django's longer LTS lines would have given a wider support window.
 
 ## Context and problem statement
+
+Synthetic parser fixture: the evidence, searches and owner decisions below are test data,
+not live research or an actual approval. Production decisions must use fetched evidence.
 
 Internal expense tracker (FR-1…FR-9): ~40 staff, one office, hosted on the owner's existing
 VPS (A-3), no in-house ops team (A-5), p95 < 300 ms at 20 concurrent users (NFR-2), 3-year
@@ -27,7 +31,7 @@ UI kit, test runner and linter are two-way doors (bulk-approved in A-13).
 |---|---|---|---|---|
 | License permissive + SPDX-listed (C-1) | pass | pass | pass | [S-01, S-04, S-10] |
 | Runtime/framework EOL outside the 3-year horizon (NFR-5) | pass | pass | pass | [S-07, S-04, S-10] |
-| Zero unpatched reviewed advisories for the pinned major (NFR-4) | pass | pass | pass | [S-02, S-03] |
+| Zero unpatched reviewed advisories for the pinned major (NFR-4) | pass | pass | pass | [S-02, S-03, S-11] |
 
 ## Decision drivers (weighted criteria, locked before scoring — A-12)
 
@@ -50,9 +54,18 @@ UI kit, test runner and linter are two-way doors (bulk-approved in A-13).
 |---|---|---|---|
 | RQ-1 | 4 [S-04, S-07] | 2 [S-05] | 5 [S-10] |
 | RQ-2 | 5 [S-06] | 3 [S-06] | 3 [S-06] |
-| RQ-3 | 4 [S-02] | 3 [S-03] | 4 [S-10] |
+| RQ-3 | 4 [S-02] | 3 [S-03] | 4 [S-11] |
 | RQ-4 | 5 [S-01, S-04] | 5 [S-01] | 5 [S-01] |
 | weighted total (secondary view, not the decision) | 44 | 30 | 43 |
+
+## Sensitivity sweep
+
+| variation | winner |
+|---|---|
+| each weight ±1 (8 runs) | O-1 |
+| drop any one driver (4 runs) | O-1 |
+| datum = O-3 | O-1 |
+| unweighted | O-1 (tie with O-3 broken by the hosting constraint A-3) |
 
 ## Decision outcome
 
@@ -85,6 +98,8 @@ under every weighting tried.
 - Microservice / polyglot envy? No — one process, one language.
 - Innovation tokens spent: 0 of 1.
 - Rewrite trap? No — every component has a support window past the 3-year horizon [S-07, S-10].
+- LLM self-preference: Node/React is a high-training-data stack; disclosed, and the spike, not
+  the prior, settles RQ-2.
 
 ## Disconfirmation log
 
@@ -96,8 +111,9 @@ under every weighting tried.
 ## Confirmation
 
 doctor.sh: node 22 LTS + Postgres reachable + Playwright present; hello-world of O-1 boots
-locally. build Phase 2 re-runs the spike under the NFR-2 load model and appends its measured p95
-here before pinning; the lockfile must contain fastify and none of the rejected frameworks.
+locally. Pre-registered for build Phase 2: p95 < 300 ms at 20 concurrent on the scaffold (NFR-2
+load model), threshold fixed here before the run; build writes measurements to confirmation-results.md and the
+lockfile must contain fastify and none of the rejected frameworks.
 
 ## More information
 
