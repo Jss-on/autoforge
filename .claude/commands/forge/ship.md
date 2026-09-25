@@ -143,6 +143,11 @@ Post-ship verification:
 
 ## Phase 8: Log
 
+Retain the native delivery operation under `ship.delivery` using `references/delivery-outcomes.md`.
+Keep requested, accepted, observed traffic and verified health timestamps distinct. Preserve failed
+observed production events for reporting without assigning COMPLETE. Link incident and remediation
+records only when causality is established; capture unknowns explicitly.
+
 Create output directory: `forge/ship-{YYMMDD}-{HHMM}/`
 Write:
 - `checklist.md` — completed checklist with pass/fail per item
@@ -165,7 +170,7 @@ If `--rollback`:
 
 ## Chain Handoff
 
-Write handoff.json: version "3.1.0", source "ship", timestamp, status
+Write handoff.json: version "3.3.0", source "ship", timestamp, status
 (COMPLETE|DRY_RUN|ROLLBACK|BLOCKED|ERROR), findings and the typed `ship` record from
 `references/handoff-schema.md`. Paths are relative to this run directory.
 
@@ -174,3 +179,13 @@ successful shipment/restoration or continuing `--chain`, additionally run
 `scripts/validate-handoff.sh <run>/handoff.json ship --require-pass`. It requires matching receipt,
 authorization, passing checks and nonempty regular evidence files confined to the run directory.
 Preview, failed and blocked outcomes stop after their report. A passing gate never grants new authorization.
+
+## Current execution evidence
+
+Before using a build/test handoff for readiness, run the shared completion gate and require schema 3.3 execution receipts. Before deployment, fetch the exact CI attempt and protected verifier identities with `scripts/ci-evidence.cjs` from a trusted policy; see [acceptance evidence](../../skills/forge/references/acceptance-evidence.md). A stored pass or old handoff never substitutes for this gate.
+
+For a selected Vercel pilot, use the [native delivery contract](../../skills/forge/references/vercel-delivery.md). Stage, promote and recover through the same protected workflow. A local simulated pass or disabled workflow cannot close live shipment obligations.
+
+Require the [rollout and recovery contract](../../skills/forge/references/operational-recovery.md) for deployments. Run `scripts/operational.cjs` against protected observations; HOLD, missing telemetry, incompatible schema or unmet RTO/RPO blocks readiness. Real provider drills remain required even when local fixtures pass.
+
+For services with an SLO, pin the journey definition, numeric target/window, telemetry coverage, alert destination, responder and runbook before rollout. Apply `operational.cjs budget` and the [operational contract](../../skills/forge/references/operational-recovery.md); a short pilot proves mechanics only. Test an authorized safe alert sink and dependency-readiness recovery before declaring operations complete.

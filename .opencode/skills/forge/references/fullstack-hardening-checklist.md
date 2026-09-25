@@ -76,10 +76,10 @@ For any domain with computation or stateful rules (payroll, accounting, POS, bil
 
 ## 2. DevOps (0.15)
 
-- [ ] **Dockerfile** — multi-stage, pinned base image, runs as a **non-root** user, has a `HEALTHCHECK`
+- [ ] **Container hosting only: Dockerfile** — multi-stage, pinned base image, runs as a **non-root** user, has a `HEALTHCHECK`
 - [ ] **CI pipeline** (GitHub Actions or equivalent) runs lint → test → build → dependency-scan, all green
-- [ ] **Compose / IaC** — `docker-compose.yml` (or Terraform/k8s manifests) brings up app + datastore
-- [ ] **DB migrations** — versioned, forward-only by default, run on deploy
+- [ ] **Provisioning** ? native managed configuration for PaaS/static hosting; for containers, **Compose / IaC** — `docker-compose.yml` (or Terraform/k8s manifests) brings up app + datastore
+- [ ] **Stateful services: DB migrations** — versioned, forward-only by default, run on deploy
 - [ ] **Graceful shutdown** — handles `SIGTERM`, drains in-flight requests, closes pool
 - [ ] **Config via environment** — no config baked into the image; `.env.example` documents every var
 
@@ -134,3 +134,5 @@ For any domain with computation or stateful rules (payroll, accounting, POS, bil
   *accept* it (see `orchestrator-routing.md` → Independent Verify & Overfit Guard).
 - `0.00` with `dims_ran=none` means nothing measurable was built yet — an honest baseline,
   never a green ship signal. Deploy stays human-gated regardless of pass-rate.
+
+Hosting mechanisms follow the pinned approved stack decision. Stateful apps must retain persistence, compatible migrations, backup and a timed isolated restore; provider-managed backup alone is insufficient. Static hosting needs health/journey observation, configuration and recovery of the delivered artifact, without an invented database or container. Use `acceptance.cjs hosting` to validate the required outcomes.

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # validate-handoff.sh — mechanical gate for the chain contract (handoff.json).
-# Schema: skills/forge/references/handoff-schema.md (v3.1.0).
+# Schema: skills/forge/references/handoff-schema.md (v3.3.0).
 #
 #   validate-handoff.sh <handoff.json> [expected-source] [--require-pass]
 #
@@ -10,6 +10,7 @@
 # of the harness (hooks, doctor), so there is no reason to hand-roll field
 # extraction with grep. A file that is not valid JSON is INVALID outright.
 set -uo pipefail
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 FILE="${1:?usage: validate-handoff.sh <handoff.json> [expected-source]}"
 EXPECT_SRC="${2:-}"
@@ -165,6 +166,27 @@ PARSED="$(node -e '
   if (legacy && !("security" in j)) securityValid = true;
   if (legacy && !("ship" in j)) shipValid = true;
   if (legacy) passValid = false;
+  // Current completion records bind the complete expected check set. Older records
+  // remain readable but cannot satisfy strengthened acceptance readiness.
+  let acceptanceValid = true;
+  const parts = s("version").split(".").map(Number);
+  const currentAcceptance = parts[0] > 3 || (parts[0] === 3 && parts[1] >= 3);
+  const acceptedSource = build || (s("source") === "test" && s("verdict") === "RELEASE_RECOMMENDED") ||
+    (s("source") === "design" && s("verdict") === "SHIP");
+  const completed = ["COMPLETE", "CONVERGED"].includes(s("status"));
+  if (acceptedSource && ((currentAcceptance && completed) || process.argv[2] === "--require-pass")) {
+    try {
+      const path = require("path"), a = require(path.join(process.argv[3], "acceptance.cjs"));
+      const run = fs.realpathSync(path.dirname(path.resolve(process.argv[1]))), ref = j.acceptance;
+      a.need(currentAcceptance && completed && object(ref) && a.digest(ref.plan_sha256), "Current pinned acceptance required");
+      const project = fs.realpathSync(process.env.FORGE_PROJECT_ROOT || process.cwd());
+      const plan = a.local(run, ref.plan), results = a.local(run, j.results_tsv);
+      const p = a.loadPlan(project, plan, ref.plan_sha256);
+      a.need(s("source") !== "feature" || object(p.plan.previous), "Feature requires its pinned previous floor");
+      acceptanceValid = a.complete(project, plan, results, ref.plan_sha256).verdict === "COMPLETE";
+      passValid = (build ? passValid : completed) && acceptanceValid;
+    } catch { acceptanceValid = false; passValid = false; }
+  }
   const h = (k) => {
     const v = j[k];
     let valid;
@@ -186,15 +208,15 @@ PARSED="$(node -e '
   console.log([s("version"), s("source"), s("status"), s("timestamp"), s("verdict"),
                h("results_tsv"), h("metric"), h("config"), h("coverage"),
                h("spec"), h("srs"), h("generated_spec"), h("errors_remaining"), h("design"),
-               h("report"), securityValid ? "1" : "0", shipValid ? "1" : "0", passValid ? "1" : "0"]
+               h("report"), securityValid ? "1" : "0", shipValid ? "1" : "0", passValid ? "1" : "0", acceptanceValid ? "1" : "0"]
               .join(String.fromCharCode(31)));
-' "$FILE" "$REQUIRE_PASS" 2>/dev/null)"
+' "$FILE" "$REQUIRE_PASS" "$SCRIPT_DIR" 2>/dev/null)"
 
 if [[ "$PARSED" == "__PARSE_ERROR__" || -z "$PARSED" ]]; then
   echo "INVALID"; echo "not valid JSON: $FILE" >&2; exit 1
 fi
 IFS=$'\x1f' read -r VERSION SOURCE STATUS TS VERDICT \
-  H_RESULTS H_METRIC H_CONFIG H_COVERAGE H_SPEC H_SRS H_GENSPEC H_ERRREM H_DESIGN H_REPORT H_SECURITY H_SHIP H_PASS <<< "$PARSED"
+  H_RESULTS H_METRIC H_CONFIG H_COVERAGE H_SPEC H_SRS H_GENSPEC H_ERRREM H_DESIGN H_REPORT H_SECURITY H_SHIP H_PASS H_ACCEPTANCE <<< "$PARSED"
 
 has_field() { # reads the pre-parsed presence-and-type flags
   case "$1" in
@@ -216,6 +238,7 @@ has_field() { # reads the pre-parsed presence-and-type flags
 [[ -n "$SOURCE"  ]] || err "missing: source"
 [[ -n "$STATUS"  ]] || err "missing: status"
 [[ -n "$TS"      ]] || err "missing or invalid: timestamp (ISO-8601 with offset required)"
+[[ "$H_ACCEPTANCE" == "1" ]] || err "current pinned acceptance plan, complete required checks and feature floor required"
 
 if [[ -n "$SOURCE" ]] && printf '%s' "$SOURCE" | grep -q ':'; then
   err "source must be the short name, not a colon form (got: $SOURCE)"
@@ -316,7 +339,7 @@ fi
 
 # Legacy-version warning is stderr-only; the file is still VALID.
 case "$VERSION" in
-  2.1.*|2.2.*|2.3.0) echo "warn: legacy handoff version $VERSION (current schema 3.1.0)" >&2 ;;
+  2.1.*|2.2.*|2.3.0) echo "warn: legacy handoff version $VERSION (current schema 3.3.0)" >&2 ;;
 esac
 
 echo "VALID"; exit 0

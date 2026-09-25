@@ -64,19 +64,29 @@ transform_opencode() {
   # References (copy with adaptations)
   for ref in "$CLAUDE_SKILLS"/references/*.md; do
     [[ -f "$ref" ]] || continue
-    adapt_opencode "$ref" > "$dst_skills/references/$(basename "$ref")"
+    cp "$ref" "$dst_skills/references/$(basename "$ref")"
   done
 
   # Core command (forge.md)
-  adapt_opencode "$CLAUDE_COMMANDS/forge.md" > "$dst_commands/forge.md"
+  cp "$CLAUDE_COMMANDS/forge.md" "$dst_commands/forge.md"
 
   # Subcommand files (colon → underscore in filename)
   for cmd in "$CLAUDE_COMMANDS"/forge/*.md; do
     [[ -f "$cmd" ]] || continue
     local base
     base="$(basename "$cmd")"
-    adapt_opencode "$cmd" > "$dst_commands/forge_${base}"
+    cp "$cmd" "$dst_commands/forge_${base}"
   done
+
+  cat >> "$dst_skills/SKILL.md" <<'BINDING'
+
+## OpenCode shared command loading
+
+The command/reference bodies are shared canonical contracts. Interpret `/forge:<name>` as
+`/forge_<name>`, and `AskUserQuestion` as the available `question` tool. Read the registered
+`forge_<name>.md` command when routing a subcommand. Set `AR_ROOT` to the directory containing
+this loaded SKILL.md and resolve its bundled scripts/references there before project-local paths.
+BINDING
 
   printf 'OpenCode: transformed %s → %s\n' ".claude/" ".opencode/"
 }
@@ -196,7 +206,7 @@ transform_hooks() {
 # source stays repo-root scripts/; these are distribution copies.
 
 transform_scripts() {
-  local runtime=(score-build.sh score-requirements.sh score-regression.sh score-debug-fix.sh orchestrate.sh doctor.sh validate-handoff.sh run-index.sh score-test.sh score-design.sh design-scan.cjs asset-check.cjs lessons.cjs score-research.sh score-android.sh)
+  local runtime=(acceptance.cjs verification.cjs ci-evidence.cjs vercel-delivery.cjs operational.cjs delivery-metrics.cjs score-build.sh score-requirements.sh score-regression.sh score-debug-fix.sh orchestrate.sh doctor.sh validate-handoff.sh run-index.sh score-test.sh score-design.sh design-scan.cjs asset-check.cjs lessons.cjs score-research.sh score-android.sh)
   local tree s
   for tree in ".claude/skills/forge" \
               "claude-plugin/skills/forge" \
@@ -204,6 +214,12 @@ transform_scripts() {
               ".agents/skills/forge" \
               "plugins/forge/skills/forge"; do
     mkdir -p "$REPO_ROOT/$tree/scripts"
+    if [[ -f "$REPO_ROOT/.github/workflows/forge-pilot.yml" ]]; then
+      cp "$REPO_ROOT/.github/workflows/forge-pilot.yml" "$REPO_ROOT/$tree/references/vercel-pilot.yml"
+    fi
+    if [[ -f "$REPO_ROOT/.github/workflows/forge-pilot-build.yml" ]]; then
+      cp "$REPO_ROOT/.github/workflows/forge-pilot-build.yml" "$REPO_ROOT/$tree/references/vercel-pilot-build.yml"
+    fi
     for s in "${runtime[@]}"; do
       cp "$REPO_ROOT/scripts/$s" "$REPO_ROOT/$tree/scripts/$s"
     done
@@ -213,6 +229,12 @@ transform_scripts() {
 
 # --- Main ---
 
+# Claude ships the same canonical command and reference bodies as the other bundles.
+mkdir -p "$REPO_ROOT/claude-plugin/commands/forge" "$REPO_ROOT/claude-plugin/skills/forge/references"
+cp "$CLAUDE_COMMANDS/forge.md" "$REPO_ROOT/claude-plugin/commands/forge.md"
+cp "$CLAUDE_COMMANDS"/forge/*.md "$REPO_ROOT/claude-plugin/commands/forge/"
+cp "$CLAUDE_SKILLS/SKILL.md" "$REPO_ROOT/claude-plugin/skills/forge/SKILL.md"
+cp "$CLAUDE_SKILLS"/references/*.md "$REPO_ROOT/claude-plugin/skills/forge/references/"
 if [[ $DO_OPENCODE -eq 1 ]]; then transform_opencode; fi
 if [[ $DO_CODEX -eq 1 ]]; then transform_codex; fi
 transform_hooks

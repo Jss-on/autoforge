@@ -83,3 +83,12 @@ A failed gate leaves local changes or the open PR available for inspection;
 there is no automatic reset, force-push, branch deletion, or test bypass. An
 abort during document review keeps only local changes. An abort after PR creation
 leaves the PR open. Reverify any changed candidate before merging or tagging it.
+
+## Required installed evaluations
+
+Both publishing paths require fresh installed Claude/Codex evaluations bound to the prepared
+bundle. The operator can pin the exact local subscription report digest alongside independently
+retrieved GitHub-hosted CI results. Policies without that explicit local-report choice still require
+the model CI job and its artifact. Missing, skipped, expired or mismatched required evidence blocks
+release. See [setup and policy fields](../guide/installed-evaluation.md).
+Existing target, authorization, tree, review and remote-race checks still apply.

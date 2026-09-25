@@ -256,3 +256,10 @@ Iterations: 15
 ```
 /forge:evals --format json --recommend
 ```
+
+## Delivery outcomes
+
+Use `forge:evals --delivery --service ID --from ISO --to ISO receipt.json ...` for the five per-service
+DORA metrics. The reducer consumes native operations, `ship.delivery`, and causal incident records.
+It reports open incidents and unknown coverage; it excludes previews and never combines the metrics
+with local keep/discard scores. See the packaged `references/delivery-outcomes.md` conventions.

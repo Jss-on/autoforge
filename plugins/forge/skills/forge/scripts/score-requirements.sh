@@ -106,6 +106,14 @@ validate() {
   gate_rows=$(grep -cE 'gate:[[:space:]]*true' "$spec" || true)
 
   local ok=1
+  local acceptance_plan="legacy-unverified"
+  if [[ "${REQUIRE_ACCEPTANCE_PLAN:-0}" == 1 || -n "${2:-}" ]]; then
+    acceptance_plan=blocked
+    if [[ -n "${2:-}" ]] && node "$SCRIPT_DIR/acceptance.cjs" hosting "${3:-.}" "$2" >/dev/null; then
+      acceptance_plan=ready
+    else ok=0
+    fi
+  fi
   [[ "$has_name"   -ge 1 ]] || ok=0
   [[ "$has_stack"  -ge 1 ]] || ok=0
   [[ "$has_accept" -ge 1 ]] || ok=0
@@ -170,6 +178,7 @@ validate() {
   echo "dims_missing=${missing:-none}"
   echo "logic=$([[ $has_logic -ge 1 ]] && echo "present(gate_rows=$gate_rows)" || echo absent) require_logic=${REQUIRE_LOGIC:-0}"
   echo "stack_decision=$stack_decision require_stack_decision=${REQUIRE_STACK_DECISION:-0}"
+  echo "acceptance_plan=$acceptance_plan"
   [[ "$ok" -eq 1 ]] && return 0 || return 1
 }
 

@@ -20,6 +20,15 @@ protocol, remediation rules); checklist: `references/uiux-checklist.md`; native 
 optional MCP integrations (media, Figma-class design bridge, tracker sync):
 `references/integrations-protocol.md`.
 
+## Required acceptance completion
+
+Follow `references/acceptance-evidence.md`: pin the reviewed expected check set before implementation,
+then require `scripts/score-build.sh completion <results.tsv> <acceptance-plan.json> <project-root>`
+before completion or a release-ready verdict. Keep weighted scoring for iteration selection.
+Missing, blocked, flaky, unexecuted or unjustifiably skipped required checks cannot be waived by
+a lower target or soft gates. Emit schema `3.3.0` with the pinned `acceptance` reference; feature
+runs preserve the previous accepted floor. Design-system output without an audit remains separate.
+
 ## Seam & reference resolution (read once)
 Resolve `AR_ROOT` exactly as in `build`: first existing of `${CLAUDE_PLUGIN_ROOT}/skills/forge`,
 `.claude/skills/forge`, the directory containing this command file, else glob
@@ -291,7 +300,7 @@ band; a flat `SLOP` across 3 checkpoints → recommend `system --refresh` (the w
 is the problem) rather than more slices.
 
 ## Chain Handoff
-Write handoff.json: version "3.1.0", source "design", timestamp, status
+Write handoff.json: version "3.3.0", source "design", timestamp, status
 (COMPLETE|CONVERGED|BOUNDED|BLOCKED|USER_INTERRUPT|ERROR), results_tsv (`design-results.tsv`),
 defects_tsv, verdict (`SHIP|FIX|REBUILD`), design (path to DESIGN.md + `lint` result), slop (count),
 health (`N/M`), summary (path to `design-report.md`), findings = open defects + waived rules,

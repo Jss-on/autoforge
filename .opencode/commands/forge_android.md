@@ -257,7 +257,7 @@ dimension. A flat gate count two checkpoints running → recommend the exact hum
 (deploy, Play fingerprint, toolchain) rather than more iterations.
 
 ## Chain Handoff
-Write handoff.json: version "3.1.0", source "android", timestamp, status
+Write handoff.json: version "3.3.0", source "android", timestamp, status
 (COMPLETE|BOUNDED|BLOCKED|USER_INTERRUPT|ERROR), verdict (STORE_READY|BLOCKED), results_tsv
 (`android-results.tsv`), package_id, host, artifacts{apk, aab} (paths or release-asset URLs),
 repo, pr, workflow_run (device-gate run URL), native_needs (list, when blocked), findings = red

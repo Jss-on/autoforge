@@ -112,6 +112,36 @@ assert_eq "1" "$LINES" "stdout is exactly one line (Verify pipes | awk '{print \
 NUM=$(bash "$SCORE_SH" pass-rate "$FIX/half.tsv" 2>/dev/null | awk '{print $2}')
 assert_eq "0.68" "$NUM" "pinned Verify extraction yields the bare number"
 
+VT=$(mktemp -d)
+for status in blocked flaky not_run; do
+  printf 'app\tlogic\tknown\t100000\tpass\tok\napp\tlogic\tunresolved\t0.01\t%s\tpending\n' "$status" > "$VT/results.tsv"
+  V_OUT=$(bash "$SCORE_SH" pass-rate "$VT/results.tsv" 2>"$VT/error.txt"); V_RC=$?
+  assert_eq 0 "$V_RC" "$status is a valid unresolved status"
+  assert_eq "PASS_RATE: 0.50" "$V_OUT" "even a tiny-weight $status logic row prevents a passing logic gate"
+done
+bad_rows=(
+  $'app\tlogic\tbad\t1\tpas\ttypo'
+  $'app\tmade-up\tbad\t1\tpass\ttypo'
+  $'app\tlogic\tknown\t1\tpass\tduplicate'
+  $'app\tlogic\tbad\t-1\tpass\tnegative'
+  $'app\tlogic\tbad\tNaN\tpass\tnan'
+  $'app\tlogic\tbad\t1e999\tpass\tinfinite'
+  $'app\tlogic\tbad\t0\tpass\tzero'
+  $'app\tlogic\t\t1\tpass\tmissing identity'
+  $'app\tlogic\tmalformed'
+)
+for bad_row in "${bad_rows[@]}"; do
+  printf 'app\tlogic\tknown\t1\tpass\tok\n%s\n' "$bad_row" > "$VT/results.tsv"
+  V_OUT=$(bash "$SCORE_SH" pass-rate "$VT/results.tsv" 2>"$VT/error.txt"); V_RC=$?
+  assert_eq 2 "$V_RC" "malformed scorer row fails explicitly: $bad_row"
+done
+printf 'app\tlogic\tknown\t1\tpass\tok\r\nother\tlogic\tknown\t1\tpass\tok\r\n' > "$VT/results.tsv"
+V_OUT=$(bash "$SCORE_SH" pass-rate "$VT/results.tsv" 2>"$VT/error.txt"); V_RC=$?
+assert_eq 0 "$V_RC" "assertion IDs may repeat across specs; CRLF accepted"
+assert_eq "PASS_RATE: 1.00" "$V_OUT" "valid cross-spec control retains its score"
+rm -f "$VT/results.tsv" "$VT/error.txt"
+rmdir "$VT"
+
 # ============================================================================
 printf '\n--- rubric: build spec capability gate ---\n'
 # ============================================================================
@@ -353,7 +383,7 @@ for mutation in '{"source":"not-a-command"}' '{"source":"build\u001fCOMPLETE"}' 
   assert_eq "INVALID/1" "$VH_BAD/$VH_BAD_CODE" "validate-handoff: rejects core field $mutation"
 done
 for mutation in '{"source":"loop"}' '{"source":"forge"}' '{"version":"2.1.0"}' \
-                '{"version":"4.0.0"}' '{"timestamp":"2024-02-29T23:00:00Z"}' \
+                '{"source":"loop","version":"4.0.0"}' '{"timestamp":"2024-02-29T23:00:00Z"}' \
                 '{"timestamp":"2026-01-01T08:00:00.123+08:00"}'; do
   node -e 'const f=require("fs");const j=JSON.parse(f.readFileSync(process.argv[1],"utf8"));f.writeFileSync(process.argv[2],JSON.stringify({...j,...JSON.parse(process.argv[3])}));' "$_ht/current-coverage.json" "$_ht/good-core.json" "$mutation"
   assert_eq "VALID" "$(bash "$VH" "$_ht/good-core.json" 2>/dev/null)" "validate-handoff: preserves valid core field $mutation"

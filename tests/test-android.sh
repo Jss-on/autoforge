@@ -307,7 +307,7 @@ spec_has "human-gated|explicit user approval|EXPLICIT USER APPROVAL" "Play uploa
 spec_has "AskUserQuestion"                             "one confirmation question"
 spec_has "speed-protocol\.md"                          "fast-path cadence"
 spec_has "STORE_READY"                                 "verdict tokens"
-spec_has "version \"3\.1\.0\""                         "handoff pins 3.1.0"
+spec_has "version \"3\.3\.0\""                         "handoff pins 3.3.0"
 spec_has "validate-handoff\.sh.*android"               "handoff validated with android source"
 spec_has "chain.*ship|--chain ship"                    "chains to ship"
 spec_has "device-relay"                                "phone evidence via device-relay"

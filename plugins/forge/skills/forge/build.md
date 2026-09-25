@@ -37,6 +37,15 @@ at the end of this doc. Companion contracts: `references/uiux-checklist.md`,
 families: generative media for real imagery/animation/3D, Figma-class design bridge, Linear-class
 tracker sync — availability-gated, degrade to the named fallback).
 
+## Required acceptance completion
+
+Follow `references/acceptance-evidence.md`: pin the reviewed expected check set before implementation,
+then require `scripts/score-build.sh completion <results.tsv> <acceptance-plan.json> <project-root>`
+before completion or a release-ready verdict. Keep weighted scoring for iteration selection.
+Missing, blocked, flaky, unexecuted or unjustifiably skipped required checks cannot be waived by
+a lower target or soft gates. Emit schema `3.3.0` with the pinned `acceptance` reference; feature
+runs preserve the previous accepted floor. Design-system output without an audit remains separate.
+
 ## Seam & reference resolution (read once, applies to every `scripts/…` and `references/…` mention)
 
 The mechanical gates (`score-build.sh`, `score-requirements.sh`, `score-regression.sh`,
@@ -626,7 +635,7 @@ interval, print pass-rate trend + per-dimension breakdown (F/ux/D/M/H). Plateau 
 recommend a spec/stack/design rethink. At loop end → `evals-summary.md` in the output directory.
 
 ## Chain Handoff
-Write handoff.json: version "3.1.0", source "build", timestamp, status
+Write handoff.json: version "3.3.0", source "build", timestamp, status
 (COMPLETE|BOUNDED|CONVERGED|BLOCKED|USER_INTERRUPT|ERROR), results_tsv, metric (fullstack_pass_rate),
 coverage{requirements, design}, design{lint, slop, verdict, design_md}, phases_completed, findings = remaining red
 assertions + untraced requirements/tokens + open design defects + ponytail debt rows, config{spec,
@@ -727,3 +736,11 @@ matrix + golden vectors, `DESIGN.md`, tokens)
 the rubric + gates check; Phases 7–8 are post-convergence + human-gated. Convergence also requires
 `logic_gate == PASS`, `REQ_COVERAGE == 1.00`, and `DESIGN_COVERAGE == 1.00`. A run reports
 `phases_completed`, `logic_gate`, `REQ_COVERAGE`, and `DESIGN_COVERAGE` in its handoff.
+
+## Hosting applicability at intake
+
+Export the approved stack decision into the existing pinned acceptance definition: `hosting: {kind: managed|static|container, stateful: boolean, decision: "docs/adr/stack-decision.md", target: "exact-isolated-target"}`. Pin the decision file as a snapshot input. Each check names its `outcome`. Require delivery, configuration, health and observability for every app; persistence, compatibility, backup and restore for stateful apps; container_nonroot, container_health and container_image when containers are selected. Mechanism exclusions require the existing applicability reason and never waive a required outcome.
+
+At spec intake run `REQUIRE_STACK_DECISION=1 REQUIRE_ACCEPTANCE_PLAN=1 bash "$AR_ROOT/scripts/score-requirements.sh" validate "$SPEC" "$PLAN" "$PROJECT"`. A legacy YAML spec may still be read, but its `legacy-unverified` result cannot authorize a new build/release until hosting acceptance is reviewed and pinned. Use the [acceptance contract](../../skills/forge/references/acceptance-evidence.md); do not invent a second profile document or an ad hoc YAML parser.
+
+For services with an SLO, pin the journey definition, numeric target/window, telemetry coverage, alert destination, responder and runbook before rollout. Apply `operational.cjs budget` and the [operational contract](../../skills/forge/references/operational-recovery.md); a short pilot proves mechanics only. Test an authorized safe alert sink and dependency-readiness recovery before declaring operations complete.

@@ -101,23 +101,32 @@ exit-criteria() {
   local results="${1:?usage: exit-criteria <results.tsv> <defects.tsv> [requirements.md]}"
   local defects_file="${2:?usage: exit-criteria <results.tsv> <defects.tsv> [requirements.md]}"
   local reqs="${3:-}"
+  local plan="${4:-${BUILD_ACCEPTANCE_PLAN:-}}" project="${5:-${FORGE_PROJECT_ROOT:-.}}"
   local target="${TEST_TARGET_RATE:-0.95}"
+  [[ "$target" =~ ^(0(\.[0-9]+)?|1(\.0+)?)$ ]] || {
+    echo "VERDICT: RELEASE_BLOCKED"; echo "invalid TEST_TARGET_RATE (expected 0..1)" >&2; return 2;
+  }
   [[ -f "$results" ]]      || { echo "VERDICT: RELEASE_BLOCKED"; echo "results file not found: $results" >&2; return 2; }
   [[ -f "$defects_file" ]] || { echo "VERDICT: RELEASE_BLOCKED"; echo "defects file not found: $defects_file" >&2; return 2; }
   [[ -x "$SCORE_BUILD" || -f "$SCORE_BUILD" ]] || { echo "VERDICT: RELEASE_BLOCKED"; echo "missing seam: $SCORE_BUILD" >&2; return 2; }
+  [[ -f "$plan" ]] || { echo "VERDICT: RELEASE_BLOCKED"; echo "missing pinned acceptance plan (fourth argument or BUILD_ACCEPTANCE_PLAN)" >&2; return 2; }
 
   local blocked=0
+  if ! bash "$SCORE_BUILD" completion "$results" "$plan" "$project" >&2; then
+    echo "criterion required-checks: FAIL" >&2; blocked=1
+  fi
 
   # 1. Strict-evidence pass-rate — unproven pass rows are already demoted here.
-  local rate_line rate gate_line
-  rate_line="$(bash "$SCORE_BUILD" pass-rate --strict-evidence "$results" 2>"$results.exitcrit.err")"
+  local rate_line rate gate_line rate_rc=0
+  rate_line="$(bash "$SCORE_BUILD" pass-rate --strict-evidence "$results" 2>"$results.exitcrit.err")" || rate_rc=$?
   rate="$(printf '%s' "$rate_line" | awk '{print $2}')"
   gate_line="$(grep -o 'logic_gate=[A-Za-z@0-9.]*' "$results.exitcrit.err" | head -1)"
   rm -f "$results.exitcrit.err"
-  if awk -v r="${rate:-0}" -v t="$target" 'BEGIN { exit (r + 0 >= t + 0 ? 0 : 1) }'; then
+  if [[ "$rate_rc" -eq 0 && "$rate" =~ ^(0\.[0-9]+|1\.0+)$ ]] &&
+      awk -v r="$rate" -v t="$target" 'BEGIN { exit (r + 0 >= t + 0 ? 0 : 1) }'; then
     echo "criterion pass-rate: $rate >= $target (strict evidence) PASS" >&2
   else
-    echo "criterion pass-rate: ${rate:-none} < $target (strict evidence) FAIL" >&2
+    echo "criterion pass-rate: ${rate:-none} below target or invalid scorer result (exit=$rate_rc) FAIL" >&2
     blocked=1
   fi
   if [[ -n "$gate_line" && "$gate_line" != "logic_gate=PASS" && "$gate_line" != "logic_gate=n/a" ]]; then

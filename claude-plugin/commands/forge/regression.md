@@ -98,7 +98,7 @@ Interval = floor(max_runs / 3), min 1 (fixed 10 if unbounded); override `--evals
 
 ## Chain Handoff
 
-Write `handoff.json` to the output directory: version "3.1.0", source "regression", timestamp,
+Write `handoff.json` to the output directory: version "3.3.0", source "regression", timestamp,
 `status` ∈ family enum {COMPLETE, CONVERGED, SATURATED, BOUNDED, USER_INTERRUPT, ERROR} (backward-compat with evals/ship consumers),
 `verdict` ∈ {STABLE, UNSTABLE, BASELINE_UNAVAILABLE} + `regression_state` ∈ {REGRESSION_FOUND, REGRESSION_FIXED, none} — `ship` reads `verdict` for the deploy-gate,
 `results_tsv` path, `findings` = blocking regressions (dim, severity, file_line, classification), `config`{base, scope, dims, axes, verdict-math}.
@@ -108,3 +108,9 @@ If `--fix` → chain to fix automatically. Invoke next `--chain` target in order
 ## Safety
 
 Verify-command screen (no `rm -rf` / `curl|sh`); worktree cleanup + prune on crash; data-migration refuses any non-allowlisted DB URL; probe auto-skips non-interactively; chained `ship` never auto-deploys.
+
+## Current execution evidence
+
+Before using a build/test handoff for readiness, run the shared completion gate and require schema 3.3 execution receipts. Before deployment, fetch the exact CI attempt and protected verifier identities with `scripts/ci-evidence.cjs` from a trusted policy; see [acceptance evidence](../../skills/forge/references/acceptance-evidence.md). A stored pass or old handoff never substitutes for this gate.
+
+Require the [rollout and recovery contract](../../skills/forge/references/operational-recovery.md) for deployments. Run `scripts/operational.cjs` against protected observations; HOLD, missing telemetry, incompatible schema or unmet RTO/RPO blocks readiness. Real provider drills remain required even when local fixtures pass.

@@ -12,6 +12,15 @@ non-regression ratchet** — every feature stacks, nothing backslides (compoundi
 existing app, not a fresh repo. Loop engine + metric are shared with `build`
 (`scripts/score-build.sh pass-rate`); the floor is `forge:regression`.
 
+## Required acceptance completion
+
+Follow `references/acceptance-evidence.md`: pin the reviewed expected check set before implementation,
+then require `scripts/score-build.sh completion <results.tsv> <acceptance-plan.json> <project-root>`
+before completion or a release-ready verdict. Keep weighted scoring for iteration selection.
+Missing, blocked, flaky, unexecuted or unjustifiably skipped required checks cannot be waived by
+a lower target or soft gates. Emit schema `3.3.0` with the pinned `acceptance` reference; feature
+runs preserve the previous accepted floor. Design-system output without an audit remains separate.
+
 ## Parse Arguments
 - `Feature:` / `--feature` — what to add (a sentence or a brief).
 - `Target:` / `--target` — the existing app directory (e.g. `build-output/money-tracker`).
@@ -131,7 +140,7 @@ Print: feature, baseline→final pass-rate (over the union), new assertions gree
 slices, and confirmation the delta was ratcheted into the spec.
 
 ## Chain Handoff
-Write handoff.json: version "3.1.0", source "feature", status
+Write handoff.json: version "3.3.0", source "feature", status
 (COMPLETE|CONVERGED|BOUNDED|BLOCKED|USER_INTERRUPT|ERROR), results_tsv, metric (fullstack_pass_rate),
 regression_verdict, findings = remaining red, config{feature, target, spec}.
 COMPLETE/CONVERGED also carry the passing typed `security` record with evidence in this run; run
@@ -141,3 +150,9 @@ attempts/cap, kept count and motion evidence paths; never replace acceptance res
 Schema: `references/handoff-schema.md`; after writing, `scripts/validate-handoff.sh <run-dir>/handoff.json
 feature` must print VALID before the summary. Chain commonly
 `regression` → `ship` (human-gated). Propagate `--evals`.
+
+## Hosting applicability at intake
+
+Export the approved stack decision into the existing pinned acceptance definition: `hosting: {kind: managed|static|container, stateful: boolean, decision: "docs/adr/stack-decision.md", target: "exact-isolated-target"}`. Pin the decision file as a snapshot input. Each check names its `outcome`. Require delivery, configuration, health and observability for every app; persistence, compatibility, backup and restore for stateful apps; container_nonroot, container_health and container_image when containers are selected. Mechanism exclusions require the existing applicability reason and never waive a required outcome.
+
+At spec intake run `REQUIRE_STACK_DECISION=1 REQUIRE_ACCEPTANCE_PLAN=1 bash "$AR_ROOT/scripts/score-requirements.sh" validate "$SPEC" "$PLAN" "$PROJECT"`. A legacy YAML spec may still be read, but its `legacy-unverified` result cannot authorize a new build/release until hosting acceptance is reviewed and pinned. Use the [acceptance contract](../../skills/forge/references/acceptance-evidence.md); do not invent a second profile document or an ad hoc YAML parser.

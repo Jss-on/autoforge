@@ -1,7 +1,7 @@
 ---
 name: forge:evals
 description: "Analyze iteration results: trends, plateaus, regressions, recommendations"
-argument-hint: "[path/to/results.tsv] [--format text|json|md]"
+argument-hint: "[path/to/results.tsv] [--delivery --service ID --from ISO --to ISO receipt.json ...] [--format text|json|md]"
 ---
 
 EXECUTE IMMEDIATELY.
@@ -14,6 +14,15 @@ Extract from $ARGUMENTS:
 - `--compare <path>` — (v2.2.0 placeholder, not yet implemented)
 
 ## Input Discovery
+
+If `--delivery` is set, use the delivery mode before TSV discovery. Require an explicit service,
+UTC window (`--from` inclusive, `--to` exclusive), and shipment/operation/incident JSON paths.
+Run `node "$AR_ROOT/scripts/delivery-metrics.cjs" SERVICE FROM TO RECEIPTS...` and retain its JSON.
+Report all five metrics, sample sizes, open incidents and coverage issues; use the conventions in
+`references/delivery-outcomes.md`. Unknown data stays unknown. Never merge this result with iteration
+keep/discard metrics or rank teams. A malformed input is an error, not an empty successful report.
+Incident lessons still require the existing baseline/recovery/holdout/guard promotion checks.
+Stop after the requested delivery report.
 
 1. If path provided → use that TSV directly
 2. If no path → scan current directory + `forge/*/` for `*-results.tsv` files

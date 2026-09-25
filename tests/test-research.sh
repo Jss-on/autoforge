@@ -242,7 +242,7 @@ spec_has "quarantine|quarantined"                     "user-context quarantine"
 spec_has "no fabricated|No fabricated"                "anti-fabrication invariant"
 spec_has "[Cc]itation laundering"                     "citation-laundering ban"
 spec_has "score-build\.sh bound"                      "iteration bound reuses build seam"
-spec_has "version \"3\.1\.0\""                        "handoff pins 3.1.0"
+spec_has "version \"3\.3\.0\""                        "handoff pins 3.3.0"
 spec_has "validate-handoff\.sh.*research"             "handoff validated with research source"
 spec_has "chain.*reason|reason.*requirements"         "chains to reason/requirements"
 spec_has "Format:.*arxiv"                             "Format argument offers arxiv"
@@ -297,8 +297,8 @@ assert_eq 1 "$H_RC" "handoff: expected-source mismatch → INVALID"
 
 grep -q 'research' "$REPO_ROOT/claude-plugin/skills/forge/references/handoff-schema.md" \
   && pass "handoff-schema documents research source" || fail "handoff-schema missing research source"
-grep -q '3\.1\.0' "$REPO_ROOT/claude-plugin/skills/forge/references/handoff-schema.md" \
-  && pass "handoff-schema at v3.1.0" || fail "handoff-schema not at 3.1.0"
+grep -q 'schema v3\.3\.0' "$REPO_ROOT/claude-plugin/skills/forge/references/handoff-schema.md" \
+  && pass "handoff-schema at v3.3.0" || fail "handoff-schema not at 3.3.0"
 
 # ============================================================================
 printf '\n--- distribution: mirror parity (5 surfaces byte-identical) ---\n'

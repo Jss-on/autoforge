@@ -112,5 +112,6 @@ If --evals: write `evals-summary.md` to output directory with full analysis.
 
 ## Handoff
 
-Write `handoff.json`: version "3.1.0", source "improve", timestamp, status (COMPLETE|SATURATED|USER_INTERRUPT|BOUNDED|ERROR), results_tsv path, findings = improvements with tier + confidence + prd_path, config{goal, icp, depth, categories_explored, insights_total, prds_generated}.
+Write `handoff.json`: version "3.3.0", source "improve", timestamp, status (COMPLETE|CONVERGED|USER_INTERRUPT|BOUNDED|ERROR), results_tsv path, findings = improvements with tier + confidence + prd_path, config{goal, icp, depth, categories_explored, insights_total, prds_generated}.
+When saturation ends the loop, serialize status CONVERGED and status_reason SATURATED; SATURATED is not a handoff status.
 Improve is a terminal emitter — no downstream chain invocation.

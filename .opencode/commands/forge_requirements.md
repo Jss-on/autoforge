@@ -405,7 +405,7 @@ Print the ready invocation:
 ```
 /forge:build Spec: evals/fullstack/<name>.spec.yaml Iterations: 40
 ```
-Write handoff.json to the output dir (`forge/requirements-{YYMMDD}-{HHMM}/`): version "3.1.0",
+Write handoff.json to the output dir (`forge/requirements-{YYMMDD}-{HHMM}/`): version "3.3.0",
 source "requirements", status COMPLETE, `spec` = generated spec path, config{name, stack,
 stack_decision: <tracked decision-directory path>},
 traceability summary. Schema: `references/handoff-schema.md`; after writing, `scripts/validate-handoff.sh
@@ -435,3 +435,9 @@ Y-statement, confidence + robustness, # candidates / # drivers / # sources by ti
 — `approved` or `owner-mandated`, never "chosen by Forge"), generated spec path, validation verdict,
 and the `/forge:build` invocation. Open assumptions mean the draft is unfinished; list them with the next needed answer,
 never as risks attached to a COMPLETE handoff.
+
+## Hosting applicability at intake
+
+Export the approved stack decision into the existing pinned acceptance definition: `hosting: {kind: managed|static|container, stateful: boolean, decision: "docs/adr/stack-decision.md", target: "exact-isolated-target"}`. Pin the decision file as a snapshot input. Each check names its `outcome`. Require delivery, configuration, health and observability for every app; persistence, compatibility, backup and restore for stateful apps; container_nonroot, container_health and container_image when containers are selected. Mechanism exclusions require the existing applicability reason and never waive a required outcome.
+
+At spec intake run `REQUIRE_STACK_DECISION=1 REQUIRE_ACCEPTANCE_PLAN=1 bash "$AR_ROOT/scripts/score-requirements.sh" validate "$SPEC" "$PLAN" "$PROJECT"`. A legacy YAML spec may still be read, but its `legacy-unverified` result cannot authorize a new build/release until hosting acceptance is reviewed and pinned. Use the [acceptance contract](../../skills/forge/references/acceptance-evidence.md); do not invent a second profile document or an ad hoc YAML parser.

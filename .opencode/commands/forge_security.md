@@ -146,7 +146,7 @@ If --evals present:
 
 ## Chain Handoff
 
-After completion, write handoff.json: version "3.1.0", source "security", timestamp,
+After completion, write handoff.json: version "3.3.0", source "security", timestamp,
 status (COMPLETE|BLOCKED|USER_INTERRUPT|BOUNDED|ERROR), results_tsv, findings, config{scope, focus, depth},
 and typed `security` evidence. COMPLETE describes a finished report, including a report with FAIL findings.
 Validate the shape using `scripts/validate-handoff.sh <run>/handoff.json security`.

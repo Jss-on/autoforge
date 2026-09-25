@@ -49,6 +49,14 @@ for (const [source, destination] of [
   }
 }
 assert.equal(read(path.join(skill, 'forge.md')), read('.claude/commands/forge.md'));
+for (const tree of ['.claude/skills/forge', 'claude-plugin/skills/forge', '.opencode/skills/forge', '.agents/skills/forge', 'plugins/forge/skills/forge']) {
+  for (const helper of ['acceptance', 'verification', 'ci-evidence', 'vercel-delivery', 'operational', 'delivery-metrics']) {
+    assert.equal(read(tree+'/scripts/'+helper+'.cjs'), read('scripts/'+helper+'.cjs'), tree+' runtime '+helper);
+  }
+  for (const [file, source] of [['vercel-pilot.yml','forge-pilot.yml'],['vercel-pilot-build.yml','forge-pilot-build.yml']]) {
+    assert.equal(read(tree+'/references/'+file), read('.github/workflows/'+source), tree+' provider workflow example');
+  }
+}
 console.log('PASS: complete shared command, reference and runtime contracts');
 
 const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'forge-codex-'));
