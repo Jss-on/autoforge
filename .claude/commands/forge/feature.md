@@ -57,6 +57,10 @@ recover.
 
 ## Phase 2 — Design delta
 Extend **within the existing `DESIGN.md`** — reuse its tokens (color, type, spacing, components/states);
+a feature that adds or changes a route extends the `## Navigation` table (route · archetype · object ·
+roles · placement · primary action · SC-n · cross-links) and re-runs `scripts/score-design.sh routes
+DESIGN.md <routes.txt> requirements.md` → `ROUTES: PARITY` before the ratchet; new UI text uses the
+`terms:` vocabulary;
 a feature inside an established surface inherits that surface’s visitor mode and world, never a new
 identity (`references/design-protocol.md` §1/§3). Do NOT introduce a new design system; new UI must pass
 `design-conformance` against the same DESIGN.md **and the craft floor**: run
@@ -104,7 +108,11 @@ Every iteration, after the feature verify, run the floor:
 `scripts/score-regression.sh verdict <results.tsv>` (baseline = incumbent greens, candidate = now).
 - **Any existing assertion green→red → auto-revert the slice** `git revert HEAD --no-edit`. No exceptions —
   a feature may never break what already worked. The baseline only rises.
-- **keep** iff new-assertion pass-rate increased **AND** regression `STABLE` **AND** guard green.
+- **Efficiency ratchet** beside the floor: `scripts/score-build.sh interactions <baseline.tsv> <results.tsv>`
+  must print `INTERACTIONS: STABLE` — a key-path row's `interactions=N` count may not rise unless the
+  row's `detail` carries `interactions-reason=<why>` (a feature that legitimately adds a step says so;
+  silent excise is a regression, the same as a red assertion).
+- **keep** iff new-assertion pass-rate increased **AND** regression `STABLE` **AND** `INTERACTIONS: STABLE` **AND** guard green.
 - **simplicity wins**; **discard** otherwise (revert). Append the outcome to `iterations.tsv`.
 
 ## Phase 5 — Verify + Ratchet (convergence)

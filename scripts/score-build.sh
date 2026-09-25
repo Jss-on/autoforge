@@ -4,6 +4,8 @@
 #   rubric    [file]                       → grep-rubric capability score of build.md → "SCORE: N"
 #   pass-rate [results.tsv|spec…]          → weighted acceptance pass-rate from a build-results TSV
 #   coverage  [results.tsv] [requirements] → PRD + design traceability gate (REQ_/DESIGN_COVERAGE)
+#   interactions <baseline.tsv> <candidate.tsv> → efficiency ratchet over key-path rows carrying
+#               `interactions=N` in detail (clicks + keystrokes + navigations) → "INTERACTIONS: STABLE|REGRESSED"
 #
 # pass-rate logic (metric_direction: higher_is_better):
 #   - acceptance assertions are grouped into 6 dimensions, each with a weight:
@@ -458,8 +460,42 @@ bound() {
   echo "BOUND: EXCEEDED used=$used max=$max"; return 1
 }
 
+# ---------------------------------------------------------------------------
+# interactions: the efficiency ratchet (Cooper's excise, measured). Key-path e2e rows carry
+# `interactions=N` in their detail column — clicks + keystrokes + navigations on the scripted primary
+# task. A row whose count rose in the candidate is a regression unless the candidate's detail carries
+# `interactions-reason=<why>` (a feature that legitimately adds a step says so). Rows without a count
+# on both sides are ignored — presence is the regression floor's job, not this seam's.
+#   stdout: INTERACTIONS: STABLE|REGRESSED      exit 0 iff STABLE · 1 REGRESSED · 2 unusable input
+#   stderr: per-row baseline -> candidate counts, accepted reasons, compared/regressed totals
+# ---------------------------------------------------------------------------
+interactions() {
+  local base="${1:?usage: interactions <baseline.tsv> <candidate.tsv>}"
+  local cand="${2:?usage: interactions <baseline.tsv> <candidate.tsv>}"
+  [[ -f "$base" && -f "$cand" ]] || { echo "INTERACTIONS: REGRESSED"; echo "missing TSV: $base / $cand" >&2; return 2; }
+  local out rc
+  out="$(awk -F'\t' '
+    function count(d,  m) { if (match(d, /(^|[ ;,])interactions=[0-9]+/)) { m = substr(d, RSTART, RLENGTH); sub(/.*=/, "", m); return m + 0 } return -1 }
+    function reason(d,  m) { if (match(d, /interactions-reason=[^\t]*/)) { m = substr(d, RSTART, RLENGTH); sub(/^interactions-reason=/, "", m); return m } return "" }
+    FNR == 1 { file++ }
+    /^#/ || $1 == "spec" { next }
+    file == 1 { key = $1 "|" $3; c = count($6); if (c >= 0) b[key] = c; next }
+    { key = $1 "|" $3; c = count($6); if (c < 0 || !(key in b)) next
+      r = reason($6)
+      if (c > b[key] && r == "") { regressed++; printf "  REGRESSED %s: %d -> %d (add interactions-reason=<why> or restore the shorter path)\n", $3, b[key], c > "/dev/stderr" }
+      else if (c > b[key]) printf "  accepted %s: %d -> %d (reason: %s)\n", $3, b[key], c, r > "/dev/stderr"
+      else printf "  ok %s: %d -> %d\n", $3, b[key], c > "/dev/stderr"
+      compared++ }
+    END { printf "compared=%d regressed=%d\n", compared + 0, regressed + 0 > "/dev/stderr"; print (regressed > 0 ? "INTERACTIONS: REGRESSED" : "INTERACTIONS: STABLE"); exit (regressed > 0 ? 1 : 0) }
+  ' "$base" "$cand")"
+  rc=$?
+  printf '%s\n' "$out"
+  return $rc
+}
+
 case "${1:-}" in
   rubric)    shift; rubric    "$@" ;;
+  interactions) shift; interactions "$@" ;;
   pass-rate) shift; pass-rate "$@" ;;
   completion)
     shift
@@ -467,5 +503,5 @@ case "${1:-}" in
     ;;
   coverage)  shift; coverage  "$@" ;;
   bound)     shift; bound     "$@" ;;
-  *) echo "usage: $0 {rubric [file] | pass-rate [--strict-evidence] [results.tsv|spec…] | completion <results.tsv> <plan.json> [project] [plan-sha256] | coverage [results.tsv] [requirements.md] | bound <iterations.tsv> <max>}" >&2; exit 64 ;;
+  *) echo "usage: $0 {rubric [file] | pass-rate [--strict-evidence] [results.tsv|spec…] | completion <results.tsv> <plan.json> [project] [plan-sha256] | coverage [results.tsv] [requirements.md] | interactions <baseline.tsv> <candidate.tsv> | bound <iterations.tsv> <max>}" >&2; exit 64 ;;
 esac

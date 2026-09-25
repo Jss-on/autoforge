@@ -383,6 +383,14 @@ Design the system **and** the interface before coding:
 - **Archetype rows** — every screen maps to a surface archetype (dashboard, list+CRUD, record,
   form/wizard, POS/kiosk, settings, auth, onboarding/empty, landing …; protocol §2) whose required
   patterns become `ux` acceptance rows now, alongside the seven `design:*` coverage rows.
+- **Navigation table = the wireframes** — write the `## Navigation` table in `DESIGN.md` (protocol §4):
+  one row per route — Route · Archetype · primary Object · Roles · Placement (global/local/contextual) ·
+  Primary action · the SC-n steps it serves · Cross-links — derived from the objects and lifecycles in
+  the SRS (each core object gets list, detail and create/edit; each relationship is navigable both
+  ways). Walk the top scenarios through it before any frontend slice. Export the router's routes
+  (one per line) and run `scripts/score-design.sh routes DESIGN.md <routes.txt> requirements.md` →
+  **`ROUTES: PARITY`**: an undeclared route, a table route the router lacks, or a confirmed SC-n with
+  no screen is `DRIFT`. Navigation labels come from the SRS glossary (`terms:`).
 **Gate:** `DESIGN.md` committed with `DESIGN_LINT: VALID` + design tokens derived from it; full design
 traceability — `scripts/score-build.sh coverage` reports `DESIGN_COVERAGE: 1.00`, i.e. every DESIGN.md
 token group (`design:type` · `design:color` · `design:spacing` · `design:radius` · `design:motion` ·
@@ -501,7 +509,9 @@ deploy → verify) then a canary check:
 - **Deployment/Release plan** — ship's checklist: steps, environments, env vars, rollback.
 - **Release Notes** (`RELEASE_NOTES.md`) — features, fixes, known issues for stakeholders/users.
 - **User manual** — a user-facing quickstart (in `README.md` or `docs/`): first-run onboarding, the
-  primary workflows, settings.
+  primary workflows, settings. When the app replaces an existing process or system, it includes an
+  old-step → new-step guide that maps every former step (the spreadsheet column, the paper form, the
+  legacy screen) to its new place — preparing users for change is part of the deliverable.
 **Deployment is human-gated** — `build` never deploys to production, tags releases, or publishes on
 its own (pushing to the private output repo per the "Output repository" contract is standard-loop, not
 deployment).
@@ -666,7 +676,7 @@ living — never heavyweight documents for their own sake.
 | 1 | **Planning / Initiation** | `plan`, `predict` | **Project charter** (`charter.md`): vision, in/out scope, stakeholders/ICP, iteration budget, risk register | charter committed with objectives, in/out scope, iteration budget, ≥3 risks + mitigations; build target dir resolved (never the skill repo) |
 | 2 | **Feasibility** | `requirements` Phase 2b (stack decision) | **Feasibility verdict** in `charter.md` (spike results: technical, **stack confirmation**, operational, schedule, licensing) + the **stack ADR bundle** (`docs/adr/0001-tech-stack/`) | toolchain spike boots (runtime + DB/docker + Playwright); `score-requirements.sh stack` returns `STACK_DECISION: READY` and the pre-registered spike thresholds are met (≥5 runs, results in `confirmation-results.md`; a miss supersedes the decision → owner re-approval); acceptance-size vs iteration budget sane; licenses permissive; verdict **GO** with stack pinned (NO-GO → re-scope with the user) |
 | 3 | **Requirements Analysis** | `probe`, `predict` | **SRS** (`requirements.md`, IEEE 830 / ISO 29148-shaped) + **RTM** (the `traces` column + coverage report) | every requirement carries a stable `FR-`/`NFR-` ID; **for logic-heavy domains, logic diagrams (ER + state machines + sequence + decision flowcharts) with every state transition / decision branch mapped to a golden vector**; every acceptance assertion enumerated + tagged `dimension`+`weight`+`traces`; `REQ_COVERAGE == 1.00` (every ID traced, no orphan assertion); baseline `build-results.tsv` seeded (`fail`) → pass-rate `0.00` |
-| 4 | **Design** | `design system`, `reason` | **HLD** (architecture) + **LLD** (domain engine + rule matrix, diagrams) + **DB schema** + **UI/UX system** (`DESIGN.md` via the direction protocol + tokens + wireframes) | `DESIGN.md` (architecture: modules, data model, API contract; **for logic-heavy domains, a pure calculation engine + the rule matrix with citations**) **and** UI/UX design system (visitor mode per surface; machine-readable tokens: type, color+contrast pairs, spacing, radius, motion, component states; `DESIGN_LINT: VALID`; wireframes) committed; `DESIGN_COVERAGE == 1.00` (every token group incl. `design:floor` traced by ≥1 `ux` assertion) |
+| 4 | **Design** | `design system`, `reason` | **HLD** (architecture) + **LLD** (domain engine + rule matrix, diagrams) + **DB schema** + **UI/UX system** (`DESIGN.md` via the direction protocol + tokens + the `## Navigation` route table, which is the wireframes deliverable, `ROUTES: PARITY`) | `DESIGN.md` (architecture: modules, data model, API contract; **for logic-heavy domains, a pure calculation engine + the rule matrix with citations**) **and** UI/UX design system (visitor mode per surface; machine-readable tokens: type, color+contrast pairs, spacing, radius, motion, component states; `DESIGN_LINT: VALID`; wireframes) committed; `DESIGN_COVERAGE == 1.00` (every token group incl. `design:floor` traced by ≥1 `ux` assertion) |
 | 5 | **Implementation** | TDD ladder | **Source code + build artifacts + CI** (lint, tests, container) | domain engine built first and **every `logic` golden case green** (incl one end-to-end case proving it is wired in); each accepted slice turns a red assertion green; guard green; no green→red regression; the app is wired to a **real persisted datastore** (UI→API→DB) with full CRUD + accounts + settings + onboarding (**fresh account starts empty**), not a seed-only/in-memory demo; headline pass-rate stays capped at 0.50 until the `logic` gate clears |
 | ‡ | **Defect loop (debugging — cross-phase, inside 5–6)** | `debug` | **Defect records** (symptom → root cause → fix, in `iterations.tsv`) | every failing assertion traced to a **root cause** before a fix lands (iron law: no symptom patches) |
 | 6 | **Testing** | — | **Test plan** (acceptance TSV + pyramid) + **test cases** (suites) + **Test summary report** (`evals-summary.md`) | test pyramid green: **golden oracle (every rule-matrix vector + edge cases, incl end-to-end)** + unit + integration + e2e (Playwright) + accessibility (axe) + **design QA (`SLOP_GATE: PASS`, DESIGN.md conformance, heuristic critique, `DESIGN_VERDICT: SHIP`)** + **load/perf (p95 SLO, no N+1)** + **security (OWASP Top 10)** + **real-product (anti-demo): a UI-created record persists across a restart, a fresh account starts empty, CRUD + settings round-trip**; **requirement-satisfaction audit — every goal/FR/NFR exercised end-to-end in the live app, no user-facing FR met by an engine/unit test alone**; coverage ≥ floor (80%) |

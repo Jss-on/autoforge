@@ -69,6 +69,12 @@ system (Phase 4), the audit (Phase 6 / any existing app) and the bounded remedia
       inspect both captures and assert product outcomes separately (`design:motion`)
 - [ ] Empty, loading, and error states render correctly when exercised (no data; failed request;
       slow network)
+- [ ] Every key-path e2e row records its cost in `detail` as `interactions=<clicks + keystrokes +
+      navigations>`; `scripts/score-build.sh interactions <baseline.tsv> <candidate.tsv>` must print
+      `INTERACTIONS: STABLE` — a count may rise only with `interactions-reason=<why>` in the row
+- [ ] On all-day surfaces (`use-frequency: all-day` in the design read) the top-frequency tasks each
+      have a keyboard-only completion row, and every shortcut is shown next to its command (tooltip,
+      menu or command palette); the audit walks these surfaces as Alex, the power user
 
 ## 5. The craft floor (anti-slop) — `design:floor`
 

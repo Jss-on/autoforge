@@ -46,7 +46,7 @@ Playwright means no captures, no scan, no verdict; say so instead of "reviewing"
 - `Target:` / `--target` — the app directory (default: current repo if it contains a runnable app).
 - `Url:` / `--url` — the running app's base URL (default: boot the Target per its README/compose,
   never a guessed destructive command; every derived command is screened via
-  `scripts/orchestrate.sh screen-cmd`). `Routes:` — comma-separated paths to review (default: every
+  `scripts/orchestrate.sh screen-cmd`). `Routes:` — comma-separated paths to review (default: the Route column of the target's `DESIGN.md` `## Navigation` table, checked against the router with `scripts/score-design.sh routes` and filed high on `DRIFT`; else every
   primary route discoverable from the router/nav + the SRS/spec screens; authenticated routes via
   `--storage-state <playwright-state.json>` produced by a login step, never by pasting credentials).
 - `Mode:` — the default visitor mode (`persuade|operate|read|experience`); default from the spec's
@@ -232,11 +232,22 @@ DESIGN.md + the app; not the build thread's summary), and never softens the disp
    Judge against the mode: Operate is scored on earned familiarity, states, scanability, task speed;
    Persuade on the first viewport doing its job (what · why · do) and on composition variety.
 5. **Phase 4 — persona walk**: 2–3 personas by surface (protocol §7.4) + 1–2 from the SRS
-   stakeholders; walk the primary task; report the exact element that failed each persona.
+   stakeholders; walk the primary task; report the exact element that failed each persona. Tag every
+   persona row in `design-critique.tsv` with `source=archetype|stakeholder-reported|observed`; a
+   walk is expert review, never user evidence. **Human evidence (optional, human-gated):** draft a
+   usability kit into `qa/usability/drafts/` — tasks from the confirmed SC-n with success criteria,
+   a screener, a consent form, a think-aloud moderator script, SEQ after each task, SUS or UMUX-Lite
+   after the session, and an observer top-3 sheet. People run the sessions and enter
+   `qa/usability/sessions.tsv` (`pseudonym role task success time_s errors seq`); the audit reads
+   that ledger and **never writes** it. Each agreed top problem becomes a `design-defects.tsv` row
+   with `evidence:human:<pseudonym>` and "affected n/N"; a persona backed by a session row may be
+   tagged `observed`. Without a ledger the report states **"not tested with users"** and
+   `DESIGN_HEALTH` is presented as expert health, never as usability.
 6. **Phase 5 — ledger + verdict**: `design-defects.tsv` (validate: `scripts/score-design.sh defects`),
    `design-results.tsv` (`ux` rows: floor, conformance, axe, archetype patterns, states — pass only
    with `evidence:`), then
-   `scripts/score-design.sh verdict design-defects.tsv evidence/design-scan.json <target>/DESIGN.md design-critique.tsv`
+   `scripts/score-design.sh verdict design-defects.tsv evidence/design-scan.json <target>/DESIGN.md design-critique.tsv [qa/usability/sessions.tsv]`
+   (the ledger, when present, adds a `USER_EVIDENCE: n sessions …` line; absent → `USER_EVIDENCE: none`, which the report repeats as "not tested with users")
    (append `<target>` as the fifth argument when assets/motion are scoped, binding fresh validation
    and both motion profiles to the verdict)
    → **`DESIGN_VERDICT: SHIP | FIX | REBUILD`**. `REBUILD` = the world/contract failed wholesale

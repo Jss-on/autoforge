@@ -276,6 +276,25 @@ B_OUT=$(bash "$SCORE_SH" bound "$_bt/iterations.tsv" 40); B_CODE=$?
 assert_contains "$B_OUT" "BOUND: EXCEEDED used=48 max=40" "bound: over budget → EXCEEDED"
 assert_eq 1 "$B_CODE" "bound: EXCEEDED → exit 1"
 
+# interactions: the efficiency ratchet over key-path rows carrying interactions=N in detail.
+printf '# metric_direction: higher_is_better\nspec\tdimension\tassertion\tweight\tstatus\tdetail\ttraces\n' > "$_bt/i-base.tsv"
+printf 'app\tux\tux-payrun-keypath\t2\tpass\tevidence:e2e/payrun.txt interactions=37\tFR-15\napp\tux\tux-states\t1\tpass\tevidence:e2e/states.txt\tNFR-6\n' >> "$_bt/i-base.tsv"
+sed 's/interactions=37/interactions=35/' "$_bt/i-base.tsv" > "$_bt/i-same.tsv"
+sed 's/interactions=37/interactions=41/' "$_bt/i-base.tsv" > "$_bt/i-worse.tsv"
+sed 's/interactions=37/interactions=41 interactions-reason=approval step added by FR-22/' "$_bt/i-base.tsv" > "$_bt/i-reason.tsv"
+I_OUT=$(bash "$SCORE_SH" interactions "$_bt/i-base.tsv" "$_bt/i-same.tsv" 2>/dev/null); I_CODE=$?
+assert_eq "INTERACTIONS: STABLE" "$I_OUT" "interactions: unchanged or lower counts → STABLE"
+assert_eq 0 "$I_CODE" "interactions: STABLE → exit 0"
+I_OUT=$(bash "$SCORE_SH" interactions "$_bt/i-base.tsv" "$_bt/i-worse.tsv" 2>"$_bt/i.err"); I_CODE=$?
+assert_eq "INTERACTIONS: REGRESSED" "$I_OUT" "interactions: a key-path count rose → REGRESSED"
+assert_eq 1 "$I_CODE" "interactions: REGRESSED → exit 1"
+assert_contains "$(cat "$_bt/i.err")" "ux-payrun-keypath: 37 -> 41" "interactions: names the row and both counts"
+I_OUT=$(bash "$SCORE_SH" interactions "$_bt/i-base.tsv" "$_bt/i-reason.tsv" 2>"$_bt/i.err"); I_CODE=$?
+assert_eq "INTERACTIONS: STABLE" "$I_OUT" "interactions: a rise with interactions-reason= is accepted"
+assert_contains "$(cat "$_bt/i.err")" "approval step added" "interactions: the accepted reason is reported"
+I_OUT=$(bash "$SCORE_SH" interactions "$_bt/i-base.tsv" "$_bt/missing.tsv" 2>/dev/null); I_CODE=$?
+assert_eq 2 "$I_CODE" "interactions: missing candidate → exit 2 (never a silent STABLE)"
+
 # strict evidence: a pass row without a resolvable evidence: ref is demoted to fail.
 mkdir -p "$_bt/evidence"
 printf 'unit tests green\n' > "$_bt/evidence/unit.txt"
@@ -505,6 +524,10 @@ spec_has "Never lazy about"               "spec: validation/security/a11y/data-l
 spec_has "Lazy senior dev"                "spec: principle listed in the phase-gate protocol"
 spec_has "speed-protocol"                 "spec: browser sweeps + guard cadence follow the speed protocol"
 spec_has "contact sheet"                  "spec: Phase 6 design QA opens the contact sheet"
+spec_has "## Navigation"                  "spec: Phase 4 writes the DESIGN.md ## Navigation table (the wireframes)"
+spec_has "score-design.sh routes"         "spec: Phase 4 checks the table against the router"
+spec_has "ROUTES: PARITY"                 "spec: route parity is a Phase 4 gate"
+spec_has "old-step"                       "spec: user manual maps old steps to new when replacing a process"
 grep -q "Ponytail: lite" "$REPO_ROOT/claude-plugin/skills/forge/SKILL.md" \
   && pass "router: Ponytail argument in the shared-argument table" || fail "router: Ponytail argument missing"
 # ============================================================================

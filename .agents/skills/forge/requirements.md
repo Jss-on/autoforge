@@ -158,6 +158,14 @@ retain unchanged confirmations. Preserve decision history and the review revisio
   and full lifecycle checklists are dispositioned AND the client has reviewed the stories and
   scenarios (corrected them or explicitly said they are accurate). Unanswered rounds do not count.
 - Capture **stakeholders**, goals and proposals in the visible assumptions ledger (protocol §0).
+- **End-user evidence (optional, human-gated):** the owner is the authority on the business, not a
+  stand-in for the people who will use the software all day. When the daily users differ from the
+  buyer and can be reached, draft an end-user interview kit into `drafts/research/` for the 1–2
+  highest-volume roles — a script with **no recommended answers** (open prompts, past specifics),
+  a screener, a consent form, and prompts for a tour of the work and photos of its artifacts. People
+  run it and enter `research/observations.tsv` (pseudonym · role · observed step · artifact · quote);
+  the loop reads that ledger and **never writes** it. Tag each SC-n's provenance `owner-reported` or
+  `observed`; an unobserved scenario is still a proposal.
   Accepted requirements carry **provenance** (protocol §7): `stated` · `derived-domain` ·
   `default-confirmed`; an `open` item blocks sign-off. A proposed default is not `default-confirmed`.
 
@@ -250,6 +258,11 @@ The gate prints each measured criterion and PASS/FAIL; follow protocol §7 for t
 Translate the reviewed flows into a draft SRS/PRD; Phase 4 approves the corresponding client
 playback and finalizes this document. No new scope may enter through translation. Include:
 - Overview + stakeholders + goals
+- **Glossary** — the controlled vocabulary from domain recon and the interview: preferred term ·
+  definition · terms to avoid (the variants each department uses). One preferred term per concept
+  across modules; each row is a `derived-domain` item read back at sign-off (regulated labels such as
+  payslip lines and receipt fields included). `build` copies it into `DESIGN.md` as `terms:` so
+  navigation labels and UI chrome use it and `design-term-drift` catches the avoided words.
 - **Day-in-the-life scenarios** (the numbered walkthroughs from elicitation — the use-case set, each
   later an e2e acceptance journey), incl. the unhappy paths and periodic rituals they surfaced
 - **User stories** in INVEST form: "As a <role>, I want <capability>, so that <benefit>"
