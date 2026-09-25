@@ -464,6 +464,11 @@ spec_has "AskUserQuestion"                                "stack: approval is an
 spec_has "knock-out|Knock-out"                            "stack: knock-out gates before scoring"
 spec_has "boring default"                                 "stack: boring default always a candidate"
 spec_has "decision: evals/fullstack/<name>\.stack"        "stack: spec schema carries a tracked decision: path"
+spec_has "\*\*Glossary\*\*"                               "srs: glossary section (preferred term · definition · avoid)"
+spec_has "design-term-drift"                              "srs: the glossary feeds DESIGN.md terms and the chrome drift rule"
+spec_has "drafts/research/"                               "evidence: end-user interview kit drafted for the highest-volume roles"
+spec_has "research/observations\.tsv"                     "evidence: human-entered observations ledger, read only"
+spec_has "owner-reported"                                 "evidence: scenario provenance owner-reported vs observed"
 
 # --- stack-selection protocol reference exists + parity across the 5 surfaces ---
 SPROTO="$REPO_ROOT/claude-plugin/skills/forge/references/stack-selection-protocol.md"
@@ -522,6 +527,11 @@ proto_has "end-of-shift|rhythms"                  "protocol: periodic rituals pr
 proto_has "criticize an artifact|selection and correction" "protocol: react-not-specify premise"
 proto_has "pronoun test"                          "protocol: pronoun ambiguity check"
 proto_has "authority on their business"           "protocol: client-authority stance"
+proto_has "the last time <task> happened"          "protocol: as-is story anchors each scenario before drafting"
+proto_has "Two columns of goals"                   "protocol: business goals beside daily-user goals, conflicts flagged"
+proto_has "swimlane"                               "protocol: multi-role scenarios get a swimlane with backstage, wait and failure points"
+proto_has "SEQ per task / SUS or UMUX-Lite"        "protocol: usability NFR vocabulary (human-gated, opt-in pinning)"
+proto_has "value matrix"                           "protocol: AI features elicit the value of right and wrong outcomes"
 
 # Instruction-contract checks only; these do not simulate or prove a live interview.
 # Join wrapped prose so the behavior checks survive ordinary Markdown reflow.

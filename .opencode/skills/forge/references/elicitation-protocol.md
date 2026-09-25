@@ -28,6 +28,10 @@ living owner-facing review, not a hidden appendix or a link the owner must open 
 4. **What needs your attention first** — highlight the few choices with the largest effect on
    usefulness, cost, access, data loss or launch. The full list stays visible; questions come in
    small batches (§2).
+5. **Two columns of goals** — the owner's business goals (revenue, cost, quality, compliance) beside
+   the daily users' goals (get the run posted before 5 pm without re-keying). Enterprise software is
+   imposed on the people who use it, so a conflict between the two columns is flagged as an A-n
+   decision, never resolved silently in the buyer's favour.
 
 Use short sentences and everyday words throughout the interview, including choices and summaries.
 Say "who can see another shop's records?", not "tenant isolation"; "how much work could we lose?",
@@ -96,7 +100,10 @@ ask the owner to repeat information already provided. Order by risk, using these
    breaks/costs money today. (Laddering: for every feature ask what it's *for* — capture the GOAL,
    which survives even when the feature idea was wrong.)
 2. **Actors & roles** — every kind of person/system touching it; what each may see and do; who
-   approves what. (Permission grids fall out of this, not out of "do you need roles?")
+   approves what. (Permission grids fall out of this, not out of "do you need roles?") Record whether
+   the daily users differ from the buyer and whether they can be reached (a clerk at another company,
+   staff on the floor); an assumption about users nobody has reached stays `open` with a revisit
+   trigger (first session, first week of use), never `confirmed` on the owner's word alone.
 3. **The day-in-the-life walkthrough (§3)** — the spine of the whole elicitation.
 4. **Objects & lifecycle** — the nouns from the walkthrough; for each: who creates it, what states
    it passes through, can it be edited/voided/deleted after the fact, who may, what's the correction
@@ -104,6 +111,10 @@ ask the owner to repeat information already provided. Order by risk, using these
 5. **Money & rules** — every computation: exact rates, caps, boundaries, rounding, with a worked
    example EACH ("sale of ₱1,234.56, senior citizen, paying cash — walk me to the receipt total").
    Worked examples become the golden vectors; a rule without a worked number is not captured.
+   Every dashboard or report number is a computation too: name its formula, unit, period semantics
+   (calendar or fiscal, to-date or rolling, which comparison or target), the "bad" threshold that
+   should draw attention, and a worked example, so the KPI passes through the same golden-case gate
+   and a mis-defined measure cannot survive a green dashboard.
 6. **Design & taste — via artifacts (§5), never via adjectives.**
 7. **Edges & elasticity** — offline? two people editing the same thing? peak load (numbers, not
    "fast")? device mix? data import from the old system? what happens at month 13?
@@ -127,7 +138,10 @@ If the owner is unavailable, save the draft and open items for resumption; do no
 
 ## 3. The day-in-the-life walkthrough (scenario elicitation)
 
-Feature lists hide gaps; narratives expose them. **Forge drafts first; the client corrects.** Write
+Feature lists hide gaps; narratives expose them. Anchor before drafting: for each primary role ask
+for the as-is story — "the last time <task> happened, step by step" — and keep it as the as-is
+baseline (past specifics, not future promises; "we always / we'd want" claims stay `open` until tied
+to an instance). **Forge drafts first; the client corrects.** Write
 one simple user story per goal/role: `US-1 — As a customer, I want to book a visit so I know when to
 arrive.` Then tell a **concrete day** with the proposed system, open to close for each primary role,
 including the owner, administrator and support person where relevant. Follow the sequence:
@@ -158,6 +172,10 @@ Ask the owner to correct this walkthrough, then probe:
   reports, remittances, stock counts) are the most-forgotten feature class.
 - **The paper:** every physical artifact in the current process (receipt, logbook, ledger, sticky
   note) is a data model + a report the system must replace or produce.
+- **The lanes:** a scenario that spans two or more roles (procure-to-pay, order-to-cash, a pay run
+  from clerk to approver to payout) also gets a mermaid swimlane in `client-review.md` — one lane per
+  role, a system/backstage lane, and the wait points and failure points marked — so the handoffs the
+  narrative hides are reviewed as a picture (a service blueprint in the owner's words).
 
 Keep the stories and numbered scenarios in `client-review.md`; the confirmed versions become
 the SRS use cases AND the e2e acceptance journeys. Derive testable requirements from the reviewed
@@ -178,7 +196,7 @@ lifecycle (SDLC); it does not make every possible feature mandatory.
 | Journeys & business rules | Main tasks, handoffs, states, mistakes and undo, approvals, scheduled work, exact money/time rules and examples, conflicting or repeated actions. |
 | Experience & accessibility | Devices, languages, keyboard/screen-reader use, poor connectivity, first use, empty/loading/error states, design preferences and supplied content/assets. |
 | Data & its lifetime | What is collected, who owns it, where it comes from, import/migration, persistence, edits, exports, retention, deletion and closing an account. |
-| Connections & technical constraints | Other services/devices, what data crosses, credentials and ownership, failures/retries, vendor limits, existing systems and stack constraints with cost or hosting consequences. |
+| Connections & technical constraints | Other services/devices, what data crosses, credentials and ownership, failures/retries, vendor limits, existing systems and stack constraints with cost or hosting consequences. AI/model features: which decisions a model makes or suggests, the value of right and wrong outcomes (the value matrix), who approves before a record changes, and what happens when it is off. |
 | Testing & acceptance | How the owner will know each story works, normal and failure examples, speed/volume targets, test data, accessibility/security checks, who accepts the result. |
 | Environments & deployment | Local/test/live environments, hosting country/provider, account/domain ownership, configuration/secrets, release approval, automated checks, data changes during upgrades and rollback after a bad release. |
 | Security & misuse | Sensitive actions/data, access boundaries, likely misuse, secure sign-in, secret storage, audit records and what happens after a suspected break-in. |
@@ -261,6 +279,11 @@ client as a closed-choice question:
 
 - **Adjective → number:** every "fast/large/many/simple/secure" must carry a measurable threshold
   with a stated load model (a p95 without concurrency is not testable).
+- **"Easy / simple / intuitive for <role>" → a usability NFR:** the role, the SC-n task, the target
+  (task success %, time on task, or SEQ per task / SUS or UMUX-Lite per session) and the method
+  (expert review, or a moderated session with real users). Session-based targets are human-gated —
+  people run them and enter `qa/usability/sessions.tsv` — and are pinned as required checks only
+  when the spec opts in; otherwise the report says "not tested with users".
 - **Rule → boundary:** every cap/threshold/window names its edge behavior (inclusive? calendar or
   rolling? what at exactly the boundary? rounding mode, to the centavo).
 - **Workflow → failure path:** every happy path names what happens on failure/timeout/duplicate

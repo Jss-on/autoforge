@@ -45,8 +45,8 @@ colors:
   surface-container: '#1c222c'
   on-surface: '#e7eaf0'
   on-surface-variant: '#a9b1bf'
-  primary: '#2456c8'
-  on-primary: '#ffffff'
+  primary: '#5b8cff'
+  on-primary: '#0b1020'
   error: '#ff6b6b'
   on-error: '#1a0000'
 typography:
@@ -89,6 +89,87 @@ assert_contains "$(cat "$T/lint.err")" "rounded" "lint: warns to rename radius �
 printf '# Design\n\nprose only\n' > "$T/prose.md"
 bash "$SD" lint "$T/prose.md" >/dev/null 2>&1; L_RC=$?
 assert_eq 1 "$L_RC" "lint: prose-only DESIGN.md → INVALID (tokens must be machine-readable)"
+
+# non-text contrast (WCAG 1.4.11): a component outline below 3:1 on a ground is a real defect
+sed "s/^  on-error: '#1a0000'/  on-error: '#1a0000'\n  outline: '#2a323f'/" "$T/good.md" > "$T/nontext.md"
+L_OUT=$(bash "$SD" lint "$T/nontext.md" 2>"$T/lint.err")
+assert_eq "DESIGN_LINT: INVALID" "$L_OUT" "lint: outline 1.4:1 on the grounds → INVALID (non-text 3:1)"
+assert_contains "$(cat "$T/lint.err")" "non-text" "lint: names the non-text rule"
+sed "s/^  on-error: '#1a0000'/  on-error: '#1a0000'\n  outline: '#7d8797'/" "$T/good.md" > "$T/nontext-ok.md"
+assert_eq "DESIGN_LINT: VALID" "$(bash "$SD" lint "$T/nontext-ok.md" 2>/dev/null)" "lint: outline ≥3:1 on every ground → VALID"
+# colour vision: red/green status tokens collapse under deuteranopia unless a redundant cue is declared
+sed "s/^  on-error: '#1a0000'/  on-error: '#1a0000'\n  success: '#3ccf7a'/" "$T/good.md" > "$T/cvd.md"
+L_OUT=$(bash "$SD" lint "$T/cvd.md" 2>"$T/lint.err")
+assert_eq "DESIGN_LINT: INVALID" "$L_OUT" "lint: red/green status pair → INVALID (CVD ΔE76 < 20)"
+assert_contains "$(cat "$T/lint.err")" "cvd:" "lint: names the colour-vision check"
+sed "s/^mode: operate/mode: operate\nstatus-cue: icon/" "$T/cvd.md" > "$T/cvd-cue.md"
+L_OUT=$(bash "$SD" lint "$T/cvd-cue.md" 2>"$T/lint.err")
+assert_eq "DESIGN_LINT: VALID" "$L_OUT" "lint: status-cue waives the CVD check"
+assert_contains "$(cat "$T/lint.err")" "status-cue" "lint: reports the status-cue waiver"
+sed "s/^  on-error: '#1a0000'/  on-error: '#1a0000'\n  success: '#1e88e5'\n  warning: '#fdd835'/" "$T/good.md" > "$T/cvd-ok.md"
+assert_eq "DESIGN_LINT: VALID" "$(bash "$SD" lint "$T/cvd-ok.md" 2>/dev/null)" "lint: CVD-distinct status tokens → VALID without a cue"
+# the protocol's own §4 example must pass the lint it teaches
+node -e 'const s=require("fs").readFileSync(process.argv[1],"utf8").replace(/\r\n/g,"\n");const m=/```yaml\n([\s\S]*?)```/.exec(s.slice(s.indexOf("## 4.")));require("fs").writeFileSync(process.argv[2],m?m[1]:"")' "$PROTO" "$T/example.md"
+assert_eq "DESIGN_LINT: VALID" "$(bash "$SD" lint "$T/example.md" 2>/dev/null)" "lint: the protocol §4 example DESIGN.md passes its own lint"
+
+# navigation table + terms: the structure plane is machine-readable too
+sed "s/^rounded: { sm: 4px, md: 8px }/&\nterms:\n  Pay run: [payroll run, salary batch]\n  Employee: [staff member, worker]/" "$T/good.md" > "$T/terms.md"
+printf '## Navigation\n| Route | Archetype | Object | Roles | Placement | Primary action | SC | Cross-links |\n|---|---|---|---|---|---|---|---|\n| `/` | dashboard | Pay run | admin | global | Start pay run | SC-1 | /runs |\n| `/runs` | list+crud | Pay run | admin | global | New pay run | SC-1, SC-2 | /runs/:id |\n| `/runs/:id` | record | Pay run | admin | contextual | Approve | SC-2 | / |\n' > "$T/nav-table.md"
+cat "$T/terms.md" "$T/nav-table.md" > "$T/nav.md"
+L_OUT=$(bash "$SD" lint "$T/nav.md" 2>"$T/lint.err")
+assert_eq "DESIGN_LINT: VALID" "$L_OUT" "lint: a well-formed ## Navigation table + terms block → VALID"
+assert_contains "$(cat "$T/lint.err")" "navigation: routes=3 terms=2" "lint: reports route and term counts"
+printf '## Navigation\n| Route | Roles |\n|---|---|\n| `/` | admin |\n' > "$T/nav-bad-table.md"
+cat "$T/terms.md" "$T/nav-bad-table.md" > "$T/nav-bad.md"
+L_OUT=$(bash "$SD" lint "$T/nav-bad.md" 2>"$T/lint.err")
+assert_eq "DESIGN_LINT: INVALID" "$L_OUT" "lint: a ## Navigation table missing columns → INVALID"
+assert_contains "$(cat "$T/lint.err")" "navigation:" "lint: names the navigation defect"
+bash "$SD" lint "$T/good.md" >/dev/null 2>"$T/lint.err"
+assert_contains "$(cat "$T/lint.err")" "warn: navigation: no ## Navigation" "lint: a legacy DESIGN.md without the table stays VALID with a warning"
+# routes: the ## Navigation table must equal the router and cover every confirmed scenario
+printf '/\n/runs\n/runs/:id\n' > "$T/routes.txt"
+printf '## SC-1 Run payroll\n## SC-2 Approve a run\n' > "$T/scen.md"
+R_OUT=$(bash "$SD" routes "$T/nav.md" "$T/routes.txt" "$T/scen.md" 2>/dev/null); R_CODE=$?
+assert_eq "ROUTES: PARITY" "$R_OUT" "routes: router = table and every SC-n has a screen → PARITY"
+assert_eq 0 "$R_CODE" "routes: PARITY → exit 0"
+printf '/\n/runs\n/runs/:id\n/settings\n' > "$T/routes-extra.txt"
+R_OUT=$(bash "$SD" routes "$T/nav.md" "$T/routes-extra.txt" "$T/scen.md" 2>"$T/routes.err"); R_CODE=$?
+assert_eq "ROUTES: DRIFT" "$R_OUT" "routes: a router route missing from the table → DRIFT"
+assert_eq 1 "$R_CODE" "routes: DRIFT → exit 1"
+assert_contains "$(cat "$T/routes.err")" "/settings" "routes: names the undeclared route"
+printf '/\n/runs\n' > "$T/routes-fewer.txt"
+R_OUT=$(bash "$SD" routes "$T/nav.md" "$T/routes-fewer.txt" 2>"$T/routes.err")
+assert_eq "ROUTES: DRIFT" "$R_OUT" "routes: a table route the router lacks → DRIFT"
+assert_contains "$(cat "$T/routes.err")" "/runs/:id" "routes: names the phantom route"
+printf '## SC-1 Run payroll\n## SC-2 Approve a run\n## SC-3 Export the ledger\n' > "$T/scen-gap.md"
+R_OUT=$(bash "$SD" routes "$T/nav.md" "$T/routes.txt" "$T/scen-gap.md" 2>"$T/routes.err")
+assert_eq "ROUTES: DRIFT" "$R_OUT" "routes: a confirmed SC-n with no screen row → DRIFT"
+assert_contains "$(cat "$T/routes.err")" "SC-3" "routes: names the uncovered scenario"
+R_OUT=$(bash "$SD" routes "$T/good.md" "$T/routes.txt" 2>/dev/null); R_CODE=$?
+assert_eq 1 "$R_CODE" "routes: no ## Navigation table → DRIFT, exit 1"
+
+# human evidence: the usability sessions ledger is read by verdict, never written; personas carry a source tag
+printf 'id\tseverity\tpriority\tstatus\ttest_id\tsummary\tevidence\n' > "$T/ev-defects.tsv"
+{ printf 'item\tkind\tscore\tmax\tnote\n'; for i in 1 2 3 4 5 6 7 8 9 10; do printf 'H%s\theuristic\t3\t4\tfine\n' "$i"; done; for i in 1 2 3 4 5 6 7 8; do printf 'C%s\tcognitive\t1\t1\tok\n' "$i"; done; } > "$T/ev-base.tsv"
+{ cat "$T/ev-base.tsv"; printf 'Alex\tpersona\t1\t0\tsource=archetype keyboard path missing\nP3\tpersona\t2\t0\tsource=observed lost the filter twice\n'; } > "$T/ev-crit.tsv"
+{ cat "$T/ev-base.tsv"; printf 'Alex\tpersona\t1\t0\tsource=guessed keyboard path missing\n'; } > "$T/ev-crit-bad.tsv"
+printf 'pseudonym\trole\ttask\tsuccess\ttime_s\terrors\tseq\nP1\tclerk\tSC-1\t1\t412\t0\t6\nP2\tclerk\tSC-1\t0.5\t610\t2\t3\nP3\tapprover\tSC-2\t1\t80\t0\t7\n' > "$T/ev-sessions.tsv"
+printf 'pseudonym\trole\ttask\tsuccess\n' > "$T/ev-sessions-bad.tsv"
+C_OUT=$(bash "$SD" critique "$T/ev-crit.tsv" 2>"$T/crit.err"); C_RC=$?
+assert_eq 0 "$C_RC" "critique: persona source tags (archetype|stakeholder-reported|observed) are valid"
+assert_contains "$(cat "$T/crit.err")" "persona_sources=" "critique: persona sources are listed"
+assert_contains "$(cat "$T/crit.err")" "expert health" "critique: DESIGN_HEALTH is labelled expert health, not usability"
+bash "$SD" critique "$T/ev-crit-bad.tsv" >/dev/null 2>"$T/crit.err"; C_RC=$?
+assert_eq 1 "$C_RC" "critique: an unknown persona source → INVALID"
+assert_contains "$(cat "$T/crit.err")" "guessed" "critique: names the bad source"
+bash "$SD" verdict "$T/ev-defects.tsv" "" "" "$T/ev-crit.tsv" "$T/ev-sessions.tsv" >"$T/v.out" 2>"$T/v.err"
+assert_eq "DESIGN_VERDICT: SHIP" "$(cat "$T/v.out")" "verdict: a sessions ledger never changes the disposition"
+assert_contains "$(cat "$T/v.err")" "USER_EVIDENCE: 3 sessions, 3 task runs, failed_tasks=1" "verdict: reports the ledger (participants, task runs, failed tasks)"
+bash "$SD" verdict "$T/ev-defects.tsv" "" "" "$T/ev-crit.tsv" >/dev/null 2>"$T/v.err"
+assert_contains "$(cat "$T/v.err")" "USER_EVIDENCE: none" "verdict: no ledger → USER_EVIDENCE: none (not tested with users)"
+bash "$SD" verdict "$T/ev-defects.tsv" "" "" "$T/ev-crit.tsv" "$T/ev-sessions-bad.tsv" >/dev/null 2>"$T/v.err"
+assert_contains "$(cat "$T/v.err")" "USER_EVIDENCE: invalid" "verdict: a ledger missing columns is invalid, never counted"
+! grep -qE '>>?\s*["'"'"']?[^ "'"'"'<>]*(sessions|observations)\.tsv' "$SD" "$SCAN" && pass "ledgers: no seam redirects into a human-entered ledger" || fail "ledgers: a seam writes sessions/observations.tsv"
 
 bash "$SD" lint "$T/nope.md" >/dev/null 2>&1; L_RC=$?
 assert_eq 2 "$L_RC" "lint: missing file → exit 2"
@@ -265,7 +346,52 @@ if [[ -n "$PW_CWD" ]]; then
         --viewports 1280x800,390x844 --mode operate --engine builtin --out "$T/live-scan2.json" --shots "$T/shots" \
         --sheet "$T/shots/sheet.png" --prev "$T/live-scan.json" >/dev/null 2>"$T/live2.err")
   fi
+  # ERP floor: correct idioms must not fire; deceptive patterns and off-palette chart marks must
+  (cd "$PW_CWD" && node "$SCAN" --url "http://127.0.0.1:$PORT/erp-floor.html" --url "http://127.0.0.1:$PORT/deceptive.html" \
+      --viewports 1280x800 --mode operate --engine builtin --design "$T/good.md" --out "$T/floor-scan.json" >/dev/null 2>"$T/floor.err")
+  # WCAG browser passes at the operate default viewports (incl. 320x640): reflow, focus sweep, text spacing
+  (cd "$PW_CWD" && node "$SCAN" --url "http://127.0.0.1:$PORT/wcag-fail.html" --url "http://127.0.0.1:$PORT/wcag-pass.html" \
+      --mode operate --engine builtin --out "$T/wcag-scan.json" >/dev/null 2>"$T/wcag.err")
+  # structure + terminology: nav-no-current, design-term-drift (terms from DESIGN.md), vague-action-label — chrome only
+  (cd "$PW_CWD" && node "$SCAN" --url "http://127.0.0.1:$PORT/structure-fail.html" --url "http://127.0.0.1:$PORT/structure-pass.html" \
+      --viewports 1280x800 --mode operate --engine builtin --design "$T/terms.md" --out "$T/structure-scan.json" >/dev/null 2>"$T/structure.err")
   kill "$SRV" >/dev/null 2>&1 || true
+  if [[ -f "$T/floor-scan.json" ]]; then
+    frules() { node -e 'const r=require(process.argv[1]);const p=r.pages.find(x=>x.url.endsWith("/"+process.argv[2]));console.log(p?[...new Set(p.findings.filter(f=>f.severity!=="advisory").map(f=>f.rule))].join(" "):"MISSING")' "$T/floor-scan.json" "$1"; }
+    ERP=$(frules erp-floor.html); DEC=$(frules deceptive.html)
+    for rule in dash-in-ui-copy tap-target-24 preticked-consent confirmshaming design-color-drift; do
+      [[ " $ERP " != *" $rule "* ]] && pass "floor: correct ERP idiom does not fire $rule" || fail "floor: false positive $rule on erp-floor.html ($ERP)"
+    done
+    for rule in preticked-consent confirmshaming design-color-drift; do
+      [[ " $DEC " == *" $rule "* ]] && pass "floor: deceptive fixture fires $rule" || fail "floor: $rule missing on deceptive.html ($DEC)"
+    done
+  else
+    fail "floor scan: no output produced ($(head -3 "$T/floor.err" | tr '\n' ' '))"
+  fi
+  if [[ -f "$T/wcag-scan.json" ]]; then
+    wrules() { node -e 'const r=require(process.argv[1]);const p=r.pages.find(x=>x.url.endsWith("/"+process.argv[2])&&x.viewport===process.argv[3]);console.log(p?[...new Set(p.findings.filter(f=>f.severity!=="advisory").map(f=>f.rule))].join(" "):"MISSING")' "$T/wcag-scan.json" "$1" "$2"; }
+    WVP=$(node -e 'const r=require(process.argv[1]);console.log(r.meta.viewports.map(v=>v.width+"x"+v.height).join(","))' "$T/wcag-scan.json")
+    assert_eq "1280x800,390x844,320x844" "$(echo "$WVP" | sed 's/320x640/320x844/')" "wcag: operate scans 1280x800, 390x844 and 320x640 by default ($WVP)"
+    WF=$(wrules wcag-fail.html 1280x800); WF320=$(wrules wcag-fail.html 320x640); WP=$(wrules wcag-pass.html 1280x800); WP320=$(wrules wcag-pass.html 320x640)
+    for rule in focus-invisible focus-obscured text-spacing-loss; do
+      [[ " $WF " == *" $rule "* ]] && pass "wcag: failing fixture fires $rule" || fail "wcag: $rule missing on wcag-fail.html ($WF)"
+      [[ " $WP " != *" $rule "* ]] && pass "wcag: repaired fixture does not fire $rule" || fail "wcag: false positive $rule on wcag-pass.html ($WP)"
+    done
+    [[ " $WF320 " == *" horizontal-overflow "* ]] && pass "wcag: 350px layout overflows at 320x640 (1.4.10)" || fail "wcag: no horizontal-overflow at 320 ($WF320)"
+    [[ " $WP320 " != *" horizontal-overflow "* ]] && pass "wcag: labelled scroll region keeps a wide table from overflowing the document at 320x640" || fail "wcag: scroll-region page overflowed at 320 ($WP320)"
+  else
+    fail "wcag scan: no output produced ($(head -3 "$T/wcag.err" | tr '\n' ' '))"
+  fi
+  if [[ -f "$T/structure-scan.json" ]]; then
+    srules() { node -e 'const r=require(process.argv[1]);const p=r.pages.find(x=>x.url.endsWith("/"+process.argv[2]));console.log(p?[...new Set(p.findings.filter(f=>f.severity!=="advisory").map(f=>f.rule))].join(" "):"MISSING")' "$T/structure-scan.json" "$1"; }
+    SF=$(srules structure-fail.html); SP=$(srules structure-pass.html)
+    for rule in nav-no-current design-term-drift vague-action-label; do
+      [[ " $SF " == *" $rule "* ]] && pass "structure: failing fixture fires $rule" || fail "structure: $rule missing on structure-fail.html ($SF)"
+      [[ " $SP " != *" $rule "* ]] && pass "structure: repaired fixture does not fire $rule (content headings/cells are never scanned)" || fail "structure: false positive $rule on structure-pass.html ($SP)"
+    done
+  else
+    fail "structure scan: no output produced ($(head -3 "$T/structure.err" | tr '\n' ' '))"
+  fi
   if [[ -f "$T/live-scan.json" ]]; then
     assert_eq 2 "$LRC" "live scan: fixture with tells → exit 2"
     LS=$(bash "$SD" scan "$T/live-scan.json" 2>"$T/ls.err")
@@ -331,6 +457,38 @@ proto_has "POS|kiosk"                                        "protocol: POS/kios
 proto_has "Restrained|Committed|Drenched"                    "protocol: color strategies"
 proto_has "cream|oxblood"                                    "protocol: names the saturated attractors"
 proto_has "rounded"                                          "protocol: DESIGN.md spec keys"
+proto_has "preticked-consent"                                "protocol: deceptive-pattern rules listed"
+proto_has "confirmshaming"                                   "protocol: confirmshaming refused"
+proto_has "no bound data"                                    "protocol: sparkline refusal scoped to decorative use"
+proto_has "focus-invisible"                                  "protocol: focus sweep rules listed (WCAG 2.4.7/2.4.11)"
+proto_has "text-spacing-loss"                                "protocol: text-spacing rule listed (WCAG 1.4.12)"
+proto_has "320.640"                                          "protocol: 320px reflow viewport named (WCAG 1.4.10)"
+proto_has "^- \*\*Charts\*\*"                                "protocol: Charts archetype (form by question, honest encodings)"
+proto_has "^- \*\*Report \(print / PDF\)\*\*"                "protocol: Report archetype (page.pdf, period, filters, generated-at)"
+proto_has "declare its job first"                            "protocol: dashboard declares monitor/analyze/executive"
+proto_has "as-of time"                                       "protocol: dashboard shows as-of time and flags stale data"
+proto_has "status-cue"                                       "protocol: status-cue waiver for the colour-vision lint"
+proto_has "^- \*\*Work queue / approvals\*\*"                "protocol: work queue / approvals archetype"
+proto_has "Table depth"                                      "protocol: conditional table-depth clause (7+ columns or a page at year-1 volume)"
+proto_has "Heavy entry"                                      "protocol: heavy-entry form clauses (drafts, line items, review before binding actions)"
+proto_has "Long operations and reversal"                     "protocol: long operations show progress and cancel; undo over confirmation"
+proto_has "use-frequency"                                    "protocol: use-frequency recorded in the design read (all-day vs occasional)"
+proto_has "reflect the role"                                 "protocol: role-aware navigation with no-permission state"
+proto_has "^## Navigation"                                   "protocol: DESIGN.md ## Navigation route table (the wireframes)"
+proto_has "^## Voice & terms"                                "protocol: DESIGN.md ## Voice & terms section"
+proto_has "^terms:"                                          "protocol: terms: vocabulary in the frontmatter schema"
+proto_has "nav-no-current"                                   "protocol: nav-no-current rule listed"
+proto_has "design-term-drift"                                "protocol: design-term-drift rule listed (chrome only)"
+proto_has "vague-action-label"                               "protocol: vague-action-label rule listed"
+spec_has  "score-design.sh routes"                           "spec: Routes default reads the ## Navigation table and checks parity"
+spec_has  "qa/usability/sessions.tsv"                        "spec: audit reads the human-entered usability ledger"
+spec_has  "never writes"                                     "spec: the audit never writes the ledger"
+spec_has  "not tested with users"                            "spec: report says so when no ledger exists"
+proto_has "source=archetype|stakeholder-reported|observed"   "protocol: persona rows carry a source tag"
+proto_has "USER_EVIDENCE"                                    "protocol: the report carries the USER_EVIDENCE line"
+proto_has "^- \*\*AI feature\*\* \*\(conditional"            "protocol: conditional AI-feature archetype"
+proto_has "no record is written before a person accepts"     "protocol: AI suggestions are reviewed before commit"
+proto_has "llm_tenant_context"                               "protocol: AI tenancy rows reuse the multi-tenancy pack"
 proto_has "design:floor"                                     "protocol: seventh coverage tag"
 proto_has "emoji"                                            "protocol: emoji-icon rule"
 proto_has "kicker|eyebrow"                                   "protocol: kicker rule"

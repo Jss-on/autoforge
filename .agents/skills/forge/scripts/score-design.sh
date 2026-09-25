@@ -8,6 +8,7 @@
 #   assets   <project-root> [--previous manifest.json] → JSON integrity/provenance/budget gate
 #   verdict  <design-defects.tsv> [scan.json] [DESIGN.md] [critique.tsv] [asset-project-root]
 #                                                 → DESIGN_VERDICT: SHIP | FIX | REBUILD
+#   routes <DESIGN.md> <routes.txt> [<scenarios.md>] → ROUTES: PARITY | DRIFT   (## Navigation table = router; every SC-n has a screen)
 #   seed     <text-or-file> <n>                   → 1-based deterministic index (the direction roll)
 #   rubric   [design.md]                          → SCORE: N   (grep-rubric of the command spec)
 #
@@ -83,6 +84,25 @@ lint() {
     if (!/motion|transition|animation|prefers-reduced-motion|duration|easing/i.test(body + JSON.stringify(fm))) errs.push("motion: no motion/transition/easing/reduced-motion guidance declared");
     if (!/loading|empty state|empty|error state|error|success/i.test(body)) errs.push("states: no loading/empty/error/success component-state guidance declared");
     if (!/prefers-reduced-motion|reduced.motion/i.test(body + JSON.stringify(fm))) warns.push("prefers-reduced-motion not mentioned — the motion section should say what collapses");
+    // navigation: the ## Navigation route table is the screen inventory (the "wireframes" deliverable);
+    // its shape is validated here, its parity with the router by `routes`. Legacy files warn, malformed fail.
+    let navCount = 0;
+    const navIdx = body.search(/^## Navigation\b/m);
+    if (navIdx < 0) warns.push("navigation: no ## Navigation route table (build Phase 4 requires one: route · archetype · object · roles · placement · primary action · SC · cross-links)");
+    else {
+      const navRest = body.slice(navIdx + 1); const navNext = navRest.search(/\n## /); const navSec = navNext < 0 ? navRest : navRest.slice(0, navNext);
+      const navRows = navSec.split("\n").filter(l => /^\|/.test(l.trim()));
+      const navHeader = navRows[0] ? navRows[0].split("|").map(c => c.trim().toLowerCase()).filter(Boolean) : [];
+      const navNeed = ["route", "archetype", "object", "roles", "placement", "primary action", "sc", "cross-links"];
+      const navMissing = navNeed.filter(n => !navHeader.some(h => h === n || h.startsWith(n)));
+      const navData = navRows.slice(1).filter(l => !/^\|\s*:?-+/.test(l.trim()));
+      if (!navRows.length || navMissing.length) errs.push("navigation: ## Navigation table needs columns " + navNeed.join(" | ") + (navMissing.length ? " (missing: " + navMissing.join(", ") + ")" : " (no table under the heading)"));
+      else if (!navData.length) errs.push("navigation: ## Navigation table has no route rows");
+      navCount = navData.length;
+    }
+    // terms: the controlled vocabulary (`Preferred: [avoid, …]`) that design-term-drift scans chrome for
+    const termsN = Object.keys(fm.terms || {}).length;
+    for (const [pref, v] of Object.entries(fm.terms || {})) { const avoid = Array.isArray(v) ? v : String(v).split(","); if (!avoid.map(s => String(s).trim()).filter(Boolean).length) warns.push("terms." + pref + ": no avoided variants listed"); }
     // contrast pairs
     const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b); };
     const ratio = (a, b) => { const l1 = lum(a), l2 = lum(b); return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05); };
@@ -94,9 +114,35 @@ lint() {
     const grounds = keys.filter(k => /(^|\.)(background|surface(-container(-lowest|-low|-high|-highest)?|-dim|-bright)?|card|canvas|panel|sheet)$/i.test(k) && !/on-|foreground|text/i.test(k));
     const texts = keys.filter(k => /(on-surface|on-background|foreground|(^|\.)text|ink|body-text|muted-foreground|on-surface-variant|on-surface-faint|text-muted|muted-text|secondary-text)/i.test(k) && !/hover|disabled|inverse|on-primary|on-secondary|on-tertiary|on-error|on-accent|on-destructive|on-success|on-warning|on-info/i.test(k));
     for (const t of texts) for (const g of grounds) need(t, g, 4.5, "text on ground/surface");
+    // component boundaries and the accent must stay visible on every ground (WCAG 1.4.11 non-text 3:1)
+    for (const k of ["outline", "primary"]) if (rgb[k]) for (const g of grounds) need(k, g, 3, "non-text, WCAG 1.4.11");
     if (fails.length) errs.push(...fails.map(f => "contrast: " + f));
+    // colour vision: status tokens must stay apart (CIE76 ΔE >= 20) under simulated deuteranopia and
+    // protanopia (Machado et al. 2009, severity 1.0, linear RGB) unless DESIGN.md declares a redundant cue
+    const cvdKeys = ["error", "success", "warning"].filter(k => rgb[k]);
+    if (fm["status-cue"]) console.error("cvd: waived by status-cue=" + fm["status-cue"] + " (status is never carried by colour alone)");
+    else if (cvdKeys.length >= 2) {
+      const SIM = {
+        deuteranopia: [[0.367322, 0.860646, -0.227968], [0.280085, 0.672501, 0.047413], [-0.011820, 0.042940, 0.968881]],
+        protanopia: [[0.152286, 1.052583, -0.204868], [0.114503, 0.786281, 0.099216], [-0.003882, -0.048116, 1.051998]],
+      };
+      const linear = (c) => [c.r, c.g, c.b].map((v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+      const lab = (c) => {
+        const X = 0.4124 * c[0] + 0.3576 * c[1] + 0.1805 * c[2], Y = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2], Z = 0.0193 * c[0] + 0.1192 * c[1] + 0.9505 * c[2];
+        const f = (t) => t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116; const fx = f(X / 0.95047), fy = f(Y), fz = f(Z / 1.08883);
+        return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+      };
+      for (const [name, m] of Object.entries(SIM)) {
+        const sim = (k) => { const c = linear(rgb[k]); return lab(m.map((r) => Math.min(1, Math.max(0, r[0] * c[0] + r[1] * c[1] + r[2] * c[2])))); };
+        for (let i = 0; i < cvdKeys.length; i++) for (let j = i + 1; j < cvdKeys.length; j++) {
+          const a = sim(cvdKeys[i]), b = sim(cvdKeys[j]), d = Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+          if (d < 20) errs.push(`cvd: ${cvdKeys[i]} vs ${cvdKeys[j]} ΔE76 ${d.toFixed(1)} < 20 under simulated ${name} (recolour, or declare status-cue: icon|label)`);
+        }
+      }
+    }
     console.error(`tokens: colors=${colorKeys.length} typography_roles=${roles.length} families=${families.size} spacing=${spacing.length} rounded=${rounded ? Object.keys(rounded).length : 0} components=${Object.keys(fm.components || {}).length}`);
     console.error(`contrast_pairs=${pairs} contrast_fail=${fails.length}`);
+    console.error(`navigation: routes=${navCount} terms=${termsN}`);
     for (const w of warns) console.error("warn: " + w);
     for (const e of errs) console.error("error: " + e);
     console.log(errs.length ? "DESIGN_LINT: INVALID" : "DESIGN_LINT: VALID");
@@ -169,6 +215,11 @@ critique() {
         cogN++; if (sc !~ /^[01]$/) { print "row " NR ": cognitive score must be 0|1" > "/dev/stderr"; errs++ } else if (sc==0) cogFail++;
       } else if (kind=="persona") {
         persona++; if (sc !~ /^[0-9]+$/) { print "row " NR ": persona score = red-flag count (integer)" > "/dev/stderr"; errs++ } else flags+=sc;
+        if ($5 ~ /source=/) {
+          if (match($5, /source=[A-Za-z-]+/)) { src = substr($5, RSTART + 7, RLENGTH - 7);
+            if (src == "archetype" || src == "stakeholder-reported" || src == "observed") srcN[src]++;
+            else { print "row " NR ": persona source must be archetype|stakeholder-reported|observed (got " src ")" > "/dev/stderr"; errs++ } }
+        } else { print "row " NR ": persona " $1 " has no source= tag (archetype|stakeholder-reported|observed): a stand-in must never read as user evidence" > "/dev/stderr"; noSrc++ }
       } else { print "row " NR ": unknown kind " kind > "/dev/stderr"; errs++ }
     }
     END {
@@ -176,6 +227,8 @@ critique() {
       pct = (max>0 ? sum/max*100 : 0);
       band = (max==0 ? "Unscored" : pct>=90 ? "Excellent" : pct>=70 ? "Good" : pct>=50 ? "Acceptable" : pct>=30 ? "Poor" : "Critical");
       printf "heuristics_scored=%d na=%d cognitive_checks=%d cognitive_fails=%d personas=%d persona_flags=%d\n", nH-na, na, cogN, cogFail, persona, flags > "/dev/stderr";
+      ps = ""; for (s in srcN) ps = ps (ps == "" ? "" : ",") s ":" srcN[s]; if (persona) printf "persona_sources=%s untagged=%d\n", (ps == "" ? "none" : ps), noSrc + 0 > "/dev/stderr";
+      print "expert health: the reviewer heuristic score, never user-measured usability (that is USER_EVIDENCE in verdict, from the human-entered sessions ledger)" > "/dev/stderr";
       printf "DESIGN_HEALTH: %d/%d (%s)\n", sum, max, band;
       exit (errs==0 ? 0 : 1);
     }
@@ -206,8 +259,12 @@ defects() {
 assets() { node "$SCRIPT_DIR/asset-check.cjs" check "$@"; }
 
 verdict() {
-  local defects_file="${1:?usage: verdict <design-defects.tsv> [design-scan.json] [DESIGN.md] [design-critique.tsv] [asset-project-root]}"
-  local scan_file="${2:-}" design_md="${3:-}" critique_file="${4:-}" asset_root="${5:-}"
+  local defects_file="${1:?usage: verdict <design-defects.tsv> [design-scan.json] [DESIGN.md] [design-critique.tsv] [asset-project-root] [sessions.tsv]}"
+  local scan_file="${2:-}" design_md="${3:-}" critique_file="${4:-}" asset_root="" sessions="" extra
+  # positions 5+: a *.tsv is the human-entered usability sessions ledger (read, never written); anything else is the asset root
+  for extra in "${@:5}"; do
+    if [[ "$extra" == *.tsv ]]; then sessions="$extra"; elif [[ -n "$extra" ]]; then asset_root="$extra"; fi
+  done
   [[ -f "$defects_file" ]] || { echo "DESIGN_VERDICT: FIX"; echo "defects file not found: $defects_file" >&2; return 2; }
   local rebuild=0 fix=0
 
@@ -245,6 +302,25 @@ verdict() {
       esac
     else echo "criterion design-health: critique file missing ($critique_file) FAIL" >&2; fix=1; fi
   else echo "criterion design-health: not supplied (skipped)" >&2; fi
+
+  # human evidence: the usability sessions ledger is entered by people and only ever read here. Its
+  # presence never changes the disposition; its absence must be said out loud in the report.
+  if [[ -n "$sessions" ]]; then
+    if [[ -f "$sessions" ]]; then
+      node -e '
+        const fs = require("fs");
+        const rows = fs.readFileSync(process.argv[1], "utf8").split(/\r?\n/).filter(l => l.trim() && !l.startsWith("#"));
+        const hdr = (rows.shift() || "").split("\t").map(s => s.trim());
+        const need = ["pseudonym", "role", "task", "success", "time_s", "errors", "seq"];
+        const miss = need.filter(n => !hdr.includes(n));
+        if (miss.length) { console.log("USER_EVIDENCE: invalid (ledger missing column: " + miss.join(", ") + " — expected " + need.join(" ") + ")"); process.exit(0); }
+        const si = hdr.indexOf("success"), pi = hdr.indexOf("pseudonym");
+        const people = new Set(); let failed = 0;
+        for (const r of rows) { const c = r.split("\t"); people.add(c[pi].trim()); if (parseFloat(c[si]) < 1) failed++; }
+        console.log("USER_EVIDENCE: " + people.size + " session" + (people.size === 1 ? "" : "s") + ", " + rows.length + " task run" + (rows.length === 1 ? "" : "s") + ", failed_tasks=" + failed + " (human-entered ledger, read only)");
+      ' "$sessions" >&2
+    else echo "USER_EVIDENCE: invalid (ledger not found: $sessions)" >&2; fi
+  else echo "USER_EVIDENCE: none — not tested with users; the report must say so, and DESIGN_HEALTH is expert health, not usability" >&2; fi
 
   if [[ -n "$asset_root" ]]; then
     local asset_report
@@ -319,8 +395,59 @@ rubric() {
 # ---------------------------------------------------------------------------
 usage() { grep '^#' "$0" | sed 's/^# \{0,1\}//' | sed -n '2,20p'; }
 
+# ---------------------------------------------------------------------------
+# routes: the structure-plane parity gate. The DESIGN.md ## Navigation table is the screen inventory
+# ("wireframes"); the router export (one route per line, # comments allowed) must equal its Route
+# column, and every confirmed scenario id (SC-n) in the scenarios file must appear in some row's SC
+# column, so no screen is undeclared and no confirmed walkthrough step lacks a screen.
+#   stdout: ROUTES: PARITY|DRIFT      exit 0 iff PARITY · 1 DRIFT · 2 unusable input
+#   stderr: table/router counts, each missing or extra route, each uncovered SC-n
+# ---------------------------------------------------------------------------
+routes() {
+  local design="${1:?usage: routes <DESIGN.md> <routes.txt> [<scenarios.md>]}"
+  local router="${2:?usage: routes <DESIGN.md> <routes.txt> [<scenarios.md>]}"
+  local scen="${3:-}"
+  [[ -f "$design" && -f "$router" ]] || { echo "ROUTES: DRIFT"; echo "missing input: $design / $router" >&2; return 2; }
+  [[ -z "$scen" || -f "$scen" ]] || { echo "ROUTES: DRIFT"; echo "scenarios file not found: $scen" >&2; return 2; }
+  local out rc
+  out="$(node -e '
+    const fs = require("fs");
+    const [design, router, scen] = process.argv.slice(1);
+    const md = fs.readFileSync(design, "utf8").replace(/\r\n/g, "\n");
+    const i = md.search(/^## Navigation\b/m);
+    if (i < 0) { console.error("no ## Navigation table in " + design); console.log("ROUTES: DRIFT"); process.exit(1); }
+    const rest = md.slice(i + 1); const nx = rest.search(/\n## /); const sec = nx < 0 ? rest : rest.slice(0, nx);
+    const rows = sec.split("\n").filter(l => /^\|/.test(l.trim()));
+    const header = rows[0] ? rows[0].split("|").map(c => c.trim().toLowerCase()).filter(Boolean) : [];
+    const col = n => header.findIndex(h => h === n || h.startsWith(n));
+    const rc = col("route"), sc = col("sc");
+    if (rc < 0) { console.error("## Navigation table has no Route column"); console.log("ROUTES: DRIFT"); process.exit(1); }
+    const norm = s => (String(s || "").replace(/`/g, "").trim().replace(/\/+$/, "")) || "/";
+    const table = new Map();
+    for (const l of rows.slice(1)) { const cells = l.split("|").slice(1, -1).map(c => c.trim()); if (!cells.length || /^:?-+:?$/.test(cells[0])) continue; table.set(norm(cells[rc]), sc >= 0 ? (cells[sc] || "") : ""); }
+    const routerSet = new Set(fs.readFileSync(router, "utf8").split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith("#")).map(norm));
+    let drift = 0;
+    for (const r of routerSet) if (!table.has(r)) { drift++; console.error("  router route missing from the table: " + r); }
+    for (const r of table.keys()) if (!routerSet.has(r)) { drift++; console.error("  table route absent from the router: " + r); }
+    if (scen) {
+      const ids = new Set(fs.readFileSync(scen, "utf8").match(/\bSC-\d+\b/g) || []);
+      const covered = new Set([...table.values()].flatMap(v => v.match(/\bSC-\d+\b/g) || []));
+      for (const id of [...ids].sort()) if (!covered.has(id)) { drift++; console.error("  confirmed scenario with no screen row: " + id); }
+      console.error("scenarios=" + ids.size + " covered=" + [...ids].filter(x => covered.has(x)).length);
+    }
+    console.error("table_routes=" + table.size + " router_routes=" + routerSet.size + " drift=" + drift);
+    console.log(drift ? "ROUTES: DRIFT" : "ROUTES: PARITY");
+    process.exit(drift ? 1 : 0);
+  ' "$design" "$router" "$scen")"
+  rc=$?
+  printf '%s\n' "$out"
+  log_invocation "routes" "$design" "$out"
+  return $rc
+}
+
 case "${1:-}" in
   lint)     shift; lint "$@" ;;
+  routes)   shift; routes "$@" ;;
   scan)     shift; scan "$@" ;;
   critique) shift; critique "$@" ;;
   defects)  shift; defects "$@" ;;

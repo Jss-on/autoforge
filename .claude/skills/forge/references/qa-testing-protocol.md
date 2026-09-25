@@ -56,7 +56,7 @@ oracles — must-pass, cap semantics identical to `build`.
 | Functional suitability | completeness, correctness, appropriateness | `functional`, `logic` | Functional cases, golden vectors |
 | Performance efficiency | time behaviour, resource utilization, capacity | `monitoring` | Load/stress/spike/soak vs p95/p99 SLOs, error rate |
 | Compatibility | co-existence, interoperability | `devops` | Browser/viewport matrix, API contract checks |
-| **Interaction capability** (2011: usability) | operability, user error protection, inclusivity, self-descriptiveness | `ux` | E2E journeys, WCAG 2.2 AA, keyboard/focus, empty/error states |
+| **Interaction capability** (2011: usability) | appropriateness recognizability, learnability, operability, user error protection, user engagement, inclusivity, user assistance, self-descriptiveness | `ux` | E2E journeys, WCAG 2.2 AA, keyboard/focus, empty/error states; learnability and appropriateness recognizability need human evidence (the usability sessions ledger), never the expert critique alone |
 | Reliability | faultlessness, availability, fault tolerance, recoverability | `monitoring` | Restart/recovery, healthz, retry/idempotency probes |
 | Security | confidentiality, integrity, authenticity, **resistance** | `hardening` | §6 security-functional set |
 | Maintainability | analysability, modifiability, testability | reported in summary (not scored rows) |
@@ -91,8 +91,13 @@ API, tampered client-side prices.
 
 - **Accessibility — WCAG 2.2 level AA = 55 success criteria** (31 A + 24 AA; 4.1.1 Parsing removed —
   checklists citing 87 total are stale). Automated axe scan covers ≈30–57%; mandatory manual:
-  keyboard-only navigation + tab order, focus visibility (2.4.11) , target size ≥24px (2.5.8),
-  contrast 4.5:1 / 3:1, redundant entry (3.3.7), accessible auth (3.3.8), screen-reader spot pass.
+  keyboard-only navigation + tab order, focus visible and not obscured (2.4.7, 2.4.11), target size ≥24px (2.5.8),
+  contrast 4.5:1 / 3:1 for text and ≥3:1 for component boundaries, focus rings and chart marks (1.4.3, 1.4.11),
+  reflow at 320 CSS px with no two-dimensional scrolling except data tables in labelled scroll regions (1.4.10),
+  text-spacing overrides without clipping or overlap (1.4.12), hover/focus content dismissible, hoverable and
+  persistent (1.4.13), time limits warned and extendable incl. session expiry and actionable toasts (2.2.1),
+  redundant entry (3.3.7), accessible auth (3.3.8), screen-reader spot pass. `design-scan.cjs` covers
+  1.4.10 (320×640 default), 1.4.12 (`text-spacing-loss`) and 2.4.7/2.4.11 (`focus-invisible`, `focus-obscured`) mechanically.
 - **Security (QA depth)** — apply `references/security-checklist.md`: versioned **ASVS 5.0.0**
   requirements (applicable L1 floor; L2 for sensitive data, multi-tenant or privileged workflows)
   and **OWASP Top 10:2025** risk categories. QA owns functional security through the real app:

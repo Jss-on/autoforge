@@ -5,7 +5,7 @@
  * anti-slop / craft-floor / DESIGN.md-conformance rules against the live DOM.
  *
  *   node design-scan.cjs --url http://localhost:3000/ [--url …] [--mode operate|persuade|read|experience]
- *                        [--viewports 1280x800,390x844] [--design DESIGN.md] [--out scan.json]
+ *                        [--viewports 1280x800,390x844] (operate/read default adds 320x640 for WCAG 1.4.10 reflow) [--design DESIGN.md] [--out scan.json]
  *                        [--shots <dir>] [--storage-state state.json] [--ignore rule1,rule2]
  *                        [--engine builtin|impeccable|both] [--settle 600] [--timeout 30000]
  *                        [--sheet <contact-sheet.png>] [--prev <previous scan.json>]
@@ -44,7 +44,7 @@ function parseArgs(argv) {
     const k = argv[i], v = argv[i + 1];
     switch (k) {
       case '--url': a.urls.push(v); i++; break;
-      case '--viewports': a.viewports = v; i++; break;
+      case '--viewports': a.viewports = v; a.vpGiven = true; i++; break;
       case '--mode': a.mode = String(v).toLowerCase(); i++; break;
       case '--out': a.out = v; i++; break;
       case '--shots': a.shots = v; i++; break;
@@ -68,6 +68,8 @@ function parseArgs(argv) {
     console.error(`--mode must be operate|persuade|read|experience (got ${a.mode})`); process.exit(1);
   }
   if (a.urls.length === 0) { console.error('need at least one --url'); usage(); process.exit(1); }
+  // task surfaces must reflow at 320 CSS px (WCAG 1.4.10); persuade/experience keep the two-viewport default
+  if (!a.vpGiven && /^(operate|read)$/.test(a.mode)) a.viewports += ',320x640';
   a.viewportList = a.viewports.split(',').map(s => {
     const m = /^(\d{3,5})x(\d{3,5})$/.exec(s.trim());
     if (!m) { console.error(`bad viewport: ${s}`); process.exit(1); }
@@ -110,6 +112,8 @@ function parseFrontmatter(md) {
       });
       parent[key] = o; continue;
     }
+    // `[a, b]` values are lists (DESIGN.md `terms:` avoid-lists); flow maps stay comma-split as before
+    if (rest.startsWith('[') && rest.endsWith(']')) { parent[key] = rest.slice(1, -1).split(',').map(s => s.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean); continue; }
     parent[key] = rest.replace(/^['"]|['"]$/g, '');
   }
   return root;
@@ -141,8 +145,14 @@ function loadDesignSystem(file) {
     if (m) radii.push(m[2] === 'rem' ? parseFloat(m[1]) * 16 : parseFloat(m[1]));
     else if (/^(9999px|100%|full|pill)$/i.test(String(v).trim())) radii.push(9999);
   }
+  // terms: the controlled vocabulary — `Preferred: [avoid, …]` (block map; a plain comma list also works)
+  const terms = [];
+  for (const [preferred, v] of Object.entries(fm.terms || {})) {
+    const avoid = (Array.isArray(v) ? v : String(v).split(',')).map(s => String(s).trim()).filter(Boolean);
+    if (avoid.length) terms.push({ preferred, avoid });
+  }
   return { present: true, hasFonts: fonts.size > 0, fonts: [...fonts], hasColors: colors.length > 0, colors,
-           hasRadii: radii.length > 0, radii, file };
+           hasRadii: radii.length > 0, radii, terms, file };
 }
 
 // ---------------------------------------------------------------------------
@@ -269,10 +279,27 @@ function inPageRules(cfg) {
   // --- interactive targets ------------------------------------------------
   const interactives = Array.from(document.querySelectorAll('a[href],button,[role=button],input:not([type=hidden]),select,textarea,[tabindex]:not([tabindex="-1"])')).filter(visible);
   let tiny24 = 0, tiny44 = 0, ex24 = null, ex44 = null;
+  const rects = new Map(interactives.map(e => [e, e.getBoundingClientRect()]));
+  const small = q => q.width < 24 || q.height < 24;
+  // WCAG 2.5.8 exceptions: a native checkbox/radio the author did not resize or restyle is a user-agent
+  // control; an undersized target passes when a 24px circle centred on it touches no other target and
+  // no other undersized target's circle (spacing)
+  const exempt24 = (el, r) => {
+    if (el.tagName === 'INPUT' && /^(checkbox|radio)$/.test(el.type) && cs(el).appearance !== 'none' && !el.style.width && !el.style.height) return true;
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    for (const [o, q] of rects) {
+      if (o === el || o.contains(el) || el.contains(o)) continue;
+      const d = small(q) ? Math.hypot(cx - (q.left + q.width / 2), cy - (q.top + q.height / 2)) - 12
+        : Math.hypot(Math.max(q.left - cx, 0, cx - q.right), Math.max(q.top - cy, 0, cy - q.bottom));
+      if (d < 12) return false;
+    }
+    return true;
+  };
   for (const el of interactives) {
-    const r = el.getBoundingClientRect();
+    const r = rects.get(el);
     if (el.closest('p') && el.tagName === 'A') continue; // inline text links exempt (WCAG 2.5.8)
-    if (r.width < 24 || r.height < 24) { tiny24++; ex24 = ex24 || el; }
+    if (small(r) && !exempt24(el, r)) { tiny24++; ex24 = ex24 || el; }
+    else if (small(r) && vw <= 480) { tiny44++; ex44 = ex44 || el; }
     else if (vw <= 480 && (r.width < 44 || r.height < 44)) { tiny44++; ex44 = ex44 || el; }
     if (cs(el).cursor !== 'pointer' && ['A', 'BUTTON'].includes(el.tagName) && !el.disabled) { /* informational only */ }
   }
@@ -313,7 +340,8 @@ function inPageRules(cfg) {
     // all-caps body
     if (bodyLike.includes(el.tagName) && s.textTransform === 'uppercase' && t.length > 60) capsBody++;
     // em/en dash
-    const dashes = (t.match(/[—–]/g) || []).length;
+    // an en dash between word characters is range notation (Jan–Mar, 1–15), not a tell
+    const dashes = (t.replace(/(\w)–(?=\w)/g, '$1').match(/[—–]/g) || []).length;
     if (dashes) {
       const inHead = /^(H[1-6]|BUTTON|A|LABEL|TH|DT|NAV|SUMMARY)$/.test(el.tagName) || el.closest('nav,button,h1,h2,h3,h4,h5,h6,label,th');
       if (inHead) { dashHead += dashes; exDash = exDash || el; } else dashBody += dashes;
@@ -348,11 +376,45 @@ function inPageRules(cfg) {
     // clipped label
     if (s.overflow === 'hidden' && s.whiteSpace === 'nowrap' && el.scrollWidth > el.clientWidth + 2 && s.textOverflow !== 'ellipsis') push('clipped-text', 'warn', el, 'text wider than its box with overflow hidden and no ellipsis');
   }
+  // deceptive patterns, scoped to controls (never content): opt-in must be an explicit act
+  for (const cb of document.querySelectorAll('input[type=checkbox]')) {
+    if (!cb.defaultChecked || !visible(cb)) continue;
+    const lab = ((cb.labels && cb.labels[0] && cb.labels[0].textContent) || cb.getAttribute('aria-label') || '').trim();
+    if (/\b(consent|marketing|newsletters?|subscribe|promotion(al|s)?|offers?|partners?|third[- ]part(y|ies))\b/i.test(lab)) push('preticked-consent', 'warn', cb, 'consent/marketing box checked by default: opt-in must be an explicit act', lab.slice(0, 80));
+  }
+  for (const b of document.querySelectorAll('button,a,[role=button]')) {
+    const bt = (b.textContent || '').trim();
+    if (/^no,?(\s+thanks?|\s+thank you)?[,.]?\s+i\s*(don['’]?t|do not|['’]d rather|would rather|prefer)\b/i.test(bt)) push('confirmshaming', 'warn', b, 'decline option shames the user: name the choice neutrally ("No thanks")', bt.slice(0, 80));
+  }
   if (capsBody) push('all-caps-body', 'warn', null, `${capsBody} uppercase body passage(s) over 60 chars`);
   if (dashHead) push('dash-in-ui-copy', 'warn', exDash, `${dashHead} em/en dash(es) in headings, nav, buttons or labels — a comma, period or colon reads as authored`);
   if (dashBody >= 6) push('em-dash-overuse', 'advisory', null, `${dashBody} em/en dashes in body copy`);
   if (apho >= 3) push('aphoristic-cadence', 'advisory', null, `${apho} "X. No Y." / "Not a X. A Y." rebuttal sentences`);
   for (const [label, h] of genericHits) push('generic-copy', 'warn', h.el, `${label} ×${h.n}`, h.sample);
+  // --- structure + terminology: chrome only (never headings or cells, which carry user content) ---
+  for (const a of document.querySelectorAll('nav a[href]')) {
+    let same = false;
+    const raw = (a.getAttribute('href') || '').trim();
+    if (!raw || raw.startsWith('#') || /^javascript:/i.test(raw)) continue; // placeholder / in-page anchors are not links to the current page
+    try { const u = new URL(a.href, location.href); same = u.origin === location.origin && !u.hash && u.pathname.replace(/\/+$/, '') === location.pathname.replace(/\/+$/, ''); } catch { /* unparsable href */ }
+    if (same && visible(a) && !a.hasAttribute('aria-current')) { push('nav-no-current', 'warn', a, 'nav link to the current page lacks aria-current="page" — "you are here" is invisible to assistive tech'); break; }
+  }
+  for (const c of document.querySelectorAll('button,a[href],[role=button]')) {
+    const t = (c.textContent || '').trim().replace(/[.!…]+$/, '').toLowerCase();
+    if (visible(c) && /^(submit|click here|yes|no|go|ok)$/.test(t)) push('vague-action-label', 'warn', c, `"${(c.textContent || '').trim()}" names no outcome — verb + object ("Post invoice", "Delete 3 employees")`);
+  }
+  if (cfg.designSystem && Array.isArray(cfg.designSystem.terms) && cfg.designSystem.terms.length) {
+    const hits = new Map();
+    const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    for (const el of document.querySelectorAll('button,[role=button],label,th,nav a,legend,[role=tab],[role=menuitem],summary')) {
+      if (!visible(el)) continue;
+      const own = Array.from(el.childNodes).filter(n => n.nodeType === 3).map(n => n.textContent).join(' ');
+      for (const { preferred, avoid } of cfg.designSystem.terms) for (const w of avoid) {
+        if (new RegExp(`(^|[^\\p{L}\\p{N}])${esc(w)}(?![\\p{L}\\p{N}])`, 'iu').test(own)) { const k = `${w} → ${preferred}`; const h = hits.get(k) || { el, n: 0 }; h.n++; hits.set(k, h); }
+      }
+    }
+    for (const [k, h] of hits) push('design-term-drift', 'warn', h.el, `avoided term in UI chrome: ${k} ×${h.n} (DESIGN.md terms)`);
+  }
   // kickers: banned outright in Persuade (impeccable), rationed 1 per 3 sections elsewhere (taste)
   const sections = Math.max(1, document.querySelectorAll('section,main > *,article').length);
   if (kickers.length) {
@@ -486,6 +548,16 @@ function inPageRules(cfg) {
       }
     }
     for (const [f, n] of offFonts) push('design-font-drift', 'warn', null, `font "${f}" not in DESIGN.md typography (${n} element(s))`, f);
+    // chart marks: SVG fill/stroke count too, so a chart library's default palette cannot escape the
+    // tokens; icon-sized SVGs (< 48px) are exempt
+    if (ds.hasColors) for (const svg of document.querySelectorAll('svg')) {
+      const b = svg.getBoundingClientRect();
+      if (b.width < 48 || b.height < 48 || !visible(svg)) continue;
+      for (const sh of svg.querySelectorAll('rect,circle,ellipse,path,line,polyline,polygon')) for (const prop of ['fill', 'stroke']) {
+        const c = parseColor(cs(sh)[prop]);
+        if (c && c.a >= 0.99 && !near(c, ds.colors) && !isNeutral(c)) { const k = `svg rgb(${c.r},${c.g},${c.b})`; offColors.set(k, (offColors.get(k) || 0) + 1); }
+      }
+    }
     const topColors = [...offColors.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
     if (topColors.length) push('design-color-drift', 'warn', null, `${offColors.size} saturated color(s) outside the DESIGN.md palette (top: ${topColors.map(([k, n]) => `${k}×${n}`).join(', ')})`);
     if (offRadii.size) push('design-radius-drift', 'advisory', null, `${offRadii.size} radius value(s) off the DESIGN.md scale: ${[...offRadii.keys()].map(r => r + 'px').join(', ')}`);
@@ -579,6 +651,76 @@ async function auditMotion(browser, url, viewport, ctxOpts, motions, args) {
   return report;
 }
 
+// WCAG 2.4.7 / 2.4.11: tab through the page (≤40 stops) and check that every focus stop is visibly
+// indicated and not covered by fixed/sticky UI. Rest styles are read by blurring the stop, then focus
+// is restored without scrolling so the sweep continues from the same place.
+async function focusSweep(page) {
+  const findings = [], seen = new Set();
+  let invisible = null, obscured = null, nInv = 0, nObs = 0;
+  try {
+    await page.evaluate(() => { if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur(); window.scrollTo(0, 0); });
+    for (let i = 0; i < 40; i++) {
+      await page.keyboard.press('Tab');
+      const r = await page.evaluate(() => {
+        const el = document.activeElement;
+        if (!el || el === document.body || el === document.documentElement) return null;
+        const desc = e => e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (e.classList.length ? '.' + e.classList[0] : '') + (e.textContent && e.textContent.trim() ? ` "${e.textContent.trim().slice(0, 40)}"` : '');
+        const snap = e => { const s = getComputedStyle(e); return [s.outlineStyle, s.outlineWidth, s.outlineColor, s.boxShadow, s.borderTopColor, s.borderRightColor, s.borderBottomColor, s.borderLeftColor, s.backgroundColor, s.color, s.textDecorationLine].join('|'); };
+        const focused = snap(el), focusedParent = el.parentElement ? snap(el.parentElement) : '';
+        el.blur();
+        const rest = snap(el), restParent = el.parentElement ? snap(el.parentElement) : '';
+        el.focus({ preventScroll: true });
+        const b = el.getBoundingClientRect(), cx = b.left + b.width / 2, cy = b.top + b.height / 2;
+        let cover = null;
+        if (b.width > 0 && b.height > 0 && cx >= 0 && cy >= 0 && cx <= innerWidth && cy <= innerHeight) {
+          const hit = document.elementFromPoint(cx, cy);
+          if (hit && hit !== el && !el.contains(hit) && !hit.contains(el)) {
+            for (let a = hit; a && a !== document.body; a = a.parentElement) { const p = getComputedStyle(a).position; if (p === 'fixed' || p === 'sticky') { cover = desc(a); break; } }
+          }
+        }
+        return { key: desc(el) + '@' + Math.round(b.top + scrollY), self: desc(el), invisible: focused === rest && focusedParent === restParent, cover };
+      });
+      if (!r || seen.has(r.key)) break;
+      seen.add(r.key);
+      if (r.invisible) { nInv++; invisible = invisible || r.self; }
+      if (r.cover) { nObs++; obscured = obscured || `${r.self} under ${r.cover}`; }
+    }
+  } catch (e) { return [{ rule: 'focus-sweep-error', severity: 'advisory', selector: '', detail: String(e && e.message || e).slice(0, 160), engine: 'builtin' }]; }
+  if (nInv) findings.push({ rule: 'focus-invisible', severity: 'error', selector: invisible, detail: `${nInv} focus stop(s) show no visible change (outline, shadow, border, background) — WCAG 2.4.7`, snippet: invisible, engine: 'builtin' });
+  if (nObs) findings.push({ rule: 'focus-obscured', severity: 'error', selector: obscured, detail: `${nObs} focus stop(s) covered by fixed/sticky UI — WCAG 2.4.11 (give the bar scroll-padding / body padding)`, snippet: obscured, engine: 'builtin' });
+  return findings;
+}
+
+// WCAG 1.4.12: apply the user text-spacing overrides and report text that NEWLY clips or spills out of
+// a fixed-size box (auto-height boxes grow; scroll containers scroll; only fixed boxes lose content).
+// Runs once per URL, at the widest viewport, after every other check because it changes layout.
+async function textSpacingPass(page) {
+  const collect = () => {
+    const out = [];
+    let i = 0;
+    for (const el of document.querySelectorAll('body *')) {
+      const idx = i++;
+      const s = getComputedStyle(el), r = el.getBoundingClientRect();
+      if (s.display === 'none' || s.visibility === 'hidden' || r.width === 0 || r.height === 0) continue;
+      if (s.display === 'inline' || /^(auto|scroll)$/.test(s.overflowY) || /^(auto|scroll)$/.test(s.overflowX)) continue;
+      if (!Array.from(el.childNodes).some(n => n.nodeType === 3 && n.textContent.trim())) continue;
+      const lost = el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1;
+      out.push({ idx, lost, desc: el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (el.classList.length ? '.' + el.classList[0] : '') + ` "${(el.textContent || '').trim().slice(0, 40)}"` });
+    }
+    return out;
+  };
+  try {
+    const before = await page.evaluate(collect);
+    await page.addStyleTag({ content: '*{line-height:1.5!important;letter-spacing:.12em!important;word-spacing:.16em!important}p{margin-bottom:2em!important}' });
+    await page.waitForTimeout(150);
+    const after = await page.evaluate(collect);
+    const was = new Map(before.map(b => [b.idx, b.lost]));
+    const lost = after.filter(x => x.lost && was.get(x.idx) === false);
+    if (!lost.length) return [];
+    return [{ rule: 'text-spacing-loss', severity: 'error', selector: lost[0].desc, detail: `${lost.length} element(s) clip or spill out of a fixed box under WCAG 1.4.12 text spacing (line-height 1.5, letter .12em, word .16em, paragraph 2em)`, snippet: lost.slice(0, 3).map(l => l.desc).join(' | '), engine: 'builtin' }];
+  } catch (e) { return [{ rule: 'text-spacing-error', severity: 'advisory', selector: '', detail: String(e && e.message || e).slice(0, 160), engine: 'builtin' }]; }
+}
+
 async function main() {
   const a = parseArgs(process.argv);
   const assetReport = a.assets ? require('./asset-check.cjs').check(a.assets) : null;
@@ -610,6 +752,7 @@ async function main() {
     catch (e) { process.stderr.write(`design-scan: --prev ${a.prev} unreadable (${String(e && e.message || e).slice(0, 80)}) — scanning everything\n`); }
   }
 
+  const widest = a.viewportList.reduce((m, v) => (v.width > m.width ? v : m), a.viewportList[0]);
   for (const url of a.urls) {
     for (const vp of a.viewportList) {
       const context = await browser.newContext({ ...ctxOpts, viewport: vp });
@@ -656,6 +799,8 @@ async function main() {
             }
           } catch (e) { entry.findings.push({ rule: 'impeccable-engine-error', severity: 'advisory', selector: '', detail: String(e.message || e).slice(0, 160), engine: 'impeccable' }); }
         }
+        if (!entry.reused) entry.findings.push(...await focusSweep(page));
+        if (!entry.reused && vp === widest) entry.findings.push(...await textSpacingPass(page));
         if (!entry.reused && consoleErrors.length) entry.findings.push({ rule: 'console-error', severity: 'error', selector: '', detail: `${consoleErrors.length} console/page error(s)`, snippet: consoleErrors.slice(0, 3).join(' | '), engine: 'builtin' });
         if (assetReport?.manifest.motion.length) {
           const motion = await auditMotion(browser, url, vp, ctxOpts, assetReport.manifest.motion, a);
