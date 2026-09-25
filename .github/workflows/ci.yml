@@ -34,25 +34,28 @@ jobs:
       - name: Seam smoke (deterministic end-to-end pipeline)
         run: bash scripts/smoke-seam.sh
 
-  # The model-drift alarm. Costs real tokens, needs CLAUDE_CODE_OAUTH_TOKEN or
-  # ANTHROPIC_API_KEY as a repo secret — manual dispatch only.
-  model-smoke:
-    name: Model smoke (drift alarm)
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+  windows-smoke:
+    name: Harness Windows smoke
+    runs-on: windows-latest
     timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           persist-credentials: false
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
           node-version: 24
           package-manager-cache: false
-      - name: Install claude CLI
-        run: npm install -g @anthropic-ai/claude-code@2.1.268
-      - name: Run headless micro-build
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          AR_SMOKE_MODEL: "1"
-        run: bash scripts/smoke-model.sh
+      - name: Windows execution and installed package seams
+        run: |
+          set -e
+          for t in acceptance verification ci-evidence delivery recovery operations delivery-metrics release-eval codex-plugin; do
+            bash "tests/test-$t.sh"
+          done
+          bash scripts/smoke-seam.sh
+
+  # Model evaluations run locally with subscription logins. Release policy pins
+  # their report digest and independently verifies these hosted CI jobs.

@@ -14,7 +14,7 @@
 #   - LOGIC GATE: `logic` rows are business-rule golden cases and are must-pass. While ANY
 #     `logic` row is red, the headline pass-rate is capped at LOGIC_GATE_CAP (default 0.50) —
 #     you cannot ride ux/devops/monitoring/hardening polish to "done" while domain math is wrong.
-#   - per-dimension score = sum(weight of pass) / sum(weight of pass|fail); status=skip excluded
+#   - applicable unresolved rows count in the denominator; legacy skip rows are excluded
 #   - dimension weights are renormalized over the dimensions that actually ran.
 #   - no measurable rows at all → PASS_RATE: 0.00 (honest baseline: nothing built yet).
 #   - STDOUT is exactly one line: "PASS_RATE: N"  (so `… | awk '{print $2}'` yields the number).
@@ -226,9 +226,16 @@ apply_evidence_strict() {
 }
 
 # ---------------------------------------------------------------------------
+# Validate before evidence filtering/scoring so malformed input cannot disappear.
+# Completion additionally checks the pinned expected set; this is the shared TSV contract.
+validate_results() {
+  node "$SCRIPT_DIR/acceptance.cjs" validate "$1"
+}
+
+# ---------------------------------------------------------------------------
 # pass-rate: reduce a build-results TSV to a weighted acceptance pass-rate.
 # TSV columns (tab):  spec  dimension  assertion  weight  status  detail  [traces]
-# status ∈ {pass, fail, skip}.  Comment (#) + header rows ignored.
+# status ∈ {pass, fail, blocked, flaky, not_run, skip}. Invalid input exits 2.
 # Col 7 `traces` (optional, comma-sep FR-n/NFR-n/design:<group>) is read by `coverage`, not pass-rate.
 # ---------------------------------------------------------------------------
 pass-rate() {
@@ -247,6 +254,11 @@ pass-rate() {
     return 0
   fi
 
+  if ! validate_results "$results"; then
+    echo "PASS_RATE: 0.00"
+    return 2
+  fi
+
   local eff="$results" strict_tmp="" strict_tag=""
   if [[ "${BUILD_EVIDENCE_STRICT:-0}" == "1" ]]; then
     strict_tmp="$(apply_evidence_strict "$results")"
@@ -258,14 +270,17 @@ pass-rate() {
   headline="$(awk -v FS='\t' \
       -v wL="$BUILD_W_LOGIC" -v wF="$BUILD_W_FUNCTIONAL" -v wU="$BUILD_W_UX" -v wD="$BUILD_W_DEVOPS" \
       -v wM="$BUILD_W_MONITORING" -v wH="$BUILD_W_HARDENING" -v gate="$LOGIC_GATE_CAP" '
+    { sub(/\r$/, "") }
     /^#/            { next }
-    $1=="spec"      { next }
+    $1=="spec" && $2=="dimension" { next }
     NF < 5          { next }
     {
       dim=$2; wt=$4+0; st=$5;
-      if (wt <= 0) wt = 1;
       if (st=="pass") { num[dim]+=wt; den[dim]+=wt }
-      else if (st=="fail") { den[dim]+=wt }
+      else if (st=="fail" || st=="blocked" || st=="flaky" || st=="not_run") {
+        den[dim]+=wt;
+        if (dim=="logic") logic_unresolved=1;
+      }
       # status=skip (n/a) excluded from both numerator and denominator
     }
     END {
@@ -305,7 +320,7 @@ pass-rate() {
       gate0 = gate + 0;
       logicgate = "n/a";
       if ("logic" in score) {
-        if (score["logic"] < 0.999) { if (disp > gate0) disp = gate0; logicgate = sprintf("CAPPED@%.2f", gate0) }
+        if (logic_unresolved) { if (disp > gate0) disp = gate0; logicgate = sprintf("CAPPED@%.2f", gate0) }
         else logicgate = "PASS";
       }
 
@@ -446,7 +461,11 @@ bound() {
 case "${1:-}" in
   rubric)    shift; rubric    "$@" ;;
   pass-rate) shift; pass-rate "$@" ;;
+  completion)
+    shift
+    node "$SCRIPT_DIR/acceptance.cjs" complete "${3:-.}" "${2:?plan.json required}" "${1:?results.tsv required}" "${@:4}"
+    ;;
   coverage)  shift; coverage  "$@" ;;
   bound)     shift; bound     "$@" ;;
-  *) echo "usage: $0 {rubric [file] | pass-rate [--strict-evidence] [results.tsv|spec…] | coverage [results.tsv] [requirements.md] | bound <iterations.tsv> <max>}" >&2; exit 64 ;;
+  *) echo "usage: $0 {rubric [file] | pass-rate [--strict-evidence] [results.tsv|spec…] | completion <results.tsv> <plan.json> [project] [plan-sha256] | coverage [results.tsv] [requirements.md] | bound <iterations.tsv> <max>}" >&2; exit 64 ;;
 esac

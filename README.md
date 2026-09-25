@@ -1415,6 +1415,9 @@ These terminal scripts maintain **AutoForge itself** at `Jss-on/autoforge`. Use 
 for an application's own repository or deployment. Run the scripts from an AutoForge checkout
 with Bash, Git, Node, the [harness prerequisites](#prerequisites), and authenticated Git access.
 Versioned releases also require the `gh` CLI and repository write access.
+Both publication paths also require fresh installed Claude/Codex evaluations and independently
+verified CI evidence for the prepared bundle. Missing or skipped required evaluations block release;
+see the [installed evaluation guide](guide/installed-evaluation.md).
 
 | Intent | Command | Result |
 |--------|---------|--------|

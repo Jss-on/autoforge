@@ -1,17 +1,20 @@
 #!/usr/bin/env bash
 # Local contract fixtures only: no credentials, network calls or deployments.
 set -uo pipefail
+export FORGE_TEST_BASH="$BASH"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 node - "$ROOT" <<'JS'
 const fs = require('node:fs'), path = require('node:path'), os = require('node:os');
 const assert = require('node:assert/strict'), { spawnSync } = require('node:child_process');
 const root = process.argv[2], validator = path.join(root, 'scripts/validate-handoff.sh');
+const acceptance = require(path.join(root, 'scripts/acceptance.cjs'));
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'forge-security-ship-'));
 let count = 0, sequence = 0;
 const check = id => ({ id, status: 'pass', evidence: 'evidence/check.txt' });
 const core = source => ({ version: '3.1.0', source, timestamp: '2026-09-11T12:00:00Z', status: 'COMPLETE' });
 const audit = () => ({ ...core('security'), security: { verdict: 'PASS', fail_on: 'high', checks: [check('auth')], findings: [] } });
 const buildReport = (source = 'build') => ({ ...core(source), status: 'CONVERGED', results_tsv: 'build-results.tsv',
+  version: '3.3.0', acceptance: {plan:'acceptance-plan.json',plan_sha256:'AUTO_FIXTURE'},
   metric: { name: 'fullstack_pass_rate', value: 1 }, config: {}, coverage: { requirements: 1, design: 1 }, security: audit().security });
 const digest = 'sha256:' + '2'.repeat(64);
 const delivery = () => ({ ...core('ship'), ship: { action: 'ship', target: 'repo:fixture/env:staging', artifact: digest,
@@ -25,14 +28,31 @@ const preview = () => { const j = delivery(); j.status = 'DRY_RUN'; j.ship.actio
 function run(j, gate = false, files = () => {}) {
   const dir = path.join(temp, String(++sequence)); fs.mkdirSync(path.join(dir, 'evidence'), { recursive: true });
   for (const f of ['check.txt', 'receipt.txt', 'authorization.txt']) fs.writeFileSync(path.join(dir, 'evidence', f), 'local fixture evidence\n');
+  if (['build','feature'].includes(j.source)) {
+    fs.writeFileSync(path.join(dir,'requirements.md'),'FR-1 fixture requirement\n');
+    fs.writeFileSync(path.join(dir,'assert.cjs'),"require('node:assert/strict').equal(1+2,3)");
+    fs.writeFileSync(path.join(dir,'checks.json'),JSON.stringify({checks:[{spec:'app',id:'FR-1',dimension:'functional',weight:1,required:true,applicable:true,execution:{argv:[process.execPath,'assert.cjs'],inputs:['assert.cjs'],environment:[],secret_env:{},timeout_ms:3000,output_limit:1024}}]}));
+    fs.writeFileSync(path.join(dir,'build-results.tsv'),'app\tfunctional\tFR-1\t1\tpass\tevidence:evidence/check.txt\n');
+    let previous;
+    if(j.source==='feature') { acceptance.snapshot(dir,'checks.json','previous.json',['requirements.md']); previous={path:'previous.json',sha256:acceptance.sha(fs.readFileSync(path.join(dir,'previous.json')))}; }
+    acceptance.snapshot(dir,'checks.json','acceptance-plan.json',['requirements.md'],previous);
+    fs.unlinkSync(path.join(dir,'evidence/check.txt'));
+    const exec=spawnSync(process.execPath,[path.join(root,'scripts/verification.cjs'),'run',dir,'acceptance-plan.json','app','FR-1','evidence/check.txt'],{encoding:'utf8',timeout:10000});assert.equal(exec.status,0,exec.stderr);
+    if(j.acceptance?.plan_sha256==='AUTO_FIXTURE') j.acceptance.plan_sha256=acceptance.sha(fs.readFileSync(path.join(dir,'acceptance-plan.json')));
+  }
   files(dir); const file = path.join(dir, 'handoff.json'); fs.writeFileSync(file, JSON.stringify(j));
-  const r = spawnSync('bash', [validator, file, j.source, ...(gate ? ['--require-pass'] : [])], { encoding: 'utf8' });
+  const r = spawnSync(process.env.FORGE_TEST_BASH, [validator, file, j.source, ...(gate ? ['--require-pass'] : [])], { encoding: 'utf8', timeout:60000, cwd:dir, env:{...process.env,FORGE_PROJECT_ROOT:dir} });
   if (r.error) throw r.error;
   return { code: r.status, output: r.stdout.trim(), error: r.stderr };
 }
 function test(name, action) { action(); count++; console.log('  PASS: ' + name); }
 function expect(j, code, gate = false, files) { const r = run(j, gate, files); assert.equal(r.code, code, JSON.stringify(r)); assert.equal(r.output, code ? 'INVALID' : 'VALID'); }
 test('clean audit passes without invented findings', () => expect(audit(), 0, true));
+test('completed build requires its pinned plan',()=>{const j=buildReport();delete j.acceptance;expect(j,1);});
+test('completed build rejects replaced plan digest',()=>{const j=buildReport();j.acceptance.plan_sha256='0'.repeat(64);expect(j,1);});
+test('completed build rejects a deleted required row',()=>expect(buildReport(),1,false,dir=>fs.writeFileSync(path.join(dir,'build-results.tsv'),'# all required rows were dropped\n')));
+test('completed build rejects blocked required row despite claimed metric',()=>expect(buildReport(),1,false,dir=>fs.writeFileSync(path.join(dir,'build-results.tsv'),'app\tfunctional\tFR-1\t1\tblocked\tevidence:evidence/check.txt\n')));
+test('old build remains readable but cannot pass new readiness',()=>{const j=buildReport();for(const version of ['3.1.0','3.2.0']){j.version=version;delete j.acceptance;expect(j,0);expect(j,1,true);}});
 for (const [name, change] of [
   ['empty planned checks', j => { j.security.checks = []; }],
   ['missing current evidence record', j => { delete j.security; }],

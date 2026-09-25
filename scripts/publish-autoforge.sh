@@ -69,6 +69,8 @@ autoforge_gates() {
   done
   bash scripts/smoke-seam.sh
   autoforge_stable "$head"
+  node scripts/release-evidence.cjs local . "$head"
+  autoforge_stable "$head"
 }
 
 autoforge_publish() {
@@ -91,6 +93,8 @@ autoforge_publish() {
   [[ "$tag_status" == 0 || "$tag_status" == 2 ]] || { echo 'ERROR: could not verify remote release tag.' >&2; return 1; }
   autoforge_gates "$head"
   if [[ "$remote_tree" == "$tree" ]]; then echo 'Verified: no changes to publish.'; return 0; fi
+  node scripts/release-evidence.cjs ci . "$head"
+  autoforge_stable "$head"
   message="${1:-publish: $(git log -1 --format=%s "$head") }"
   commit=$(git commit-tree "$tree" -p "$AUTOFORGE_BASE" -m "$message")
   autoforge_stable "$head"

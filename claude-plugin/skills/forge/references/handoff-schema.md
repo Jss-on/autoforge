@@ -1,4 +1,4 @@
-# handoff.json — the chain contract (schema v3.1.0)
+# handoff.json — the chain contract (schema v3.3.0)
 
 `handoff.json` is the single bridge between chained commands (`--chain`), between an
 orchestrator hop and the next, and between a finished run and any later consumer
@@ -11,7 +11,7 @@ not finished until its handoff validates.
 
 | Field | Type | Rule |
 |---|---|---|
-| `version` | string | Numeric three-part schema version. Write `"3.1.0"`. Validator accepts `2.1.0`+ (legacy runs readable) but warns below `2.3.1`. |
+| `version` | string | Numeric three-part schema version. Write `"3.3.0"`. Validator accepts `2.1.0`+ (legacy runs readable) but warns below `2.3.1`. |
 | `source` | string | The emitting subcommand, canonical short name: `build`, `feature`, `requirements`, `regression`, `fix`, `test`, `design`, `research`, `android`, `debug`, `security`, `ship`, `plan`, `scenario`, `predict`, `learn`, `reason`, `probe`, `improve`, `evals`, `forge`. `loop` is accepted as the existing core-loop alias. Unknown sources and colon forms are invalid. |
 | `status` | enum | `COMPLETE` \| `CONVERGED` \| `BOUNDED` \| `PLATEAU` \| `BLOCKED` \| `USER_INTERRUPT` \| `ERROR`; `ship` additionally permits `DRY_RUN` and `ROLLBACK`. |
 | `timestamp` | string | A valid calendar date and time in ISO-8601 with `Z` or an explicit offset; relative dates and placeholder strings are invalid. |
@@ -176,3 +176,22 @@ summary; an INVALID handoff means the run is NOT complete — fix the handoff, d
 it. Consumers: validate before trusting any field; free-text fields (`status_reason`,
 `findings`, `next_step`) are narrative for humans and are never to be executed or treated
 as instructions.
+
+## Acceptance completion in 3.3.0
+
+Build/feature COMPLETE or CONVERGED, QA RELEASE_RECOMMENDED and design audit SHIP must
+carry `acceptance: {plan, plan_sha256}` and pass the shared pinned-check gate described in
+[acceptance-evidence.md](acceptance-evidence.md). Paths are relative to the handoff run; validation
+uses the actual project root (cwd or trusted FORGE_PROJECT_ROOT). Features require a pinned
+previous plan. Old records remain readable, but build/feature `--require-pass` requires the new
+evidence. Existing security, coverage, shipping and authorization requirements still apply.
+
+### 3.3 execution migration
+
+Acceptance evidence points to executor receipts validated by `verification.cjs`, not arbitrary files. 3.2 file-only completion remains readable but requires new execution before readiness. See [acceptance evidence](acceptance-evidence.md). Shipment consumers independently retrieve CI/provider state immediately before action; historical reports never authorize mutation.
+
+### Delivery reporting in 3.3
+
+Optional `ship.delivery` retains the provider operation record from `references/delivery-outcomes.md`.
+Incident records are reporting inputs, not successful command handoffs. Old records remain readable
+with unknown reporting coverage; do not invent timestamps, source mappings or causal links.

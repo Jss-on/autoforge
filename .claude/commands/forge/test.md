@@ -20,6 +20,15 @@ chains to `fix`/`feature`), and "release-ready" is decided by `scripts/score-tes
 never by opinion. Companion contract: `references/qa-testing-protocol.md` (technique catalog,
 severity/priority model, deliverable templates, standards mapping).
 
+## Required acceptance completion
+
+Follow `references/acceptance-evidence.md`: pin the reviewed expected check set before implementation,
+then require `scripts/score-build.sh completion <results.tsv> <acceptance-plan.json> <project-root>`
+before completion or a release-ready verdict. Keep weighted scoring for iteration selection.
+Missing, blocked, flaky, unexecuted or unjustifiably skipped required checks cannot be waived by
+a lower target or soft gates. Emit schema `3.3.0` with the pinned `acceptance` reference; feature
+runs preserve the previous accepted floor. Design-system output without an audit remains separate.
+
 ## Seam & reference resolution (read once)
 Resolve `AR_ROOT` exactly as in `build`: first existing of `${CLAUDE_PLUGIN_ROOT}/skills/forge`,
 `.claude/skills/forge`, the directory containing this command file, else glob
@@ -229,7 +238,7 @@ Interval: floor(max_iterations / 3), min 1. Print pass-rate trend, execution pro
 A rising arrival curve at the bound → recommend extension or RELEASE_BLOCKED, never silent exit.
 
 ## Chain Handoff
-Write handoff.json: version "3.1.0", source "test", timestamp, status
+Write handoff.json: version "3.3.0", source "test", timestamp, status
 (COMPLETE|BOUNDED|BLOCKED|USER_INTERRUPT|ERROR), results_tsv, defects_tsv, verdict
 (RELEASE_RECOMMENDED|RELEASE_BLOCKED), summary (path), metric (fullstack_pass_rate), coverage,
 findings = unresolved defects + not-tested list, config{target, requirements, types, iterations}.

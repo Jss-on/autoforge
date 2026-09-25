@@ -210,7 +210,7 @@ don't sand it), sources read vs triaged, disconfirmation hit-rate. A flat covera
 checkpoints running → recommend narrowing the RQ set or accepting a scarcity note, never padding.
 
 ## Chain Handoff
-Write handoff.json: version "3.1.0", source "research", timestamp, status
+Write handoff.json: version "3.3.0", source "research", timestamp, status
 (COMPLETE|BOUNDED|BLOCKED|USER_INTERRUPT|ERROR), verdict (DOSSIER_READY|DOSSIER_BLOCKED), report
 (dossier path), findings = per-RQ one-line answers + the contested list + scarcity notes,
 config{topic, rqs, recency, audience, depth, iterations}. Validate with

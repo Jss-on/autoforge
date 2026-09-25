@@ -71,10 +71,21 @@ printf '\n--- score-test: exit-criteria verdict ---\n'
 # ============================================================================
 
 printf 'spec\tdimension\tassertion\tweight\tstatus\tdetail\ttraces\n' > "$T/r.tsv"
-printf 'app\tfunctional\tlogin\t1\tpass\tevidence:evidence/u.txt#login\tFR-1\n' >> "$T/r.tsv"
-printf 'app\tlogic\ttax\t1\tpass\tevidence:evidence/u.txt#tax\tFR-2\n' >> "$T/r.tsv"
+printf 'app\tfunctional\tlogin\t1\tpass\tevidence:evidence/login.json#login\tFR-1\n' >> "$T/r.tsv"
+printf 'app\tlogic\ttax\t1\tpass\tevidence:evidence/tax.json#tax\tFR-2\n' >> "$T/r.tsv"
 printf -- '- FR-1 login\n- FR-2 tax\n' > "$T/reqs.md"
 printf "${hdr}DEF-1\tmedium\tP3\topen\tTC-1\tcosmetic\tevidence:evidence/u.txt\n" > "$T/d.tsv"
+
+export BUILD_ACCEPTANCE_PLAN="$T/plan.json" FORGE_PROJECT_ROOT="$T"
+node - "$REPO_ROOT" "$T" <<'JS'
+const fs=require('node:fs'),path=require('node:path');
+const a=require(path.join(process.argv[2],'scripts/acceptance.cjs')),root=process.argv[3];
+fs.writeFileSync(path.join(root,'assert.cjs'),"require('node:assert/strict').equal(1+2,3)");
+const checks=[['login','functional'],['tax','logic']].map(([id,dimension])=>({spec:'app',id,dimension,weight:1,required:true,applicable:true,execution:{argv:[process.execPath,'assert.cjs'],inputs:['assert.cjs'],environment:[],secret_env:{},timeout_ms:3000,output_limit:1024}}));
+fs.writeFileSync(path.join(root,'checks.json'),JSON.stringify({checks}));
+a.snapshot(root,'checks.json','plan.json',['reqs.md']);
+(async()=>{for(const c of checks)await require(path.join(process.argv[2],'scripts/verification.cjs')).execute(root,'plan.json','app',c.id,'evidence/'+c.id+'.json');})().catch(e=>{console.error(e);process.exitCode=1;});
+JS
 
 E_OUT=$(bash "$ST" exit-criteria "$T/r.tsv" "$T/d.tsv" "$T/reqs.md" 2>/dev/null); E_RC=$?
 assert_eq "VERDICT: RELEASE_RECOMMENDED" "$E_OUT" "exit-criteria: all green → RECOMMENDED"
@@ -96,7 +107,7 @@ assert_contains "$E_ERR" "pass-rate.*FAIL" "exit-criteria: names the failing cri
 
 # threshold override
 E_OUT=$(TEST_TARGET_RATE=0.50 bash "$ST" exit-criteria "$T/r.tsv" "$T/d.tsv" "$T/reqs.md" 2>/dev/null)
-assert_eq "VERDICT: RELEASE_RECOMMENDED" "$E_OUT" "exit-criteria: TEST_TARGET_RATE env override honored"
+assert_eq "VERDICT: RELEASE_BLOCKED" "$E_OUT" "exit-criteria: lower target cannot waive the pinned required-check gate"
 
 # uncovered requirement blocks
 head -3 "$T/r.tsv" > "$T/r2.tsv"
@@ -106,6 +117,13 @@ assert_eq "VERDICT: RELEASE_BLOCKED" "$E_OUT" "exit-criteria: untraced requireme
 
 bash "$ST" exit-criteria "$T/nope.tsv" "$T/d.tsv" >/dev/null 2>&1; E_RC=$?
 assert_eq 2 "$E_RC" "exit-criteria: missing results file → exit 2"
+
+printf 'app\tfunctional\tinvalid\t1\tpas\tevidence:evidence/u.txt\n' > "$T/invalid.tsv"
+E_OUT=$(TEST_TARGET_RATE=0 bash "$ST" exit-criteria "$T/invalid.tsv" "$T/d.tsv" 2>/dev/null); E_RC=$?
+assert_eq "VERDICT: RELEASE_BLOCKED" "$E_OUT" "invalid scorer input cannot pass even at target zero"
+assert_eq 1 "$E_RC" "QA propagates scorer rejection"
+E_OUT=$(TEST_TARGET_RATE=bogus bash "$ST" exit-criteria "$T/r.tsv" "$T/d.tsv" 2>/dev/null); E_RC=$?
+assert_eq 2 "$E_RC" "invalid QA threshold fails explicitly"
 
 rm -rf "$T"
 

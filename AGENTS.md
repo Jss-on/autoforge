@@ -60,7 +60,7 @@ cp -r autoforge/.agents/skills/forge ~/.agents/skills/forge
 
 | Command | Purpose |
 |---------|---------|
-| `forge` | Autonomous iteration loop (unlimited or bounded with `Iterations: N`) |
+| `forge` | Autonomous iteration loop (25 iterations by default; explicit `Iterations: unlimited` opts out) |
 | `forge:plan` | Interactive wizard: Goal → Scope, Metric, Direction, Verify config |
 | `forge:debug` | Autonomous bug-hunting — scientific method + iterative investigation |
 | `forge:fix` | Autonomous error repair — one fix per iteration until zero errors |
@@ -170,7 +170,7 @@ Iterations: 8
 | `Metric` | Yes | What number to optimize (higher/lower + unit) |
 | `Verify` | Yes | Shell command that outputs the metric value |
 | `Guard` | No | Safety command that must always pass (prevents regressions) |
-| `Iterations` | No | Bounded run — stop after N iterations (default: unlimited) |
+| `Iterations` | No | Bounded run — stop after N iterations (default: 25; `unlimited` is explicit) |
 | `Direction` | No | `higher` or `lower` — which direction is better |
 
 ---

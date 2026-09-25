@@ -159,7 +159,15 @@ Update: README.md (commands table), guide/ (new guide file), COMPARISON.md (subc
 
 ## Testing
 
-No automated tests — forge is Markdown instructions. Testing means using it:
+The harness has automated behavioral suites in `tests/test-*.sh`, a deterministic execution/handoff
+seam in `scripts/smoke-seam.sh`, and installed-agent evaluations with an external oracle. Run affected
+suites while editing, regenerate bundles with `scripts/transform.sh`, and run the full suite before
+release. Use Git Bash and Node 24 on Windows. CI runs Linux suites and a Windows smoke.
+
+Required release evaluations use `AR_SMOKE_MODEL_REQUIRED=1` with `FORGE_EVAL_AGENT=claude|codex`;
+a missing CLI, authentication, sandbox or oracle blocks the run. See
+[the evaluation guide](guide/installed-evaluation.md) for setup, evidence and release policy.
+Manual workflow checks remain useful:
 
 1. Symlink your working tree (see Quick Start)
 2. Open Claude Code in a real project

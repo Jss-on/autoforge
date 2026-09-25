@@ -141,3 +141,10 @@ Backed by `scripts/orchestrate.sh` (deterministic seam — all routing logic liv
 - **Validate the ledger before routing.** `validate-state` gates `orchestrator-state.json` (required fields + coarse types); a malformed ledger is not trusted to route from.
 - **Independent verify before convergence.** High-impact changes accepted on the working signal set `pending_verify`; `next-hop` routes to a `verify` hop (held-out / adversarial check) before `DONE` or ship. The verify hop never auto-approves ship.
 - **Unknown-units cycles excluded from Plateau counter.** A cycle where `units` returns `unknown` (e.g. runner crash) is not counted as zero-progress; repeated `unknown` routes to `BLOCKED`.
+
+## OpenCode shared command loading
+
+The command/reference bodies are shared canonical contracts. Interpret `/forge:<name>` as
+`/forge_<name>`, and `AskUserQuestion` as the available `question` tool. Read the registered
+`forge_<name>.md` command when routing a subcommand. Set `AR_ROOT` to the directory containing
+this loaded SKILL.md and resolve its bundled scripts/references there before project-local paths.

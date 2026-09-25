@@ -309,3 +309,7 @@ and spec generation (Phase 5, `REQUIRE_STACK_DECISION=1`) are blocked while the 
 - Survey methodologies: Stack Overflow 2025 — https://survey.stackoverflow.co/2025/methodology · State of JS 2024 — https://2024.stateofjs.com/en-US/about/ · Python Developers Survey 2024 — https://lp.jetbrains.com/python-developers-survey-2024/
 - Thoughtworks Radar rings + *Microservice envy* — https://www.thoughtworks.com/en-us/radar/faq · https://www.thoughtworks.com/radar/techniques/microservice-envy
 - github/spec-kit plan template (`NEEDS CLARIFICATION` gate) — https://github.com/github/spec-kit/blob/main/templates/plan-template.md
+
+## Delivery capability confirmation
+
+The existing decision must cover runtime, immutable promotion versus rebuild, exact account/project/region, environment protection availability on the actual plan, scoped credentials, persistence and isolated restore, telemetry retention, expected cost and teardown. Owner-delegated selection is valid only within that delegation; production authorization remains action/target/artifact bound. Pin these outcomes through `acceptance.cjs hosting`. Do not assume an environment name supplies a native approval gate or that a provider OIDC feature authenticates inbound deployments.

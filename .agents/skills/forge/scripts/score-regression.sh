@@ -163,5 +163,6 @@ verdict() {
 case "${1:-}" in
   rubric)  shift; rubric  "$@" ;;
   verdict) shift; verdict "$@" ;;
+  rollout|recovery) node "$SCRIPT_DIR/operational.cjs" "$@" ;;
   *) echo "usage: $0 {rubric [file] | verdict <results.tsv>}" >&2; exit 64 ;;
 esac

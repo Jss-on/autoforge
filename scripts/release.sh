@@ -91,6 +91,7 @@ echo "Review $PR_URL ($REVIEWED_HEAD)."
 read -rp "Type 'merge' to merge this verified PR and create $TAG (anything else leaves the PR open): " MERGE_RESPONSE
 [[ "$MERGE_RESPONSE" == merge ]] || { echo "PR left open: $PR_URL"; exit 0; }
 gh pr checks "$PR_URL" --repo "$REPO" --watch --fail-fast
+node scripts/release-evidence.cjs ci . "$REVIEWED_HEAD"
 gh api "repos/$REPO/commits/$REVIEWED_HEAD/check-runs?per_page=100" > "$BODY_FILE"
 node - "$BODY_FILE" "$REVIEWED_HEAD" <<'JS'
 const checks=JSON.parse(require('node:fs').readFileSync(process.argv[2],'utf8'));
