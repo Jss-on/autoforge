@@ -171,7 +171,10 @@ claim, number, or citation the dossier does not carry.
 ## GitHub flow (transparency contract)
 Research artifacts are evidence — commit the run directory (plan, ledgers, notes, dossier) to the
 invoking workspace as `research: <topic slug> dossier` so the engagement is reviewable and
-replayable. Nothing is pushed anywhere else; no external service receives the dossier.
+replayable. Nothing is pushed anywhere else; no external service receives the dossier. In a
+repository that is not yours (`node scripts/host.cjs detect` → `role: contributor`;
+`references/host-protocol.md` §3) the run directory stays uncommitted and locally excluded, and no
+query carries their identifiers, code or issue text.
 
 ## Safety Invariants
 - **No fabricated scholarship.** Every `sources.tsv` row's locator was actually accessed this run

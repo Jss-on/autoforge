@@ -72,6 +72,35 @@ Blocks destructive bash commands.
 - `git checkout .`, `git restore .`
 - `rm -rf /`, `rm -rf ~`, `rm -rf .`
 
+**Also blocked — a model named as author or co-author** (`lib/ai-credit.cjs`). In a command that
+writes history or a pull/merge request — `git commit | merge | tag | notes | push | config`,
+`gh` / `glab` `create | edit | update | comment | note | review | merge | close | api`:
+- a `Co-Authored-By` / `Authored-by` trailer whose name is a model's — `Claude Fable 5.1`,
+  `Claude Code`, `Opus 4.5`, `claude[bot]` — and any `…-by` trailer carrying an `@anthropic.com`
+  address
+- the "Generated with Claude Code" footer on a line of its own, the footer's Markdown link to
+  `https://claude.com/claude-code`, a `https://claude.ai/code/session_…` link
+- a git identity set to a model: `--author`, `user.name` / `user.email`, `GIT_AUTHOR_*`
+
+The command text is checked, and so is a message file it names: `-F`, `--file`, any `--…-file`
+flag, `$(cat file)`, `< file` — absolute, `~/`, Git Bash `/c/…` and `/tmp/…`, or relative to the
+session directory or a `cd` / `-C` target.
+
+Left alone, on purpose:
+- People. `Claude Dupont <…>` and even a bare `Claude <claude@company.example>` keep their credit;
+  so do `Reviewed-by: Claude` and `Encoded-by: opus` — only author keys are read for names.
+- Reading and cleaning: `git log --grep`, `gh pr view … | grep`, `grep -v 'Co-Authored-By: Claude'`.
+- Talking about it: a quoted mention mid-sentence, a label such as "Generated with Claude: …".
+- A disclosure in your words — `Assisted-by: Claude Fable 5.1`, a ticked template checkbox, a
+  sentence. Whether to disclose is your decision (or your employer's rule); the hook only refuses
+  authorship credit. Forge itself writes such a line only when you dictate it.
+
+The check is lexical and, like every command check here, sees the Bash tool only: a message
+assembled by a script, a file named through a variable, or a commit made through another shell
+tool is not seen. It is the net under the rule, not the rule — that is a safety invariant in
+`SKILL.md`. To stop Claude Code proposing the trailer at all, set
+`"attribution": {"commit": "", "pr": "", "sessionUrl": false}` in `~/.claude/settings.json`.
+
 **Disable:** `export AR_DISABLE_DANGEROUS_CMD_BLOCK=1`
 
 ## Context Injection (UserPromptSubmit / SubagentStart)
@@ -203,10 +232,11 @@ Records from the safety-gate hooks (`dangerous-cmd-block`, `privacy-block`, `sco
 ├── .ckignore               # Baseline blocked patterns
 ├── lib/
 │   ├── ar-hook-utils.cjs   # Shared utilities
+│   ├── ai-credit.cjs       # "A model is never an author" — rules read by dangerous-cmd-block
 │   └── ignore.cjs          # Vendored gitignore pattern matcher
 ├── scout-block.cjs         # Directory access blocker
 ├── privacy-block.cjs       # Sensitive file protector
-├── dangerous-cmd-block.cjs # Destructive command blocker
+├── dangerous-cmd-block.cjs # Destructive command and AI-authorship blocker
 ├── iteration-context.cjs   # TSV state injector
 ├── subagent-context.cjs    # Subagent context provider
 ├── dev-rules-reminder.cjs  # Post-compaction rule reminder

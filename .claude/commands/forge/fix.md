@@ -22,6 +22,15 @@ Both end with the same discipline: evidence per fix, ledger updated, GitHub issu
 validated, and commonly `--chain test` so the re-engagement — not this command — declares defects
 `verified`.
 
+**Whose repository?** Before the first write, commit or host call run
+`node scripts/host.cjs detect` and read `references/host-protocol.md`. On GitLab every `gh` / PR /
+issue / Actions step in this file maps to its `glab` / merge-request / pipeline equivalent (§1).
+`role: contributor` — an employer's, a client's or a community's repository — puts §3 above every
+owner default in this file, wherever it sits: their branch, commit and merge-request conventions;
+no push per kept fix, only a reviewable topic branch; the run directory and every working file stay
+uncommitted under `forge/`; no forge labels, markers or tracker comments; a test or CI file changes
+only on the user's word; and **no auto-merge**. A tracker backlog there is `/forge:backlog`'s job.
+
 ## Seam & reference resolution (read once)
 Resolve `AR_ROOT` exactly as in `build`: first existing of `${CLAUDE_PLUGIN_ROOT}/skills/forge`,
 `.claude/skills/forge`, the directory containing this command file, else glob
@@ -172,7 +181,8 @@ was actually applied, record its `reuse` check and ID/version in this run. Lesso
 sets a defect to `verified`: the independent `test` re-engagement still owns that decision.
 
 ## GitHub flow (transparency contract)
-When the working repo is an output repo (per `build`'s contract), fixes ride the standard lifecycle:
+Owner role — in a repository that is not yours, "Whose repository?" at the top of this file governs
+instead. When the working repo is an output repo (per `build`'s contract), fixes ride the standard lifecycle:
 - Work on branch **`fix/<stamp>`**; push at every kept fix; final commits squashed/reworded to
   conventional `fix: <summary> (DEF-n)` messages.
 - **Open a PR** when the queue is done (or the bound hits): body = per-defect table (root cause →
@@ -186,9 +196,12 @@ When the working repo is an output repo (per `build`'s contract), fixes ride the
   `verified` closes), and never touch unmarked issues.
 - **Comment on each `qa` issue** as its fix lands: root cause + commit + evidence path + "awaiting
   independent verification by `/forge:test`".
-Commit the fix run directory to the invoking workspace as usual.
+Owner role: commit the fix run directory to the invoking workspace as usual.
 
 ### Auto-merge (default ON — the loop finishes its own PRs)
+**Owner role only.** `role: contributor` (host-protocol §3) → never merge: open the PR/MR, get its
+pipeline green (`node scripts/host.cjs mr <n>` → `READY`), hand it to their reviewers and stop.
+
 The pipeline is meant to run hands-off: the human supplies requirements and a command, not repo
 chores. So the PR **merges itself once it has earned it**. All of these must hold — every one is a
 mechanical check, never a judgement call:

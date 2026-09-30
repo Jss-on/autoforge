@@ -246,7 +246,7 @@ fi
 
 # The core loop currently emits "loop"; retain it as the documented forge alias.
 case "$SOURCE" in
-  ""|forge|loop|build|feature|requirements|regression|fix|test|design|research|android|debug|security|ship|plan|scenario|predict|learn|reason|probe|improve|evals) ;;
+  ""|forge|loop|build|feature|requirements|regression|fix|test|design|research|android|backlog|debug|security|ship|plan|scenario|predict|learn|reason|probe|improve|evals) ;;
   *) err "source not in enum: $SOURCE" ;;
 esac
 
@@ -326,6 +326,9 @@ case "$SOURCE" in
       *)  err "verdict not in enum for android: $VERDICT (STORE_READY|BLOCKED)" ;;
     esac
     has_field results_tsv || err "missing: results_tsv (android-results.tsv — required for android)"
+    ;;
+  backlog)
+    has_field results_tsv || err "missing: results_tsv (backlog.tsv — required for backlog)"
     ;;
 esac
 

@@ -6,6 +6,13 @@ argument-hint: "[Scope: <glob>] [Focus: <area>] [Iterations: N] [--diff] [--fix]
 
 EXECUTE IMMEDIATELY.
 
+**Whose repository?** Run `node scripts/host.cjs detect` first. `role: contributor`
+(`references/host-protocol.md` §3 — an employer's, a client's or a community's repository): the
+audit stays read-only and its report stays in the run directory; findings go to the user, never
+onto their tracker; `--fix` follows `/forge:backlog`'s branch → merge request → review-handoff
+rules; `--strix` sends scan context to a model provider, which is another service — it needs the
+user's explicit word for this repository.
+
 ## Parse Arguments
 
 Extract from $ARGUMENTS:

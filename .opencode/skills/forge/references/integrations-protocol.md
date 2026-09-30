@@ -244,6 +244,12 @@ tracker of record only when armed: `Tracker: linear` argument or the spec's `tra
 field. Never dual-file the same defect in two trackers; `handoff.json` records the choice
 (`tracker` field). `Tracker: github` / unset → today's behavior, unchanged.
 
+"GitHub issues" here means **the repository host's own issues**: on a GitLab remote they are GitLab
+issues, reached through `glab` (`references/host-protocol.md` §1, §5). Tracker sync is an owner-role
+integration. In a repository that is not the user's (`role: contributor`, host-protocol §3) the
+tracker of record is the owner's and `Tracker: linear` is refused — their issue text never leaves
+their host.
+
 ### 3.2 Mapping (forge → tracker)
 
 | Forge event | Tracker operation |

@@ -14,7 +14,7 @@ An autonomous iteration engine for Claude Code, OpenCode, and OpenAI Codex.
 ![Version](https://img.shields.io/badge/version-3.6.0-blue.svg)
 [![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 
-**21 commands · 3 agent platforms · bounded iteration · evidence-backed gates**
+**22 commands · 3 agent platforms · bounded iteration · evidence-backed gates**
 
 [Capabilities](#capabilities) · [Scenarios](#practical-scenarios) · [Install](#quick-start) · [Commands](#commands) · [Build Software](#building-complex-software) · [Secure & Ship](#security-and-shipping-guide) · [Guides](guide/)
 
@@ -45,6 +45,11 @@ the packaged release; see the [project changelog](docs/project-changelog.md) for
 - **Stronger security completion:** build and feature completion require current passing checks
   and saved evidence. Optional **Strix** adds isolated dynamic testing; incomplete scans, missing
   reports and unresolved blocking findings prevent readiness. [Security guide](guide/forge-security.md).
+- **GitLab, and work in a repository that is not yours:** `/forge:backlog` works an employer's or
+  client's issue backlog — one item, one branch, one merge request, their pipeline green, handed to
+  their reviewers. Forge now detects the git host and whose repository it is; on GitLab the
+  GitHub-worded commands use `glab`, merge requests and pipelines, and in someone else's repository
+  nothing is merged, relabelled or copied off their host. [Backlog guide](guide/forge-backlog.md).
 
 ## Capabilities
 
@@ -60,10 +65,11 @@ the packaged release; see the [project changelog](docs/project-changelog.md) for
 | Security | STRIDE, OWASP/ASVS-guided checks, authorization and tenant isolation, secrets/dependencies, deployment boundaries and optional Strix verification | `security` |
 | Stability and release | Baseline/candidate comparisons, performance regression checks, release checklists, dry runs, artifact-bound execution evidence, live verification and rollback | `regression`, `ship` |
 | Android delivery | PWA preparation, Trusted Web Activity packaging, Digital Asset Links, signed bundles, emulator verification and store materials | `android` |
+| Contract work in someone else's repository | GitLab and GitHub hosts, issue intake and triage, one merge request per item, pipeline and review state checked against the host, and contributor rules: their conventions, no self-merge, nothing leaves their host | `backlog`, [host protocol](.claude/skills/forge/references/host-protocol.md) |
 | Documentation and memory | Codebase docs, navigable wikis, checked links, run history and scoped procedures retained from verified recoveries | `learn`, [procedural lessons](.claude/skills/forge/references/procedural-lessons.md) |
-| Integrations and runtime | Native image tools or media MCP, Figma import, GitHub/Linear tracking, environment checks, safety hooks and validated command handoffs | [Integrations and assets](#integrations-assets-and-memory), [hooks](#hooks--safety) |
+| Integrations and runtime | Native image tools or media MCP, Figma import, GitHub/GitLab/Linear tracking, environment checks, safety hooks and validated command handoffs | [Integrations and assets](#integrations-assets-and-memory), [hooks](#hooks--safety) |
 
-The [command reference](#commands) lists all 21 commands. Required checks remain required when
+The [command reference](#commands) lists all 22 commands. Required checks remain required when
 a tool or integration is unavailable; the run reports what is blocked instead of assuming success.
 
 ---
@@ -115,7 +121,7 @@ Before looping, the agent performs a one-time setup:
 | 4 | **Mechanical verification only** — no subjective "looks good"; use metrics |
 | 5 | **Automatic rollback** — failed changes revert instantly |
 | 6 | **Simplicity wins** — equal results + less code = keep |
-| 7 | **Git is memory** — experiments committed with `experiment:` prefix; agent reads `git log` + `git diff` before each iteration |
+| 7 | **Git is memory** — experiments committed with `experiment:` prefix; agent reads `git log` + `git diff` before each iteration. Commits carry your git identity only: no `Co-Authored-By` trailer or "Generated with" footer naming Claude, Fable, Opus or any other model |
 | 8 | **When stuck, think harder** — re-read, combine near-misses, try radical changes |
 
 ---
@@ -130,7 +136,7 @@ v2.1.1 ships a 9-hook safety system that protects your sessions automatically. H
 |------|-------------|-------|
 | **scout-block** | Blocks node_modules/, .git/, __pycache__/, etc. from filling your context | PreToolUse |
 | **privacy-block** | Blocks .env, SSH keys, credentials from being read in sessions | PreToolUse |
-| **dangerous-cmd-block** | Blocks force-push, `rm -rf`, `git reset --hard` | PreToolUse |
+| **dangerous-cmd-block** | Blocks force-push, `rm -rf`, `git reset --hard` — and any commit or pull/merge request that names Claude, Fable, Opus or another Claude model as author or co-author | PreToolUse |
 | **iteration-context** | Injects recent TSV iteration data after context compaction | UserPromptSubmit |
 | **subagent-context** | Gives subagents awareness of active loop state | SubagentStart |
 | **dev-rules-reminder** | Re-injects plan path and code standards after compaction | UserPromptSubmit |
@@ -175,6 +181,7 @@ See [guide/hooks.md](guide/hooks.md) for full reference.
 | `/forge:design` | Create `DESIGN.md`, plan imagery, audit a running UI and remediate design/accessibility defects | 12 (`--fix`) |
 | `/forge:research` | Produce a cited dossier with checked claims; optionally generate arXiv/IEEE papers | 15 |
 | `/forge:android` | Package a deployed web app as a verified, signed Android TWA with a store pack | 12 |
+| `/forge:backlog` | Work an employer's or client's tracker backlog on GitLab or GitHub: one item, one branch, one merge request, their pipeline green, review handoff — never merges its own work | 25 |
 | `/forge:debug` | Hunt bugs via hypothesis iteration | 15 |
 | `/forge:fix` | Remediate defects to zero, root-cause first | 20 |
 | `/forge:security` | Audit security boundaries, optionally run Strix, and gate readiness on checks and unresolved findings | 15 |
@@ -210,6 +217,9 @@ they are workflows, not a standalone `forge` shell executable.
 | Run a full QA engagement on an existing app (plan → RTM → verdict) | `/forge:test` |
 | Research a topic into a cited, source-anchored dossier | `/forge:research` |
 | Ship a built web app as an Android app (Play-ready TWA) | `/forge:android` |
+| Clear a backlog of bugs and unfinished work in a company's GitLab or GitHub repo | `/forge:backlog` |
+| See what a backlog run would pick up, without changing anything | `/forge:backlog --dry-run` |
+| Work one ticket in someone else's repo and hand it to their reviewers | `/forge:backlog Item: <id>` |
 | Give a plain-language goal, let it self-orchestrate | `/forge <goal>` (bare, no Metric/Verify) |
 | Improve test coverage / reduce bundle size / any metric | `/forge` |
 | Run bounded iterations | Add `Iterations: N` to any command |
@@ -604,7 +614,8 @@ These capabilities extend the same commands; they do not add separate command na
 
 `Assets: off` disables new generation, while retaining checked asset reuse, icons, motion and
 delivery checks. An unavailable provider leaves a required asset slot unmet. Figma and Linear are
-optional; file/catalog/generated design sources and GitHub remain available alternatives.
+optional; file/catalog/generated design sources and the repository host's own issues (GitHub or
+GitLab) remain available alternatives.
 
 Run state travels in a validated `handoff.json`; logs and nonempty evidence live under
 `forge/<command>-<timestamp>/`. A report's `COMPLETE` status and its passing disposition are separate.
@@ -629,7 +640,7 @@ Your git must be able to reach it: authenticate with `gh auth login`, or set up 
 | git | the loop itself — commit / revert is the memory |
 | Playwright | **required for the build pipeline** — headless Chromium for live e2e, axe a11y and DESIGN.md conformance (the ux dimension). Installed per project: `npm i -D playwright && npx playwright install --with-deps chromium` |
 
-Optional, per spec: `docker` (devops dimension), `axe` CLI (accessibility), `k6` or `autocannon` (perf SLOs), `gh` (release tooling).
+Optional, per spec: `docker` (devops dimension), `axe` CLI (accessibility), `k6` or `autocannon` (perf SLOs), `gh` (GitHub remotes, release tooling), `glab` (GitLab remotes — `glab auth login --hostname <host>` once per instance).
 Strix additionally needs its CLI, a working Docker runtime and a configured model/provider when
 selected. Android packaging needs the local or CI toolchain described in the
 [Android guide](guide/forge-android.md); research PDF output needs LaTeX. Native image and MCP
@@ -725,7 +736,7 @@ cp -r autoforge/.opencode/skills/forge ~/.config/opencode/skills/forge
 cp autoforge/.opencode/commands/forge*.md ~/.config/opencode/commands/
 ```
 
-> All 21 commands available as `/forge_debug`, `/forge_fix`, `/forge_improve`, etc.
+> All 22 commands available as `/forge_debug`, `/forge_fix`, `/forge_improve`, etc.
 
 ### Codex Quick Start
 
@@ -750,7 +761,7 @@ $forge security --diff --fail-on high
 $forge build Spec: ./spec.yaml
 ```
 
-All 21 workflows use `$forge` followed by a subcommand. The plugin loads the selected command
+All 22 workflows use `$forge` followed by a subcommand. The plugin loads the selected command
 and its bundled references and verification scripts. Results are written into the target
 repository's `forge/` directory. The package includes skills and scripts; the nine Claude Code
 hooks are specific to Claude Code.
@@ -1066,6 +1077,49 @@ ANDROID_VERDICT: STORE_READY
 and `verdict`; eleven required gates, each `pass` only with an evidence file that exists, decide
 `STORE_READY | BLOCKED`. Secrets never leave the machine in the clear (`gh secret set` from files);
 tags, Play uploads and track promotions stay human-gated. Contract: `references/android-protocol.md`.
+
+---
+
+## /forge:backlog — Someone Else's Backlog, on GitLab or GitHub
+
+The **contract engineer** of the pipeline. For the job where the repository, the tracker, the
+pipeline and the last word belong to someone else: you were hired to fix and finish a company's
+backlog. `backlog` takes the queue the owner already prioritised and turns each item into **one
+branch and one merge request** that their pipeline passes, then hands it to their reviewers.
+
+```
+/forge:backlog                                   # open issues assigned to you, in priority order
+/forge:backlog --dry-run                         # show the queue and the conventions found; change nothing
+/forge:backlog Issues: label=bug milestone="Q3 cleanup" Wip: 2
+/forge:backlog Item: 412                         # one ticket
+/forge:backlog Backlog: tickets.md               # the tracker is Jira or a spreadsheet: bring the list
+/forge:backlog --sync                            # what merged, what needs rework, what is still waiting
+```
+
+**How it works:** detect the host and whose repository it is → read *their* conventions (branch
+names, commit format, merge-request template, required checks) and record the Guard's baseline →
+intake the issues into a ledger → triage (type, priority, is it workable?) → per item: reproduce or
+write the failing check first, find the root cause, experiment locally with keep/revert, squash into
+commits in their convention, open a draft merge request, wait for **their** pipeline on the current
+head commit, mark it ready for review → on the next run, answer review threads before starting
+anything new.
+
+```
+{"host":"gitlab","hostname":"gitlab.acme.com","project":"platform/api","upstream":null,"default_branch":"develop","remote":"origin","cli":"glab","auth":"ok","user":"jdoe","role":"contributor","basis":"namespace is not the authenticated user"}
+{"host":"gitlab","number":231, … "checks":"green","merge":"discussions_not_resolved","threads":2,"verdict":"REWORK","reasons":["2 review thread(s) awaiting a reply"]}
+LEDGER: VALID total=14 remaining=6 open=5 in_review=3 done=4 blocked=1 dropped=0
+```
+
+`scripts/host.cjs` is the seam — `detect` (GitHub or GitLab, owner or contributor), `issues`
+(intake), `mr` (`READY | WAIT | REWORK | MERGED | CLOSED`) and `ledger` (`--live` checks every claim
+against the host). Credentials stay inside `gh` / `glab`. In a repository that is not yours forge
+**never merges** (`Merge: auto` is refused), never commits on or pushes to a protected branch, never
+edits their CI or tests to get green, leaves their tracker alone unless you say otherwise, keeps its
+run directory and working files out of their history, and sends nothing of theirs to another
+service; an item is `done` only when the host says its merge request merged. No commit or merge
+request names Claude, Fable, Opus or any other model as co-author — there or in your own
+repositories. The same host layer makes `fix`, `feature`,
+`test`, `design` and `ship` work on GitLab. Contract: `references/host-protocol.md`.
 
 ---
 
@@ -1756,6 +1810,7 @@ autoforge/
 │   ├── lessons.cjs                                ← evidence-backed procedural memory
 │   ├── score-research.sh · score-android.sh        ← research dossier/paper and Android readiness gates
 │   ├── score-regression.sh                        ← regression stability verdict
+│   ├── host.cjs                                   ← git-host seam: GitHub/GitLab detection, owner/contributor role, issue intake, merge-request verdicts, backlog ledger
 │   ├── validate-handoff.sh                        ← chain-handoff contract validator
 │   ├── run-index.sh · smoke-seam.sh · smoke-model.sh  ← run inventory + seam/model smokes
 │   └── release.sh · publish-autoforge.sh          ← release + test-gated publish automation
@@ -1767,12 +1822,12 @@ autoforge/
 │   │                                                security, personas, orchestrator routing, ux + hardening
 │   └── commands/
 │       ├── forge.md                        ← core loop (self-contained)
-│       └── forge/                          ← 20 subcommand files (21 commands total)
+│       └── forge/                          ← 21 subcommand files (22 commands total)
 ├── .claude-plugin/marketplace.json                ← marketplace manifest (marketplace name: autoforge)
 ├── claude-plugin/                                 ← Claude Code plugin package (skills + commands + hooks)
 ├── .opencode/                                     ← OpenCode port (via transform.sh)
 │   ├── skills/forge/
-│   └── commands/                                  ← 20 command files (forge_*.md)
+│   └── commands/                                  ← 21 command files (forge_*.md)
 ├── .agents/                                       ← Codex port (via transform.sh)
 │   └── skills/forge/
 └── plugins/forge/                          ← Codex plugin package
@@ -1817,7 +1872,7 @@ A: Point it at any `*-results.tsv` file from a previous run. It reports trends, 
 A: Yes. Any language, framework, or domain. Install via plugin (Claude Code), installer script, or manual copy.
 
 **Q: Does this work with OpenCode?**
-A: Yes. Run `./scripts/install.sh --opencode --global` or manually copy `.opencode/` files. Commands use underscore naming (`/forge_debug`, `/forge_evals`, etc.). All 21 commands available.
+A: Yes. Run `./scripts/install.sh --opencode --global` or manually copy `.opencode/` files. Commands use underscore naming (`/forge_debug`, `/forge_evals`, etc.). All 22 commands available.
 
 **Q: Does this work with OpenAI Codex?**
 A: Yes. Run `codex plugin marketplace add Jss-on/autoforge`, then `codex plugin add forge@forge-local`. Start a new thread and invoke `$forge plan`, `$forge build`, or any other subcommand. See [Codex Quick Start](#codex-quick-start) for updates, Windows setup and the manual skill fallback.

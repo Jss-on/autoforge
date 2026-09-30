@@ -6,6 +6,11 @@ argument-hint: "[Mode: <init|update|check|summarize|wiki>] [Scope: <glob>] [Iter
 
 EXECUTE IMMEDIATELY.
 
+**Whose repository?** Before the first write run `node scripts/host.cjs detect`. `role: contributor`
+(`references/host-protocol.md` §3 — an employer's, a client's or a community's repository): every
+page is written under the run directory, their `.gitignore` is not touched and nothing is committed,
+in every mode, unless the user asked for the docs as a change to their repository.
+
 ## Parse Arguments
 
 Extract from $ARGUMENTS:

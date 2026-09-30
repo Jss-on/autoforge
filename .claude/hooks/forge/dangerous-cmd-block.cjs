@@ -1,6 +1,7 @@
 'use strict';
 
-// PreToolUse hook: blocks destructive bash commands.
+// PreToolUse hook: blocks destructive bash commands, and commands that would name a model as
+// author or co-author (lib/ai-credit.cjs).
 // Regular `git push` is allowed — only force-push variants and hard-destructive ops are blocked.
 // Uses the packaged command screen; a broken screen cannot approve execution.
 
@@ -57,9 +58,21 @@ try {
     block('BLOCKED: Forge command screening refused this command or could not complete.');
   }
 
+  // A `#` line above the first quote character cannot be part of a quoted string: it is a
+  // comment (or heredoc text), never a command. Drop it, so an apostrophe in it ("# don't push
+  // yet") cannot swallow the command below as one quoted word.
+  // ponytail: an apostrophe after the first quote — in a later comment or a heredoc body — still
+  // can; closing that takes a shell lexer shared with the command screen.
+  let quoteFree = true;
+  const code = command.split('\n').filter(line => {
+    if (quoteFree && /^[ \t]*#/.test(line)) return false;
+    if (/['"]/.test(line)) quoteFree = false;
+    return true;
+  }).join('\n');
+
   // ponytail: conservative lexical checks, not a shell sandbox. Recognize static
   // quoting and force flags after the remote, including Git's +refspec spelling.
-  const words = command.match(/(?:[^\s'"\\;&|()]+|\\[^\n]|"(?:\\.|[^"\\])*"|'[^']*')+|[;&|()\n]/g) || [];
+  const words = code.match(/(?:[^\s'"\\;&|()]+|\\[^\n]|"(?:\\.|[^"\\])*"|'[^']*')+|[;&|()\n]/g) || [];
   const normalized = words.map(w => /\s/.test(w) && w !== '\n' ? '__argument__'
     : w.replace(/\\([A-Za-z0-9_./-])/g, '$1').replace(/['"]/g, '')).join(' ');
   if (/\bpush\b[^;&|()\n]*\s(?:--force(?:\b|=)|-[A-Za-z]*f[A-Za-z]*(?:\s|$)|\+\S)/.test(normalized)) {
@@ -74,6 +87,14 @@ try {
         `This command is blocked for safety during forge sessions.`
       );
     }
+  }
+  // Last, so that whatever it costs, the checks above have already had their say. Loaded here:
+  // a missing module then fails closed like the rest of the screen.
+  if (require('./lib/ai-credit.cjs').aiCredit(command, stdin.cwd)) {
+    log(HOOK_NAME, { action: 'block', matched: 'ai-credit' });
+    block('BLOCKED: A model is named as author — a co-author trailer, a "Generated with Claude ' +
+      'Code" footer, a session link, or a git identity set to a model. Remove it and retry: ' +
+      'commits and pull/merge requests carry the user\'s git identity only.');
   }
 
   process.exit(0);
