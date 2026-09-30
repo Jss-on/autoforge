@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # orchestrate.sh — deterministic seam for the forge orchestrator loop.
 #
-#   classify   <goal-string>   → Goal archetype label (keyword heuristics; 11 archetypes)
+#   classify   <goal-string>   → Goal archetype label (keyword heuristics; 12 archetypes)
 #   next-hop   <state.json>    → Next subcommand from router decision table
 #   units      <results.json>  → Units-remaining scalar (lower_is_better)
 #   plateau    <history.txt>   → Exit 0 if last N computed values are flat-or-worse
@@ -12,7 +12,7 @@
 set -uo pipefail
 
 # ---------------------------------------------------------------------------
-# classify: map a goal string to one of the 11 Goal archetype labels.
+# classify: map a goal string to one of the 12 Goal archetype labels.
 # Priority order matters: higher-stakes archetypes checked first so that
 # "fix and add the broken feature" → fix-broken, not build-feature.
 # ---------------------------------------------------------------------------
@@ -33,6 +33,14 @@ classify() {
   # owns its own trust/package/device-gate/release loop (single-pass dispatch).
   if printf '%s' "$g" | grep -qE '(android|\bapk\b|\baab\b|play store|google play|\btwa\b|trusted web activity)'; then
     echo "package-android"; return 0
+  fi
+
+  # Someone else's backlog — after harden/android, before ship/fix/build: "fix and complete the
+  # backlog", "ship the tickets assigned to me", "implement my GitLab issues" are all queue work for
+  # the backlog command, which ends at review handoff and never merges (single-pass dispatch).
+  # Bare "issues"/"tickets" are NOT enough: "fix the issues" is fix-broken, "build a ticket app" is a build.
+  if printf '%s' "$g" | grep -qE '(backlog|assigned to me|my (open )?(issues|tickets)|(gitlab|github|jira) (issues|tickets))'; then
+    echo "clear-backlog"; return 0
   fi
 
   # Ship/release/deploy — checked before fix-broken per the router spec:
@@ -492,7 +500,7 @@ validate-state() {
       for (const f of ["goal", "archetype", "predicate", "terminal_choice"])
         if (typeof j[f] !== "string" || !j[f].trim()) process.exit(2);
       if (!["ship-ready", "optimize-metric", "fix-broken", "harden", "build-feature", "explore",
-            "polish-ui", "document", "what-to-build", "decide-design", "package-android"].includes(j.archetype))
+            "polish-ui", "document", "what-to-build", "decide-design", "package-android", "clear-backlog"].includes(j.archetype))
         process.exit(2);
       // "stop" is the existing short form in persisted state fixtures.
       if (!["stop-at-verified", "proceed-to-ship", "stop"].includes(j.terminal_choice)) process.exit(2);

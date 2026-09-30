@@ -206,7 +206,7 @@ transform_hooks() {
 # source stays repo-root scripts/; these are distribution copies.
 
 transform_scripts() {
-  local runtime=(acceptance.cjs verification.cjs ci-evidence.cjs vercel-delivery.cjs operational.cjs delivery-metrics.cjs score-build.sh score-requirements.sh score-regression.sh score-debug-fix.sh orchestrate.sh doctor.sh validate-handoff.sh run-index.sh score-test.sh score-design.sh design-scan.cjs asset-check.cjs lessons.cjs score-research.sh score-android.sh)
+  local runtime=(acceptance.cjs verification.cjs ci-evidence.cjs vercel-delivery.cjs operational.cjs delivery-metrics.cjs host.cjs score-build.sh score-requirements.sh score-regression.sh score-debug-fix.sh orchestrate.sh doctor.sh validate-handoff.sh run-index.sh score-test.sh score-design.sh design-scan.cjs asset-check.cjs lessons.cjs score-research.sh score-android.sh)
   local tree s
   for tree in ".claude/skills/forge" \
               "claude-plugin/skills/forge" \

@@ -20,6 +20,14 @@ chains to `fix`/`feature`), and "release-ready" is decided by `scripts/score-tes
 never by opinion. Companion contract: `references/qa-testing-protocol.md` (technique catalog,
 severity/priority model, deliverable templates, standards mapping).
 
+**Whose repository?** Before the first write, commit or host call run
+`node scripts/host.cjs detect` and read `references/host-protocol.md` (§1 maps the `gh` / PR / issue
+steps in this file to GitLab). `role: contributor` — an employer's, a client's or a community's
+repository — puts §3 above every owner default in this file, wherever it sits: nothing is committed
+or pushed — plan, cases, results, ledger, report and any added test code stay under the run
+directory; no `qa/` branch or folder, no self-merging report PR, no issue filed on their tracker
+unless the user asks. The findings go to the user.
+
 ## Required acceptance completion
 
 Follow `references/acceptance-evidence.md`: pin the reviewed expected check set before implementation,
@@ -199,7 +207,8 @@ residual-risk statement. The command **recommends; the human decides** — never
 RELEASE_RECOMMENDED as a deploy action (shipping stays `ship`, human-gated).
 
 ## GitHub flow (transparency contract)
-Test artifacts are evidence — push them. Commit the run directory to the invoking workspace; when the
+Owner role — in a repository that is not yours, "Whose repository?" at the top of this file governs
+instead. Test artifacts are evidence — push them. Commit the run directory to the invoking workspace; when the
 Target is its own output repo (per `build`'s Output repository contract), copy `test-summary.md` +
 `defects.tsv` into `<target>/qa/` on a `qa/test-<stamp>` branch, push, and open a PR so the QA report
 rides CI and review. **That report PR merges itself** (`gh pr merge --squash --delete-branch`) once

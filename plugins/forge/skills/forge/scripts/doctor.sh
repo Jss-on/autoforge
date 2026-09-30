@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # doctor.sh — environment preflight for the AutoForge build pipeline.
 #
-# Verifies every external tool the 21 commands actually invoke, split by tier:
+# Verifies every external tool the 22 commands actually invoke, split by tier:
 #   CORE      — required for any command to work (bash/node/git/coreutils)
 #   BUILD     — required for the build/feature pipeline's verification gates
 #               (Playwright drives the ux dimension; docker the devops one)
@@ -81,7 +81,8 @@ printf '\nOPTIONAL (needed when the spec declares matching rows)\n'
 check opt axe axe             "a11y scans for ux rows (axe CLI)"
 check opt k6 k6               "perf SLO load tests (or autocannon)"
 check opt autocannon autocannon "perf SLO load tests (alternative)"
-check opt gh gh               "release tooling / private marketplace auth"
+check opt gh gh               "GitHub remotes: PRs, issues, Actions (scripts/host.cjs) + release tooling / private marketplace auth"
+check opt glab glab           "GitLab remotes: merge requests, issues, pipelines (scripts/host.cjs); needs 'glab auth login --hostname <host>'"
 check opt strix strix         "optional dynamic security checks (--strix; also needs Docker + a configured model)"
 
 printf '\nANDROID (/forge:android — local TWA build + certificate fingerprints; CI builds the bundle either way)\n'

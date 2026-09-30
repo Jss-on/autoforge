@@ -12,6 +12,16 @@ non-regression ratchet** — every feature stacks, nothing backslides (compoundi
 existing app, not a fresh repo. Loop engine + metric are shared with `build`
 (`scripts/score-build.sh pass-rate`); the floor is `forge:regression`.
 
+**Whose repository?** Before the first write, commit or host call run
+`node scripts/host.cjs detect` and read `references/host-protocol.md` (§1 maps every `gh` / PR /
+Actions step in this file to GitLab). `role: contributor` — an employer's, a client's or a
+community's repository — puts §3 above every owner default in this file, wherever it sits:
+**never create a repository or add a remote for code that is not yours**; never hand off to `build`
+from inside their repository — scaffold on the item's branch instead; their branch and
+merge-request conventions; forge's spec, acceptance and result files live under the run directory,
+never in their tree; never merge — hand the merge request to their reviewers. For a tracker backlog
+there use `/forge:backlog`.
+
 ## Required acceptance completion
 
 Follow `references/acceptance-evidence.md`: pin the reviewed expected check set before implementation,
@@ -31,7 +41,8 @@ runs preserve the previous accepted floor. Design-system output without an audit
 
 ## Autonomy — greenfield vs brownfield (decide, don't ask)
 Inspect `Target`:
-- **Empty / missing / no app** → this is greenfield → **hand to `forge:build`** (don't scaffold here).
+- **Empty / missing / no app** → this is greenfield → **hand to `forge:build`** (don't scaffold here)
+  — owner role only; inside someone else's repository the new code is a branch in *their* repository.
 - **Existing app present** → feature mode below.
 This is also how the orchestrator routes the `build-feature` archetype: greenfield → `build`, existing
 code → `feature`.
@@ -97,8 +108,11 @@ Per iteration, exactly as `build`:
    "Seam & reference resolution" section.
 
 ## GitHub flow (the output repo is the workbench)
-The app's private output repo (`build` created it; if missing, create it now per `build`'s
-"Output repository" section) is where this feature is visible end-to-end: work on a
+Owner role — in a repository that is not yours, "Whose repository?" at the top of this file governs
+instead. The app's private output repo (`build` created it; if forge built the app and the repo is
+missing, create it now per `build`'s "Output repository" section — existing code forge did not
+build gets a remote only on the user's explicit instruction) is where this feature is visible
+end-to-end: work on a
 `feat/<slug>` branch, push it, **open a PR** with the delta acceptance rows in the description,
 let the repo's CI run, and merge only after Phase 4's ratchet is STABLE and CI is green. Deferred
 findings become issues on that repo. Record the PR URL in `handoff.json`.

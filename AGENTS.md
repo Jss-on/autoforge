@@ -23,7 +23,7 @@ AutoForge is the product; `forge` is the engine and plugin it ships — all comm
 /plugin install forge@autoforge
 ```
 
-Restart session after install. All 21 commands become available as `/forge` and `/forge:<subcommand>`. Update later with `/plugin marketplace update autoforge`.
+Restart session after install. All 22 commands become available as `/forge` and `/forge:<subcommand>`. Update later with `/plugin marketplace update autoforge`.
 
 ### Codex (plugin)
 
@@ -79,6 +79,7 @@ cp -r autoforge/.agents/skills/forge ~/.agents/skills/forge
 | `forge:feature` | Add a feature to an existing app — delta acceptance + hard non-regression ratchet |
 | `forge:test` | Full QA engagement on existing software — risk-based plan, RTM, formal test design, execution + defect ledger, exit-criteria verdict (ISO 29119/ISTQB-aligned) |
 | `forge:design` | UI/UX designer + design QA — direction protocol → machine-readable `DESIGN.md`; independent design audit (anti-slop floor `SLOP_GATE`, heuristic critique, personas, defect ledger, `SHIP|FIX|REBUILD` verdict); bounded `--fix` remediation |
+| `forge:backlog` | Work an employer's or client's tracker backlog on GitLab or GitHub — one item, one branch, one merge request, their pipeline green, review handoff; never merges its own work |
 
 ---
 
@@ -120,6 +121,20 @@ forge:fix
 ```
 
 Auto-detects broken tests/types/lint/build, fixes one at a time, stops at zero errors.
+
+### Clear a backlog in a company's repository (GitLab or GitHub)
+
+```
+forge:backlog --dry-run
+forge:backlog
+Issues: label=bug
+Wip: 3
+```
+
+Detects the host and whose repository it is, reads the repository's own conventions, then works the
+issues assigned to you one at a time: one branch, one merge request, their pipeline green, handed to
+their reviewers. It never merges, never edits their CI or tracker, and keeps its run directory out of
+their history. GitLab needs `glab auth login --hostname <host>` once.
 
 ### Security audit
 
@@ -279,7 +294,7 @@ forge:probe --chain reason             # interrogate → debate → converge
 4. **Mechanical verification only** — no subjective "looks good." Use metrics.
 5. **Automatic rollback** — failed changes revert instantly via `git revert`.
 6. **Simplicity wins** — equal results + less code = KEEP.
-7. **Git is memory** — experiments committed with `experiment:` prefix, agent reads `git log` + `git diff` before each iteration.
+7. **Git is memory** — experiments committed with `experiment:` prefix, agent reads `git log` + `git diff` before each iteration. Commits carry the user's git identity only: no `Co-Authored-By` trailer or "Generated with" footer naming Claude, Fable, Opus or any other model.
 8. **When stuck, think harder** — re-read, combine near-misses, try radical changes.
 
 ---

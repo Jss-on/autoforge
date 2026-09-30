@@ -8,6 +8,8 @@ version: 3.6.0
 
 ## Safety Invariants (all subcommands)
 - Never deploy to production, publish packages/publicly, or change repo visibility without explicit user approval. `build`/`feature` push to the project's **own private output repo** as part of the standard loop (that is how its CI runs); everything beyond that repo is human-gated.
+- Every subcommand runs `node scripts/host.cjs detect` before its first write, commit or host call. In a repository the user does not own (**contributor role** — an employer's, a client's or a community's; doubt means contributor) `references/host-protocol.md` §3 overrides every sentence of the command file: never merge, never commit on or push to a default or protected branch, never change its CI, settings, secrets or tracker, never copy its code or tracker content off its host, and keep forge run artifacts out of its history.
+- **A model is never an author.** Commits, tags, pull/merge requests, release notes, issues and comments go out under the git identity the clone already has and nothing else: never set `user.name`, `user.email` or `--author` (a clone with no identity is a question for the user), no `Co-Authored-By` (or any other) trailer naming Claude, Fable, Opus or any other model, assistant or agent, no "Generated with …" footer, no session link — in either role, whatever the harness default says. A disclosure of AI use is written only when the user dictates it, in their words. Under Claude Code the `dangerous-cmd-block` hook refuses authorship credit mechanically.
 - Bounded by default. Override with `Iterations: unlimited`.
 - All results logged to `forge/{subcommand}-{YYMMDD}-{HHMM}/` directory.
 - Chain handoff via `handoff.json`. Evals reads `*-results.tsv`.
@@ -59,6 +61,7 @@ Print a banner on every invocation: `[forge] mode: classic | orchestrator | wiza
 | `/forge:design` | UI/UX designer + design QA: mode-aware direction protocol → machine-readable `DESIGN.md` (`system`); independent audit of a running app — valid captures, mechanical anti-slop floor (`SLOP_GATE`), heuristic critique, personas, defect ledger, `SHIP|FIX|REBUILD` verdict (`audit`); bounded remediation (`--fix`) | 12 (`--fix`) |
 | `/forge:research` | Deep research engagement: decompose questions → multi-modal scholarly + web sweep → deep reading of primary literature → source-anchored claims ledger with graded confidence → cited dossier gated by `DOSSIER_READY|DOSSIER_BLOCKED` verdict | 15 |
 | `/forge:android` | Web app → Android app (Trusted Web Activity): native-needs gate → PWA-ify the deployed app → Digital Asset Links trust → Bubblewrap-signed AAB/APK → live trust + real-emulator gate in CI → release workflow + store pack; `STORE_READY|BLOCKED` verdict, native-only needs reported honestly | 12 |
+| `/forge:backlog` | Work a tracker backlog on a repository you contribute to (GitLab or GitHub — an employer's or client's): intake → triage → one item, one branch, one merge request → their pipeline green → review handoff; ledger checked against the host, never merges its own work | 25 |
 
 ## Universal Flags
 
@@ -74,7 +77,9 @@ Print a banner on every invocation: `[forge] mode: classic | orchestrator | wiza
 | `--max-cycles N` | Orchestrator | Hard ceiling on orchestration cycles (default 50) |
 | `--classic` | Bare `/forge` | Force Classic metric-loop mode |
 | `--auto` | Bare `/forge` | Force Orchestrator mode |
-| `Tracker: github\|linear` | `build`, `feature`, `test`, `design`, `fix` | Tracker of record for projects/phases/defects (default `github`; `linear` arms tracker sync) |
+| `Tracker: github\|linear` | `build`, `feature`, `test`, `design`, `fix` | Tracker of record for projects/phases/defects (default `github` = the repo host's own issues, GitLab's on a GitLab remote; `linear` arms tracker sync) |
+| `Host: github\|gitlab` | `build`, `feature`, `fix`, `test`, `design`, `ship`, `backlog` (`android` is GitHub-only) | Git host (default: detected from the remote by `scripts/host.cjs detect`). The GitHub-worded contracts translate to `glab` / merge requests / pipelines per `references/host-protocol.md` |
+| `Role: owner\|contributor` | every command that writes, commits or calls the host | Whose repository this is (default: detected — `owner` only for a non-fork repo in your own namespace; a Maintainer permission on someone else's project is not ownership). `contributor`: their conventions, no merge, nothing leaves their host. The user can pin it per clone with `git config forge.role owner` |
 | `Assets: N\|off` | `build`, `feature`, `design`, `requirements` | Generation-attempt budget (default 12 with suitable native/MCP tools; off preserves reuse, icons, motion and checks) |
 | `Ponytail: lite\|full\|ultra\|off` | `build` | Lazy-senior-dev discipline level — ladder (skip → reuse → stdlib → native → installed dep → one line → minimum), shortest working diff, `ponytail:` debt harvest (default `ultra`) |
 | `--thorough` | `test`, `fix`, `design` | Restores the exhaustive form of every fast-path rule (every PNG opened, full Guard per slice, per-persona walks + blind panel); the default is the fast path per `references/speed-protocol.md` |
@@ -96,7 +101,7 @@ slots stay unmet during outages; both motion preferences and the keyboard task n
 |---|---|---|
 | **Generative media** (Codex-native / media MCP) | Scoped raster generation and edits, copied project assets, real receipts, capped attempts and approved hashes; video/audio/3D only when scoped and supported | Checked reuse, licensed sources, native vectors/motion, named optional placeholders; required slots remain unmet |
 | **Design bridge** (Figma-class) | `Design: <figma-url>` → variables/components/frames normalized into `DESIGN.md`; audit fidelity vs source frames; `--figma-out` review push (human-gated) | catalog / file / `generate` sources |
-| **Tracker sync** (Linear-class) | `Tracker: linear` → engagement = project, phase gates = status updates, defect ledgers = issues (marker-deduped, severity-mapped, fixed→in-review, verified→done) | GitHub issues on the output repo (default) |
+| **Tracker sync** (Linear-class) | `Tracker: linear` → engagement = project, phase gates = status updates, defect ledgers = issues (marker-deduped, severity-mapped, fixed→in-review, verified→done) | The repo host's own issues — GitHub or GitLab (default) |
 
 ## Orchestrator
 

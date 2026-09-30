@@ -37,6 +37,12 @@ at the end of this doc. Companion contracts: `references/uiux-checklist.md`,
 families: generative media for real imagery/animation/3D, Figma-class design bridge, Linear-class
 tracker sync — availability-gated, degrade to the named fallback).
 
+**Whose repository?** `build` creates and owns a fresh output repository. Run
+`node scripts/host.cjs detect` in the invoking directory first (`references/host-protocol.md`):
+inside someone else's repository (`role: contributor`, §3) never `git init` a nested repository,
+create an output repo, add a remote or push — greenfield work there is a branch and a merge request
+in *their* repository (`/forge:backlog`), and §3 overrides every owner default in this file.
+
 ## Required acceptance completion
 
 Follow `references/acceptance-evidence.md`: pin the reviewed expected check set before implementation,
@@ -97,6 +103,13 @@ Cadence:
 - Record the repo URL in `handoff.json` (`repo` field) and in the run summary.
 The repo stays **private** and its visibility is never changed by the loop. If `gh` is
 unauthenticated, say so and continue local-only — do not silently skip the contract.
+
+**Other hosts:** `Host: gitlab` (or a GitLab remote already wired) puts the output project on GitLab
+instead — `glab repo create <namespace>/<slug> --private`, a generated `.gitlab-ci.yml`, merge
+requests and pipelines in place of PRs and workflow runs, all per `references/host-protocol.md` §1;
+§2 lists what stays GitHub-only and is reported `blocked` there. This whole section assumes the
+repository is **yours** (`node scripts/host.cjs detect` → `role: owner`): never create an output
+repo, push a mirror or self-merge for code that belongs to someone else (`role: contributor`, §3).
 
 ## Reuse before build (efficiency principle)
 
@@ -217,6 +230,7 @@ Extract from $ARGUMENTS:
   (integrations-protocol §2: variables/components/frames → DESIGN.md) — or `generate`. Default:
   the spec's `design:` block, else generate.
 - `Tracker:` / `--tracker` — `github` (default) | `linear` (arms tracker sync, integrations-protocol §3).
+- `Host:` / `--host` — `github` (default) | `gitlab`: where the output repo lives (`references/host-protocol.md`).
 - `Assets: N|off` — generation-attempt budget (default 12 when suitable native/MCP tools are available;
   `off` disables new generation, preserving asset validation, checked reuse, SVG icons and UI motion).
 - `Ponytail:` / `--ponytail` — `lite | full | ultra | off` (default `ultra`): the lazy-senior-dev

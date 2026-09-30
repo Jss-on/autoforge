@@ -20,6 +20,15 @@ protocol, remediation rules); checklist: `references/uiux-checklist.md`; native 
 optional MCP integrations (media, Figma-class design bridge, tracker sync):
 `references/integrations-protocol.md`.
 
+**Whose repository?** Before the first write, commit or host call run
+`node scripts/host.cjs detect` and read `references/host-protocol.md` (§1 maps the `gh` / PR steps
+in this file to GitLab). `role: contributor` — an employer's, a client's or a community's
+repository — puts §3 above every owner default in this file, wherever it sits: `DESIGN.md`, the
+report, the ledger and captures live under the run directory, never in their tree; no direction
+comment or forge marker in their source; nothing of theirs goes to a design or media service;
+nothing is committed, pushed or filed unless the user asks, and nothing is merged. `--fix` there
+follows `/forge:backlog`'s branch → merge request → review-handoff rules.
+
 ## Required acceptance completion
 
 Follow `references/acceptance-evidence.md`: pin the reviewed expected check set before implementation,
@@ -254,7 +263,8 @@ DESIGN.md + the app; not the build thread's summary), and never softens the disp
    (`[rebuild]` defect or health band Poor/Critical): route to `system --refresh` or a redesign, do not
    patch. Write `design-report.md` (protocol §7.7) — the report is the deliverable; print it, don't
    just file it.
-7. **GitHub flow**: commit the run dir; when the Target is its own output repo, copy
+7. **GitHub flow** (owner role — see "Whose repository?" above): commit the run dir; when the
+   Target is its own output repo, copy
    `design-report.md` + `design-defects.tsv` into `<target>/qa/design/` on a `qa/design-<stamp>`
    branch, push, open a PR that merges itself on green CI (`--no-merge` opts out; branch protection
    wins). File every unresolved critical/high design defect on the **tracker of record** — GitHub

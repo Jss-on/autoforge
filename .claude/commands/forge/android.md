@@ -20,6 +20,11 @@ web platform cannot do natively (background location, foreground services, telep
 criteria, DAL rules, native-needs matrix, every file template, the CI workflows, the
 device-relay script).
 
+**Whose repository?** Owner role and GitHub only: this lane writes workflows, sets CI secrets and
+merges its own PR. Run `node scripts/host.cjs detect` first — on a GitLab remote, or in a repository
+that is not yours (`role: contributor`), stop with `BLOCKED` and say why
+(`references/host-protocol.md` §2, §3).
+
 ## Seam & reference resolution (read once)
 Resolve `AR_ROOT` exactly as in `build`: first existing of `${CLAUDE_PLUGIN_ROOT}/skills/forge`,
 `.claude/skills/forge`, the directory containing this command file, else glob

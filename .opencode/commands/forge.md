@@ -6,6 +6,11 @@ argument-hint: "[Goal: <text>] [Scope: <glob>] [Metric: <text>] [Verify: <cmd>] 
 
 EXECUTE IMMEDIATELY — do not deliberate before reading this protocol.
 
+**Whose repository?** Before the first commit run `node scripts/host.cjs detect`. `role: contributor`
+(an employer's, a client's or a community's repository) → `references/host-protocol.md` §3 governs
+this loop: branch first — never commit on the default or integration branch; stage by explicit
+path; keep `forge/` out of their history (`node scripts/host.cjs exclude`); push and merge nothing.
+
 ## Parse Arguments
 
 Extract from $ARGUMENTS:
@@ -68,6 +73,8 @@ For each iteration (1 to max_iterations, or unbounded):
 
 ### Phase 3: Commit
 - Stage and commit with `experiment: {description}` prefix
+- The message ends there: no `Co-Authored-By` trailer or "Generated with …" footer naming Claude,
+  Fable, Opus or any other model (SKILL.md safety invariant)
 - Record commit SHA
 
 ### Phase 4: Verify

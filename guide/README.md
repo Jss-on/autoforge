@@ -52,7 +52,8 @@ Requires access to the private repo [Jss-on/autoforge](https://github.com/Jss-on
 | [/forge:design](forge-design.md) | UI/UX designer + design QA — direction protocol → machine-readable `DESIGN.md`; independent design audit (anti-slop floor, heuristic critique, personas, ledger, `SHIP|FIX|REBUILD`); bounded `--fix` remediation |
 | [/forge:research](forge-research.md) | Deep research engagement — scholarly + web sweep, primary-literature reading, source-anchored claims ledger, cited dossier with `DOSSIER_READY|DOSSIER_BLOCKED` verdict |
 | [/forge:android](forge-android.md) | Web app → Android app (Trusted Web Activity) — PWA-ify, Digital Asset Links trust, Bubblewrap-signed AAB/APK, emulator gate in CI, release workflow + store pack, `STORE_READY|BLOCKED` |
-| [Chains & Combinations](chains-and-combinations.md) | Multi-command pipelines with all 21 commands |
+| [/forge:backlog](forge-backlog.md) | Someone else's backlog on GitLab or GitHub — issue intake, triage, one merge request per item, their pipeline green, review handoff; contributor rules (no self-merge, their conventions, nothing leaves their host) |
+| [Chains & Combinations](chains-and-combinations.md) | Multi-command pipelines with all 22 commands |
 | [Examples by Domain](examples-by-domain.md) | Real-world examples: software, sales, marketing, DevOps, ML, HR |
 | [Advanced Patterns](advanced-patterns.md) | Guards, MCP, CI/CD, evals checkpoints, transform.sh |
 | [Hooks Reference](hooks.md) | 9 auto-firing hooks: safety gates, context injection, notifications |
@@ -72,6 +73,7 @@ Requires access to the private repo [Jss-on/autoforge](https://github.com/Jss-on
 | Ship a PR / deployment / release | `/forge:ship` |
 | Hunt all bugs in a codebase | `/forge:debug` |
 | Fix all errors (tests, types, lint) | `/forge:fix` |
+| Clear a backlog in a company's GitLab or GitHub repo | `/forge:backlog` |
 | Debug then auto-fix | `/forge:debug --fix` |
 | Check if something is ready to ship | `/forge:ship --checklist-only` |
 | Explore edge cases for a feature | `/forge:scenario` |

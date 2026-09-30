@@ -39,7 +39,7 @@ for (const [source, destination] of [
 ]) {
   const files = fs.readdirSync(path.join(skill, destination)).filter(f => f !== 'SKILL.md' && f !== 'forge.md' && /\.(md|sh|cjs)$/.test(f));
   if (destination !== 'scripts') assert.deepEqual(files.sort(), fs.readdirSync(source).filter(f => f.endsWith('.md')).sort());
-  if (!destination) assert.equal(files.length, 20, 'all 20 subcommands must ship');
+  if (!destination) assert.equal(files.length, 21, 'all 21 subcommands must ship');
   assert.ok(files.length);
   for (const file of files) {
     const bundled = read(path.join(skill, destination, file));

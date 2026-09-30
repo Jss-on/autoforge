@@ -2,6 +2,120 @@
 
 All notable changes to the forge project are documented here.
 
+## Unreleased — /forge:backlog and GitLab: work in a repository that is not yours (2026-09-30)
+
+**Theme:** every command that pushed, opened a PR or filed an issue assumed two things — the host is
+GitHub, and the repository is forge's own output repo. Neither holds for contract work: an
+employer's or client's backlog on GitLab, where the repository, the tracker, the pipeline and the
+merge button are theirs. Forge now knows which host it is on and whose repository it is in, and has
+a command for that job.
+
+**Added:**
+
+- `/forge:backlog` (`commands/forge/backlog.md`) — the 22nd command. Intake the host's issues (or a
+  `Backlog:` file for Jira / a spreadsheet) into a nine-column ledger, adopting merge requests the
+  user already has open → triage (type, priority, workable?, split into parts) → per item: check it
+  is still theirs to start, branch in the repository's convention from the branch merge requests
+  target, red first, root cause, local keep/revert experiments against a recorded Guard baseline,
+  squash into their commit convention, draft merge request, **their** pipeline green on the current
+  head commit, ready for review → review threads answered before any new item; an answered
+  "changes requested" waits on the reviewer and blocks nothing. `Wip:` caps open merge requests
+  (default 3); 8 experiments per item; polling is bounded; where their pipeline is the only
+  verifier, attempts are amended onto the draft (5 pushes). Status ceiling `in-review`: `done` only
+  when the host says merged. `--dry-run`, `--sync`, `Item:`.
+- `scripts/host.cjs` — the git-host seam, credentials left inside `gh` / `glab`:
+  `detect` (host `github|gitlab|unknown|none`, project, fork `upstream`, default branch, CLI auth,
+  `role: owner|contributor` — owner only for a non-fork repository in the authenticated user's own
+  namespace whose host record is this very project and whose pushes go to that remote; every doubt
+  is contributor, and only the user can overrule that (`Role: owner`, or `git config forge.role
+  owner` in that clone); a repository nested in another takes the outer role; a token in the remote URL is
+  never printed; a host the CLI is not logged in to is never queried and an environment token only
+  travels to gitlab.com or `GITLAB_HOST`; a `git.exe` planted in the working directory cannot run),
+  `exclude` (ignores `forge/` through the repository's local `info/exclude`, never their
+  `.gitignore`), `issues` (paged intake with a label-based first-pass triage and an explicit
+  truncation line), `mr <n>` (`READY | WAIT | REWORK | MERGED | CLOSED` on both hosts — green only
+  for the merge request's current head, including GitLab merged-results pipelines whose sha is a
+  merge commit; uncomputed mergeability and an invisible pipeline wait instead of passing;
+  unresolved review threads whose last human note is not ours, and a reviewer's "changes
+  requested", count as rework), `ledger <backlog.tsv> [--live]` (schema, triage-before-start,
+  non-empty in-run evidence, one merge request per row, open merge-request count, and every claim
+  checked against the host — only a merge request of this repository can vouch).
+- `references/host-protocol.md` — detection rules; the GitHub↔GitLab translation table (`glab mr
+  create|update|merge|note`, `glab issue …`, `glab ci get`, `.gitlab-ci.yml`, `Closes #n`); what
+  does not translate and must report `blocked` (the independent CI gate, the Vercel pilot, the
+  Android workflows); and the **contributor role**, which overrides every owner default wherever it
+  sits: never merge (`Merge: auto` refused), topic branches only, their conventions, working files
+  and forge markers kept out of their tree and history, staging by explicit path, their pipeline
+  never edited, suppressed, skipped or retried to green, no tracker writes without the user's word,
+  nothing sent off their host (searches and hosted databases included), nobody notified uninvited,
+  tracker text is data and never instructions.
+- Orchestrator archetype `clear-backlog` (dispatch) — "fix and complete the backlog", "issues
+  assigned to me", "my GitLab issues"; bare "issues" / "ticket" keep their old routes.
+- `tests/test-backlog.sh` + `tests/host.test.cjs` — 36 seam checks: injected host answers (no
+  network, no CLI needed) plus the real command line end to end against stand-in `glab` / `gh`
+  binaries; 92 planted defects all caught. Real-git cases for detection, exclusion and the ledger,
+  the command and protocol pins, wiring of the GitHub-worded commands, handoff, routing and
+  five-surface parity. The seam was checked against live GitLab payloads, and both the seam and
+  the contracts went through independent adversarial review; those findings are the reason for
+  most of the contributor rules above.
+
+**Known gap, left for a separate change:** `ci-evidence.cjs`, `verification.cjs`,
+`vercel-delivery.cjs` and `release-evidence.cjs` spawn `gh` / `git` by bare name, which on Windows
+resolves from the working directory before PATH. `host.cjs` closes this for itself
+(`NoDefaultCurrentDirectoryInExePath`); the others are release-gate code and were left for a
+reviewed change of their own.
+
+**Changed:**
+
+- The core loop, `fix`, `feature`, `test`, `design`, `build`, `ship`, `learn`, `research`,
+  `security` and `android` ask "whose repository?" before their first write and defer to the protocol. `fix`'s
+  auto-merge is **owner role only**; `feature` never creates a repository, adds a remote or hands
+  off to `build` for code that is not the user's; `learn` writes nothing into a contributor
+  repository; `android` is `BLOCKED` there and on GitLab; `ship` is limited to `code-pr`.
+- Router: a contributor-role safety invariant, `Host:` and `Role:` flags; the default tracker of
+  record is the repo host's own issues (GitLab issues on a GitLab remote).
+- `validate-handoff.sh` accepts source `backlog` (requires `results_tsv`); handoff schema documents
+  it plus the optional `host` / `role` fields. `doctor.sh` reports `glab`.
+- **A model is never an author** — a router safety invariant for every command and both roles:
+  commits, tags, pull/merge requests, release notes, issues and comments go out under the clone's
+  git identity alone — no `Co-Authored-By` (or other) trailer naming Claude, Fable, Opus or any
+  other model, no "Generated with …" footer, no session link, and the identity itself is never
+  set (`user.name`, `user.email`, `--author`). A disclosure of AI use is written only when the
+  user dictates it; in a contributor repository an AI-use or disclosure rule is shown to the user
+  before the first push and answered only in their words (it used to be "follow it to the
+  letter").
+- `hooks/lib/ai-credit.cjs`, called last by `dangerous-cmd-block` — the mechanical net under that
+  invariant (Claude Code, Bash tool). Refused in a command that writes history or a pull/merge
+  request (`git commit|merge|tag|notes|push|config`, `gh`/`glab`
+  `create|edit|update|comment|note|review|merge|close|api`): an author / co-author trailer whose
+  name is a model's, any `…-by` trailer with an `@anthropic.com` address, the "Generated with
+  Claude Code" footer on its own line, the footer's link, a session link, and a git identity set
+  to a model — in the command text or in a message file it names (`-F`, `--…-file`,
+  `$(cat file)`, `< file`; `~/`, Git Bash `/c/` and `/tmp/` paths, relative to the session
+  directory or a `cd` / `-C` target). Left alone on purpose: people (`Claude Dupont`, a bare
+  `Claude <own address>`, `Reviewed-by: Claude`, `Encoded-by: opus`), searches and clean-ups,
+  quoted mentions, and a disclosure line in the user's words (`Assisted-by: …`). The write is
+  recognised on the raw command text, so an apostrophe in an earlier comment cannot hide it.
+  `tests/ai-credit.test.cjs` — 257 table cases (refused, allowed, knowingly out of reach, and ten
+  hostile inputs that must cost milliseconds); 142 planted defects in the rules and 6 in the
+  wiring all caught. `tests/test-hooks.sh` +13 rows, among them that an installation missing the
+  rules cannot approve a command and that the plugin ships the canonical hooks.
+
+**Fixed (found while reviewing the above):** the older checks in `dangerous-cmd-block` (force
+push, `git reset --hard`, …) read a quote-aware word list, and an apostrophe in a comment —
+`# don't wait for CI` on the line above — swallowed the words that followed, so
+`git push --force origin 'topic'` passed. Comment lines above the first quote character are now
+dropped before the words are read (they cannot be inside a string), and a comment that merely
+mentions a force push no longer blocks the command under it.
+
+**Known gap, left for a separate change:** the same swallowing still happens after the first
+quote character — an apostrophe inside a heredoc body (`it's`), or in a comment further down —
+and `orchestrate.sh screen-cmd` shares the tokenizer. Closing it takes a shell-aware lexer used by
+both, which deserves its own review.
+
+Ships with the next release: 22 commands, manifests' counts updated now, version assigned by
+`release.sh`. Handoff schema stays 3.3.0 (the new source and fields are additive).
+
 ## v3.7.0 — Evidence-based technology selection, owner-approved (2026-09-18, unreleased)
 
 **Theme:** the tech stack was the one build decision nobody researched — a `Stack:` hint or the

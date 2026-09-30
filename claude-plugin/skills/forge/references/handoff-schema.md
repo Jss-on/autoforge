@@ -12,7 +12,7 @@ not finished until its handoff validates.
 | Field | Type | Rule |
 |---|---|---|
 | `version` | string | Numeric three-part schema version. Write `"3.3.0"`. Validator accepts `2.1.0`+ (legacy runs readable) but warns below `2.3.1`. |
-| `source` | string | The emitting subcommand, canonical short name: `build`, `feature`, `requirements`, `regression`, `fix`, `test`, `design`, `research`, `android`, `debug`, `security`, `ship`, `plan`, `scenario`, `predict`, `learn`, `reason`, `probe`, `improve`, `evals`, `forge`. `loop` is accepted as the existing core-loop alias. Unknown sources and colon forms are invalid. |
+| `source` | string | The emitting subcommand, canonical short name: `build`, `feature`, `requirements`, `regression`, `fix`, `test`, `design`, `research`, `android`, `backlog`, `debug`, `security`, `ship`, `plan`, `scenario`, `predict`, `learn`, `reason`, `probe`, `improve`, `evals`, `forge`. `loop` is accepted as the existing core-loop alias. Unknown sources and colon forms are invalid. |
 | `status` | enum | `COMPLETE` \| `CONVERGED` \| `BOUNDED` \| `PLATEAU` \| `BLOCKED` \| `USER_INTERRUPT` \| `ERROR`; `ship` additionally permits `DRY_RUN` and `ROLLBACK`. |
 | `timestamp` | string | A valid calendar date and time in ISO-8601 with `Z` or an explicit offset; relative dates and placeholder strings are invalid. |
 
@@ -28,6 +28,7 @@ not finished until its handoff validates.
 | `design` | `verdict` (`SHIP` \| `FIX` \| `REBUILD`) **or** `design` (object: `design_md` path + `lint`) — an audit carries the disposition, a `system` run carries the DESIGN.md it wrote. SHOULD also carry `results_tsv` (`design-results.tsv`), `defects_tsv`, `slop` (number), `health` (`N/M`), and `summary` (path to `design-report.md`). |
 | `research` | `verdict` (`DOSSIER_READY` \| `DOSSIER_BLOCKED`) **and** `report` (path to the dossier). SHOULD also carry `claims_tsv`, `sources_tsv`, and `findings` (per-RQ one-line answers + the contested list). |
 | `android` | `verdict` (`STORE_READY` \| `BLOCKED`) **and** `results_tsv` (`android-results.tsv`). SHOULD also carry `package_id`, `host`, `artifacts` (apk/aab paths or release-asset URLs), `repo`, `pr`, `workflow_run` (device-gate run URL), and `native_needs` (the native-only list) when blocked. |
+| `backlog` | `results_tsv` (the `backlog.tsv` ledger — schema in `host-protocol.md` §5). SHOULD also carry `remaining` (number of items still to start or rework), `host`, `role`, and `findings` (blocked items with the question each waits on). COMPLETE means nothing is left to start, never that anything merged. |
 | `security` | Current 3.x+ writers require the typed `security` record below. COMPLETE describes report completion, not a passing security disposition. |
 | `ship` | Current 3.x+ writers require the typed `ship` record below; COMPLETE/ROLLBACK require bound execution and passing readiness/verification. |
 
@@ -35,7 +36,9 @@ Everything else (`status_reason`, `findings`, `verified_live_this_run`, `phases_
 `bound_extension`, `repo` — the project's private GitHub output-repo URL, `pr` — the feature PR
 URL, …) is optional, additive, and must not be required by any consumer. `build`/`feature` SHOULD
 write `repo` (and `feature` the `pr`) so the chain and `run-index` can link straight to the
-transparent output.
+transparent output. Commands that touch a git host SHOULD also write `host` (`github|gitlab|unknown|none`)
+and `role` (`owner|contributor`) as reported by `scripts/host.cjs detect` — on GitLab `repo` is the
+project URL and `pr` the merge-request URL. See `host-protocol.md`.
 
 Stack-selection writers include `config.stack_decision` as the path to the complete approved
 decision directory (requirements: tracked beside the spec; build: `docs/adr/0001-tech-stack/`).

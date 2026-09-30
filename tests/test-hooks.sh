@@ -317,6 +317,63 @@ assert_exit 0 "dangerous-cmd-block: quoted commit message is not a force push"
 run_hook "dangerous-cmd-block.cjs" '{"tool_name":"Bash","tool_input":{"command":"npm test -- --grep \"push origin --force\""}}'
 assert_exit 0 "dangerous-cmd-block: quoted test filter is not a force push"
 
+# A comment line above any quote is certainly a comment: its apostrophe must not hide what follows.
+run_hook "dangerous-cmd-block.cjs" '{"tool_name":"Bash","tool_input":{"command":"# don'"'"'t wait for CI\ngit push --force origin '"'"'topic'"'"'"}}'
+assert_exit 2 "dangerous-cmd-block: an apostrophe in a leading comment cannot hide a force push"
+
+run_hook "dangerous-cmd-block.cjs" '{"tool_name":"Bash","tool_input":{"command":"cd repo\n  # don'"'"'t keep the last commit\ngit reset --hard '"'"'HEAD~1'"'"'"}}'
+assert_exit 2 "dangerous-cmd-block: an apostrophe in a later comment cannot hide a hard reset"
+
+run_hook "dangerous-cmd-block.cjs" '{"tool_name":"Bash","tool_input":{"command":"# never run git push --force here\ngit status"}}'
+assert_exit 0 "dangerous-cmd-block: a comment that mentions a force push is not one"
+
+run_hook "dangerous-cmd-block.cjs" '{"tool_name":"Bash","tool_input":{"command":"git commit -m \"notes\n# not a comment: inside the message\" && git push --force origin topic"}}'
+assert_exit 2 "dangerous-cmd-block: a # line inside a quoted message is not dropped as a comment"
+
+run_hook "dangerous-cmd-block.cjs" '{"tool_name":"Bash","tool_input":{"command":"git commit -m '"'"'notes\n# not a comment either'"'"' && git push --force origin topic"}}'
+assert_exit 2 "dangerous-cmd-block: nor is a # line inside a single-quoted message"
+
+# A model is never an author or co-author. The rules live in lib/ai-credit.cjs and are tested as a
+# table (what is refused, what is left alone, what hostile text costs); the rows after it prove
+# the hook is wired to them.
+TOTAL=$((TOTAL + 1))
+if CREDIT_OUT="$(node "$SCRIPT_DIR/ai-credit.test.cjs" 2>&1)"; then
+  printf '  PASS: ai-credit: %s\n' "$(printf '%s\n' "$CREDIT_OUT" | tail -n 1)"
+  PASS=$((PASS + 1))
+else
+  printf '%s\n' "$CREDIT_OUT" | grep 'FAIL' || true
+  printf '  FAIL: ai-credit: %s\n' "$(printf '%s\n' "$CREDIT_OUT" | tail -n 1)"
+  FAIL=$((FAIL + 1))
+fi
+
+run_hook "dangerous-cmd-block.cjs" '{"tool_name":"Bash","tool_input":{"command":"# Commit the fix - don'"'"'t push yet\ngit add a.ts && git commit -m \"$(cat <<'"'"'EOF'"'"'\nfix: x\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\nEOF\n)\""}}'
+assert_exit 2 "dangerous-cmd-block: a model as co-author is refused, even after a comment with an apostrophe"
+
+printf 'fix: x\n\nCo-Authored-By: Claude Opus 4.5 (1M context) <bot@example.com>\n' > "$AR_TMP/msg-ai.txt"
+run_hook "dangerous-cmd-block.cjs" "{\"cwd\":\"$AR_TMP\",\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"git commit --file=msg-ai.txt\"}}"
+assert_exit 2 "dangerous-cmd-block: a message file is read from the session directory"
+
+run_hook "dangerous-cmd-block.cjs" '{"tool_name":"Bash","tool_input":{"command":"git commit -m \"fix: x\n\nCo-authored-by: Claude Dupont <claude.dupont@example.fr>\""}}'
+assert_exit 0 "dangerous-cmd-block: a person named Claude keeps their credit"
+
+run_hook "dangerous-cmd-block.cjs" '{"tool_name":"Bash","tool_input":{"command":"git commit --author=\"Claude <noreply@anthropic.com>\" -m \"fix: x\""}}'
+assert_exit 2 "dangerous-cmd-block: a model as the author itself is refused"
+
+# The rules are part of the screen: an installation that lost them cannot approve a command.
+mkdir -p "$AR_TMP/no-credit/hooks/lib" "$AR_TMP/no-credit/skills/forge/scripts"
+cp "$HOOKS_DIR/dangerous-cmd-block.cjs" "$AR_TMP/no-credit/hooks/"
+cp "$HOOKS_DIR/lib/ar-hook-utils.cjs" "$AR_TMP/no-credit/hooks/lib/"
+cp "$REPO_ROOT/scripts/orchestrate.sh" "$AR_TMP/no-credit/skills/forge/scripts/"
+EXIT_CODE=0
+STDOUT=$(printf '%s' '{"tool_name":"Bash","tool_input":{"command":"git status"}}' |
+  node "$AR_TMP/no-credit/hooks/dangerous-cmd-block.cjs" 2>/dev/null) || EXIT_CODE=$?
+assert_exit 2 "dangerous-cmd-block: missing authorship rules cannot approve execution"
+cp "$HOOKS_DIR/lib/ai-credit.cjs" "$AR_TMP/no-credit/hooks/lib/"
+EXIT_CODE=0
+STDOUT=$(printf '%s' '{"tool_name":"Bash","tool_input":{"command":"git status"}}' |
+  node "$AR_TMP/no-credit/hooks/dangerous-cmd-block.cjs" 2>/dev/null) || EXIT_CODE=$?
+assert_exit 0 "dangerous-cmd-block: the same installation with its rules approves a harmless command"
+
 # ============================================================================
 # Test: iteration-context.cjs
 # ============================================================================
@@ -610,6 +667,16 @@ else
 fi
 
 rm -rf "$LOG_HOME" "$LOG_PROJ"
+
+# The plugin ships a copy of these hooks; a stale copy ships yesterday's gates.
+TOTAL=$((TOTAL + 1))
+if diff -rq "$HOOKS_DIR" "$REPO_ROOT/claude-plugin/hooks" >/dev/null 2>&1; then
+  printf '  PASS: %s\n' "plugin hooks: shipped copy matches the canonical hooks"
+  PASS=$((PASS + 1))
+else
+  printf '  FAIL: %s\n' "plugin hooks: shipped copy differs from .claude/hooks/forge (run scripts/transform.sh)"
+  FAIL=$((FAIL + 1))
+fi
 
 # ============================================================================
 # Summary
