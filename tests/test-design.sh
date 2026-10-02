@@ -462,7 +462,7 @@ proto_has "confirmshaming"                                   "protocol: confirms
 proto_has "no bound data"                                    "protocol: sparkline refusal scoped to decorative use"
 proto_has "focus-invisible"                                  "protocol: focus sweep rules listed (WCAG 2.4.7/2.4.11)"
 proto_has "text-spacing-loss"                                "protocol: text-spacing rule listed (WCAG 1.4.12)"
-proto_has "320.640"                                          "protocol: 320px reflow viewport named (WCAG 1.4.10)"
+proto_has "320×640"                                          "protocol: 320px reflow viewport named (WCAG 1.4.10)"
 proto_has "^- \*\*Charts\*\*"                                "protocol: Charts archetype (form by question, honest encodings)"
 proto_has "^- \*\*Report \(print / PDF\)\*\*"                "protocol: Report archetype (page.pdf, period, filters, generated-at)"
 proto_has "declare its job first"                            "protocol: dashboard declares monitor/analyze/executive"
