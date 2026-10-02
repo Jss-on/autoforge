@@ -53,6 +53,14 @@ Design-system documentation runs without an audit verdict are distinct from a re
 
 File presence no longer completes an assertion. Each applicable check pins an `execution` object: `argv` (explicit executable and arguments, no implicit shell), `inputs` (implementation, verifier, lockfiles, artifact/config descriptors), `environment` (non-secret names), `secret_env` (secret name to rotation-version variable), `timeout_ms`, and `output_limit`. A numeric command also pins `expect: {min, max}`. Pin `max_age_ms` when the five-minute local freshness default is unsuitable. Checks with unidentifiable external dependency/secret changes must rerun; never declare a cache hit.
 
+Pin commands for the host OS. Prefer a native executable such as `node` with a script path and
+separate arguments; a path containing spaces is still one array element. Windows `.cmd`/`.bat`
+launchers such as npm require an explicit shell, for example
+`["cmd.exe", "/d", "/s", "/c", "npm test"]`; bare `npm` is not a native Windows executable.
+For Bash commands on Windows, pin the full Git Bash executable path, not a `bash` that resolves
+to an unconfigured WSL installation. Explicit shells still pass the command safety screen;
+never turn on an implicit shell or treat a spawn error as a passing assertion.
+
 ```bash
 node "$AR_ROOT/scripts/verification.cjs" run "$PROJECT" "$PLAN" app FR-1 "$RUN/evidence/FR-1.json"
 node "$AR_ROOT/scripts/verification.cjs" check "$PROJECT" "$PLAN" app FR-1 "$RUN/evidence/FR-1.json"

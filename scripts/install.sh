@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# AutoForge installer — supports Claude Code, OpenCode, and OpenAI Codex, local or global.
+# AutoForge installer — supports Claude Code, OpenCode, OpenAI Codex, and Cursor, local or global.
 
 set -euo pipefail
 
@@ -22,6 +22,7 @@ Options:
   --claude            Install for Claude Code
   --opencode          Install for OpenCode
   --codex             Install for OpenAI Codex
+  --cursor            Install for Cursor
   -g, --global        Install globally
   -l, --local         Install in the current project
   -c, --config-dir    Override the global config directory
@@ -33,16 +34,20 @@ Examples:
   ./scripts/install.sh --claude --global
   ./scripts/install.sh --opencode --local
   ./scripts/install.sh --codex --global
+  ./scripts/install.sh --cursor --local
 EOF
 }
 
 expand_path() {
   local raw="$1"
-  if [[ "$raw" == ~* ]]; then
-    printf '%s\n' "${raw/#\~/$HOME}"
-  else
-    printf '%s\n' "$raw"
-  fi
+  case "$raw" in
+    '~') raw="$HOME" ;;
+    '~/'*) raw="$HOME/${raw#\~/}" ;;
+  esac
+  # Round-trip through a native absolute path so /tmp and /c aliases compare equally.
+  case "$OSTYPE" in msys*|cygwin*) raw="$(cygpath -u "$(cygpath -am "$raw")")" ;; esac
+  case "$raw" in /*) ;; *) raw="$PWD/$raw" ;; esac
+  printf '%s\n' "$raw"
 }
 
 is_interactive() { [[ -t 0 && -t 1 ]]; }
@@ -61,6 +66,9 @@ parse_args() {
       --codex)
         if [[ -n "$TOOL" && "$TOOL" != "codex" ]]; then die "choose only one tool"; fi
         TOOL="codex" ;;
+      --cursor)
+        if [[ -n "$TOOL" && "$TOOL" != "cursor" ]]; then die "choose only one tool"; fi
+        TOOL="cursor" ;;
       -g|--global)
         if [[ -n "$LOCATION" && "$LOCATION" != "global" ]]; then die "choose --global or --local"; fi
         LOCATION="global" ;;
@@ -69,20 +77,17 @@ parse_args() {
         LOCATION="local" ;;
       -c|--config-dir)
         shift
-        if [[ $# -eq 0 ]]; then die "--config-dir requires a path"; fi
+        if [[ $# -eq 0 || -z "$1" ]]; then die "--config-dir requires a path"; fi
         CONFIG_DIR="$(expand_path "$1")" ;;
       --config-dir=*)
-        CONFIG_DIR="$(expand_path "${1#*=}")"
-        if [[ -z "$CONFIG_DIR" ]]; then die "--config-dir requires a path"; fi ;;
+        if [[ -z "${1#*=}" ]]; then die "--config-dir requires a path"; fi
+        CONFIG_DIR="$(expand_path "${1#*=}")" ;;
       --force) FORCE=1 ;;
       -h|--help) usage; exit 0 ;;
       *) die "unknown argument: $1" ;;
     esac
     shift
   done
-  if [[ -n "$CONFIG_DIR" && "$LOCATION" == "local" ]]; then
-    die "--config-dir can only be used with --global"
-  fi
 }
 
 get_global_dir() {
@@ -103,6 +108,7 @@ get_global_dir() {
     codex)
       if [[ -n "${CODEX_HOME:-}" ]]; then expand_path "$CODEX_HOME"
       else printf '%s\n' "$HOME/.codex"; fi ;;
+    cursor) printf '%s\n' "$HOME/.cursor" ;;
   esac
 }
 
@@ -113,6 +119,7 @@ get_target_dir() {
       claude) printf '%s\n' "$PWD/.claude" ;;
       opencode) printf '%s\n' "$PWD/.opencode" ;;
       codex) printf '%s\n' "$PWD/.codex" ;;
+      cursor) printf '%s\n' "$PWD/.cursor" ;;
     esac
     return
   fi
@@ -121,12 +128,13 @@ get_target_dir() {
 
 prompt_tool() {
   local answer
-  printf 'Select the tool to install:\n  1) Claude Code\n  2) OpenCode\n  3) OpenAI Codex\nChoice [1]: '
+  printf 'Select the tool to install:\n  1) Claude Code\n  2) OpenCode\n  3) OpenAI Codex\n  4) Cursor\nChoice [1]: '
   read -r answer || cancelled
   case "${answer:-1}" in
     1) TOOL="claude" ;;
     2) TOOL="opencode" ;;
     3) TOOL="codex" ;;
+    4) TOOL="cursor" ;;
     *) die "invalid selection: $answer" ;;
   esac
 }
@@ -134,7 +142,7 @@ prompt_tool() {
 prompt_location() {
   local global_dir answer local_dir
   global_dir="$(get_global_dir "$TOOL")"
-  case "$TOOL" in claude) local_dir="$PWD/.claude" ;; opencode) local_dir="$PWD/.opencode" ;; codex) local_dir="$PWD/.codex" ;; esac
+  local_dir="$(get_target_dir "$TOOL" local)"
   printf 'Install location:\n  1) Global (%s)\n  2) Local  (%s)\nChoice [1]: ' "$global_dir" "$local_dir"
   read -r answer || cancelled
   case "${answer:-1}" in
@@ -154,12 +162,32 @@ ensure_context() {
 }
 
 sync_dir() {
-  [[ -n "$2" && "$2" =~ ^/.{3,}/.{1,}/.{1,} ]] || die "sync_dir: refusing unsafe destination path: ${2:-<empty>}"
-  rm -rf "$2"
+  local source destination
+  [[ -d "$1" ]] || die "source directory not found: $1"
+  if [[ "$1" -ef "$2" ]]; then return; fi
+  source="$(expand_path "$(cd "$1" && pwd -P)")"
   mkdir -p "$(dirname "$2")"
-  cp -R "$1" "$2"
+  destination="$(checked_destination "$2")"
+  case "$source/" in "$destination/"*) die "source is inside destination: $destination" ;; esac
+  case "$destination/" in "$source/"*) die "destination is inside source: $destination" ;; esac
+  rm -rf "$destination"
+  cp -R "$source" "$destination"
 }
-sync_file() { mkdir -p "$(dirname "$2")"; cp "$1" "$2"; }
+sync_file() {
+  [[ -f "$1" ]] || die "source file not found: $1"
+  if [[ "$1" -ef "$2" ]]; then return; fi
+  mkdir -p "$(dirname "$2")"
+  cp "$1" "$(checked_destination "$2")"
+}
+
+checked_destination() {
+  local parent
+  parent="$(expand_path "$(cd "$(dirname "$1")" && pwd -P)")"
+  # target_root is the canonical config directory from main, never a path-depth guess.
+  case "$parent/" in "$target_root/"*) ;; *) die "destination escapes config directory: $1" ;; esac
+  [[ ! -L "$1" ]] || die "refusing symbolic-link destination: $1"
+  printf '%s/%s\n' "$parent" "$(basename "$1")"
+}
 
 confirm_overwrite() {
   local target_root="$1"
@@ -217,25 +245,39 @@ install_codex() {
   sync_dir "$REPO_ROOT/.agents/skills/forge" "$t/skills/forge"
 }
 
+install_cursor() {
+  local t="$1"
+  mkdir -p "$t/skills"
+  sync_dir "$REPO_ROOT/.cursor/skills/forge" "$t/skills/forge"
+}
+
 main() {
   parse_args "$@"
   ensure_context
   local target_root
-  target_root="$(get_target_dir "$TOOL" "$LOCATION")"
+  if [[ -n "$CONFIG_DIR" && "$LOCATION" == local ]]; then die "--config-dir can only be used with --global"; fi
+  target_root="$(expand_path "$(get_target_dir "$TOOL" "$LOCATION")")"
+  mkdir -p "$target_root"
+  target_root="$(expand_path "$(cd "$target_root" && pwd -P)")"
+  case "$OSTYPE:$target_root" in
+    *:/|msys*:/[a-zA-Z]|cygwin*:/cygdrive/[a-zA-Z]) die "refusing filesystem root as config directory" ;;
+  esac
   confirm_overwrite "$target_root"
 
   local label
-  case "$TOOL" in claude) label="Claude Code" ;; opencode) label="OpenCode" ;; codex) label="OpenAI Codex" ;; esac
+  case "$TOOL" in claude) label="Claude Code" ;; opencode) label="OpenCode" ;; codex) label="OpenAI Codex" ;; cursor) label="Cursor" ;; esac
   printf 'Installing AutoForge for %s (%s)\nTarget: %s\n' "$label" "$LOCATION" "$target_root"
 
   case "$TOOL" in
     claude) install_claude "$target_root" ;;
     opencode) install_opencode "$target_root" ;;
     codex) install_codex "$target_root" ;;
+    cursor) install_cursor "$target_root" ;;
   esac
 
   case "$TOOL" in
     codex) printf 'Done. Use $forge in Codex to start.\n' ;;
+    cursor) printf 'Done. Use /forge or /forge <subcommand> in Cursor Agent to start.\n' ;;
     *) printf 'Done. Run /forge to start.\n' ;;
   esac
 }

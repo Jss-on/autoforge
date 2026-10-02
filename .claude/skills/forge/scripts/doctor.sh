@@ -2,7 +2,7 @@
 # doctor.sh — environment preflight for the AutoForge build pipeline.
 #
 # Verifies every external tool the 22 commands actually invoke, split by tier:
-#   CORE      — required for any command to work (bash/node/git/coreutils)
+#   CORE      — required for any command to work (bash/node/git/POSIX utilities)
 #   BUILD     — required for the build/feature pipeline's verification gates
 #               (Playwright drives the ux dimension; docker the devops one)
 #   OPTIONAL  — needed only when a spec declares the matching rows
@@ -51,7 +51,7 @@ check core node node          "hooks + verification helpers (.cjs)"
 check core git git            "experiment ledger, ratchet, worktrees"
 check core awk awk            "scorer arithmetic"
 check core sed sed            "seam text processing"
-check core sha256sum sha256sum "score-log evidence hashing"
+check core grep grep          "command routing + scorer text matching"
 if command -v node >/dev/null 2>&1; then
   NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)"
   if [[ "${NODE_MAJOR:-0}" -lt 18 ]]; then
@@ -69,7 +69,8 @@ printf '\nBUILD PIPELINE (build/feature verification gates)\n'
 if command -v playwright >/dev/null 2>&1 \
   || node -e "require.resolve('playwright')" >/dev/null 2>&1 \
   || node -e "require.resolve('playwright-core')" >/dev/null 2>&1 \
-  || [[ -d "$HOME/.cache/ms-playwright" ]] || [[ -d "$HOME/AppData/Local/ms-playwright" ]]; then
+  || [[ -d "$HOME/.cache/ms-playwright" ]] || [[ -d "$HOME/Library/Caches/ms-playwright" ]] \
+  || [[ -d "$HOME/AppData/Local/ms-playwright" ]]; then
   row "playwright" "ok" "live e2e + axe + DESIGN.md conformance drive the ux dimension"
 else
   row "playwright" "MISSING" "REQUIRED: install with 'npm i -D playwright && npx playwright install --with-deps chromium'"

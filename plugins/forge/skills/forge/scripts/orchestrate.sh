@@ -31,7 +31,7 @@ classify() {
   # Android packaging — after harden (security keeps priority), before ship/fix: "publish the
   # apk", "convert to android", "fix the android build" all belong to the android command, which
   # owns its own trust/package/device-gate/release loop (single-pass dispatch).
-  if printf '%s' "$g" | grep -qE '(android|\bapk\b|\baab\b|play store|google play|\btwa\b|trusted web activity)'; then
+  if printf '%s' "$g" | grep -qE '(android|(^|[^[:alnum:]_])(apk|aab|twa)([^[:alnum:]_]|$)|play store|google play|trusted web activity)'; then
     echo "package-android"; return 0
   fi
 
@@ -69,7 +69,7 @@ classify() {
   # (audit → --fix loop; predicate = score-design.sh verdict SHIP). Checked AFTER build so
   # "build the UI for X" stays greenfield work; bare "design" is NOT enough ("design
   # decision" is decide-design below) — the surface words are.
-  if printf '%s' "$g" | grep -qE '(redesign|ui/ux|\bui\b|\bux\b|user interface|look and feel|looks? (bad|ugly|generic|dated|amateur)|ugly|polish the|slop|usability|accessib)'; then
+  if printf '%s' "$g" | grep -qE '(redesign|ui/ux|(^|[^[:alnum:]_])(ui|ux)([^[:alnum:]_]|$)|user interface|look and feel|looks? (bad|ugly|generic|dated|amateur)|ugly|polish the|slop|usability|accessib)'; then
     echo "polish-ui"; return 0
   fi
 
@@ -241,7 +241,9 @@ screen-cmd() {
   # boundaries and quoted arguments together when checking URL/credential scope.
   # ponytail: lexical screening cannot resolve expansions, scripts or aliases;
   # the host sandbox and explicit execution approvals remain the real boundary.
-  if ! cmd=$(MSYS2_ARG_CONV_EXCL='*' node - "$cmd" <<'NODE'
+  # Bash 3.2 misparses these JavaScript quotes inside a command-substitution heredoc.
+  local screen_js
+  IFS= read -r -d '' screen_js <<'NODE' || :
 const raw = process.argv[2];
 const tokenPattern = /(?:[^\s'"\\;&|()]+|\\[^\n]|"(?:\\.|[^"\\])*"|'[^']*')+|&&|\|\||[;&|()\n]/g;
 const tokens = raw.match(tokenPattern) || [];
@@ -316,7 +318,7 @@ process.stdout.write(raw.replace(tokenPattern, token => {
   return /^[A-Za-z0-9_./-]+$/.test(value) ? value : token;
 }));
 NODE
-  ); then
+  if ! cmd=$(MSYS2_ARG_CONV_EXCL='*' node - "$cmd" <<< "$screen_js"); then
     echo "refuse"; return 1
   fi
   # Shell operators delimit commands even without whitespace; do not let the

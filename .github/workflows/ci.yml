@@ -11,9 +11,22 @@ permissions:
 
 jobs:
   test:
-    name: Harness test suites
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: Harness test suites
+          - os: windows-latest
+            name: Harness Windows smoke
+          - os: macos-latest
+            name: Harness macOS test suites
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -25,6 +38,8 @@ jobs:
       - name: Run all suites
         run: |
           set -e
+          # Exercise macOS's system Bash and BSD tools, even if Homebrew is installed.
+          if [[ "$RUNNER_OS" == macOS ]]; then export PATH="/usr/bin:/bin:/usr/sbin:/sbin:$PATH"; fi
           fail=0
           for t in tests/test-*.sh; do
             echo "== $t"
@@ -33,29 +48,6 @@ jobs:
           exit $fail
       - name: Seam smoke (deterministic end-to-end pipeline)
         run: bash scripts/smoke-seam.sh
-
-  windows-smoke:
-    name: Harness Windows smoke
-    runs-on: windows-latest
-    timeout-minutes: 20
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
-        with:
-          node-version: 24
-          package-manager-cache: false
-      - name: Windows execution and installed package seams
-        run: |
-          set -e
-          for t in acceptance verification ci-evidence delivery recovery operations delivery-metrics release-eval codex-plugin; do
-            bash "tests/test-$t.sh"
-          done
-          bash scripts/smoke-seam.sh
 
   # Model evaluations run locally with subscription logins. Release policy pins
   # their report digest and independently verifies these hosted CI jobs.
