@@ -6,15 +6,16 @@
 
 **Research the decision. Build the product. Verify every improvement.**
 
-An autonomous iteration engine for Claude Code, OpenCode, and OpenAI Codex.
+An autonomous iteration engine for Claude Code, OpenCode, OpenAI Codex, and Cursor.
 
 [![Claude Code Skill](https://img.shields.io/badge/Claude_Code-Skill-blue?logo=anthropic&logoColor=white)](https://docs.anthropic.com/en/docs/claude-code)
 [![OpenCode](https://img.shields.io/badge/OpenCode-Skill-purple)](https://opencode.ai)
 [![Codex](https://img.shields.io/badge/Codex-Plugin-green?logo=openai&logoColor=white)](https://developers.openai.com/codex)
+[![Cursor](https://img.shields.io/badge/Cursor-Skill-black)](https://cursor.com/docs/skills)
 ![Version](https://img.shields.io/badge/version-3.6.0-blue.svg)
 [![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 
-**22 commands · 3 agent platforms · bounded iteration · evidence-backed gates**
+**22 commands · 4 agent platforms · bounded iteration · evidence-backed gates**
 
 [Capabilities](#capabilities) · [Scenarios](#practical-scenarios) · [Install](#quick-start) · [Commands](#commands) · [Build Software](#building-complex-software) · [Secure & Ship](#security-and-shipping-guide) · [Guides](guide/)
 
@@ -205,6 +206,7 @@ they are workflows, not a standalone `forge` shell executable.
 | Claude Code | `/forge` | `/forge:design` |
 | Codex | `$forge` | `$forge design` |
 | OpenCode | `/forge` | `/forge_design` |
+| Cursor | `/forge` | `/forge design` |
 
 ### Quick Decision Guide
 
@@ -257,8 +259,8 @@ they are workflows, not a standalone `forge` shell executable.
 
 ## Practical scenarios
 
-These examples use **Codex chat syntax**. Use the platform equivalents above for Claude Code or
-OpenCode. Run one command at a time; replace paths, domains and budgets with your project's values.
+These examples use **Codex chat syntax**. Use the platform equivalents above for Claude Code,
+OpenCode, or Cursor. Run one command at a time; replace paths, domains and budgets with your project's values.
 Each scenario names the evidence you should expect, so progress is more than a finished response.
 
 <details>
@@ -635,8 +637,8 @@ Your git must be able to reach it: authenticate with `gh auth login`, or set up 
 
 | Requirement | Needed for |
 |---|---|
-| bash + POSIX tools (Git Bash on Windows) | scripts, hooks, scorers |
-| Node.js >= 18 | hooks, verification probes |
+| Bash 3.2+ + POSIX tools (Git Bash on Windows) | scripts, hooks, scorers; macOS system tools are supported |
+| Node.js >= 18 (Node 24 used in CI) | hooks, verification probes |
 | git | the loop itself — commit / revert is the memory |
 | Playwright | **required for the build pipeline** — headless Chromium for live e2e, axe a11y and DESIGN.md conformance (the ux dimension). Installed per project: `npm i -D playwright && npx playwright install --with-deps chromium` |
 
@@ -651,6 +653,20 @@ Run the environment preflight any time:
 ```bash
 bash scripts/doctor.sh
 ```
+
+Linux and macOS run the `.sh` tools with Bash, including from a zsh terminal.
+On Windows, install Git for Windows and run them in **Git Bash**, with Node.js and Git on
+that shell's `PATH`. From PowerShell, use the explicit Git Bash executable when needed:
+
+```powershell
+& 'C:/Program Files/Git/bin/bash.exe' scripts/doctor.sh
+```
+
+Paths containing spaces are supported; quote them. Installer `--config-dir` accepts absolute
+or relative paths, including Windows drive paths under Git Bash. No extra GNU coreutils install
+is needed on macOS. CI runs the full harness and installation checks on all three operating
+systems. Agent/model evaluations are tracked separately in the
+[installed evaluation guide](guide/installed-evaluation.md).
 
 ---
 
@@ -792,6 +808,38 @@ cp -r autoforge/.agents/skills/forge ~/.agents/skills/forge
 
 Use either the plugin or the manual skill to avoid duplicate Forge entries. For development
 from a local checkout, see [Contributing](CONTRIBUTING.md#codex-plugin-development).
+
+### Cursor Quick Start
+
+Authenticate Git for this private repository first, then run in Bash (Git Bash on Windows):
+
+```bash
+git clone https://github.com/Jss-on/autoforge
+cd autoforge
+bash scripts/install.sh --cursor --global
+```
+
+This installs the complete skill into `~/.cursor/skills/forge/`. For a project-only installation,
+run this from your **target project's root**, replacing the checkout path:
+
+```bash
+bash /path/to/autoforge/scripts/install.sh --cursor --local
+```
+
+The local destination is `.cursor/skills/forge/` in the target project. Reload Cursor with
+**Developer: Reload Window** or reopen it, then start an Agent chat in that project:
+
+```text
+/forge plan Goal: Improve this repository's test coverage
+/forge design
+/forge security --diff --fail-on high
+```
+
+All 22 workflows use `/forge <subcommand> [flags]`; `/forge` is the single skill entry.
+Git, Node.js and Bash remain required for workflow checks. Claude Code hooks are not installed
+in Cursor. Update by pulling the AutoForge checkout, rerunning the same installer and reloading
+Cursor. See [Cursor's skill documentation](https://cursor.com/docs/skills) and
+[Cursor skill development](CONTRIBUTING.md#cursor-skill-development).
 
 ### Run It
 
@@ -1201,11 +1249,11 @@ Enter Forge commands in your agent's chat while working in the application repos
 agent workflows; there is no standalone `forge` shell executable required by these examples.
 Use the same arguments after the command name on each platform:
 
-| Task | Codex | Claude Code | OpenCode |
-|------|-------|-------------|----------|
-| Audit | `$forge security` | `/forge:security` | `/forge_security` |
-| Check regressions | `$forge regression` | `/forge:regression` | `/forge_regression` |
-| Preview or ship | `$forge ship` | `/forge:ship` | `/forge_ship` |
+| Task | Codex | Claude Code | OpenCode | Cursor |
+|------|-------|-------------|----------|--------|
+| Audit | `$forge security` | `/forge:security` | `/forge_security` | `/forge security` |
+| Check regressions | `$forge regression` | `/forge:regression` | `/forge_regression` | `/forge regression` |
+| Preview or ship | `$forge ship` | `/forge:ship` | `/forge_ship` | `/forge ship` |
 
 The examples below use Codex syntax. Replace paths, repository names, environment names, and
 URLs with your project's values. `Scope:` limits the files examined or changed; `Target:` identifies
@@ -1525,7 +1573,7 @@ bash scripts/release.sh 3.6.1 --title "Security and shipment hardening"
 `X.Y.Z` without leading zeros, and have no existing release tag; an initial `v` is accepted.
 Authenticate with `gh auth login` if needed before starting.
 
-1. The script creates `release/X.Y.Z`, updates the three manifests, all five skill versions, and
+1. The script creates `release/X.Y.Z`, updates the three manifests, all generated skill versions, and
    version badges, then pauses for document review. Review `README.md`, `guide/`, `CONTRIBUTING.md`,
    and `COMPARISON.md`; press Enter to continue or type `abort` to retain local changes and stop.
 2. It stages only release/documentation paths, commits them, runs all harness suites and the seam
@@ -1798,9 +1846,9 @@ autoforge/
 ├── evals/fullstack/                               ← build specs (*.spec.yaml)
 ├── tests/                                         ← harness self-tests (parity, hooks, scorers)
 ├── scripts/
-│   ├── install.sh                                 ← guided installer (Claude Code + OpenCode + Codex)
+│   ├── install.sh                                 ← guided installer (Claude Code + OpenCode + Codex + Cursor)
 │   ├── doctor.sh                                  ← environment preflight (core / build / optional tiers)
-│   ├── transform.sh                               ← single transform: .claude/ → .opencode/ + .agents/ + plugins/
+│   ├── transform.sh                               ← single transform: .claude/ → .opencode/ + .agents/ + plugins/ + .cursor/
 │   ├── orchestrate.sh                             ← orchestrator seam (classify / route / units / screen)
 │   ├── score-build.sh                             ← fullstack_pass_rate scorer + logic gate + coverage + strict evidence
 │   ├── score-test.sh                              ← defect-ledger validator + exit-criteria verdict (test)
@@ -1830,6 +1878,8 @@ autoforge/
 │   └── commands/                                  ← 21 command files (forge_*.md)
 ├── .agents/                                       ← Codex port (via transform.sh)
 │   └── skills/forge/
+├── .cursor/                                       ← Cursor port (via transform.sh)
+│   └── skills/forge/                              ← router + command contracts + references + scripts
 └── plugins/forge/                          ← Codex plugin package
     ├── .codex-plugin/plugin.json                  ← plugin manifest
     └── skills/forge/
@@ -1876,6 +1926,9 @@ A: Yes. Run `./scripts/install.sh --opencode --global` or manually copy `.openco
 
 **Q: Does this work with OpenAI Codex?**
 A: Yes. Run `codex plugin marketplace add Jss-on/autoforge`, then `codex plugin add forge@forge-local`. Start a new thread and invoke `$forge plan`, `$forge build`, or any other subcommand. See [Codex Quick Start](#codex-quick-start) for updates, Windows setup and the manual skill fallback.
+
+**Q: Does this work with Cursor?**
+A: Yes. From the authenticated clone, run `bash scripts/install.sh --cursor --global`, reload Cursor, and invoke `/forge plan` or another subcommand in Agent chat. All 22 workflows are included. See [Cursor Quick Start](#cursor-quick-start) for project-local installation and prerequisites.
 
 **Q: How do I stop the loop?**
 A: `Ctrl+C` or add `Iterations: N` to your inline config. Claude commits before verifying, so your last successful state is always in git.

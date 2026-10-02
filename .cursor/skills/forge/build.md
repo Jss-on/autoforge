@@ -1,0 +1,770 @@
+---
+name: forge:build
+description: "Build greenfield full-stack software via the standard SDLC — plan → feasibility → requirements → design (incl UI/UX) → implement → comprehensive test → deploy → operate/maintain, every phase gated with its named deliverable — to passing weighted acceptance"
+argument-hint: "[Spec: <file|glob>] [Goal: <text>] [Scope: <glob>] [Stack: <hint>] [Iterations: N] [--evals] [--chain <targets>]"
+---
+
+EXECUTE IMMEDIATELY.
+
+Greenfield full-stack builder that follows the **standard software-engineering lifecycle** (the
+ISO/IEC 12207-backed phase model: planning → feasibility → requirements → design → implementation →
+testing → deployment → operations/maintenance), not a one-shot scaffold. Every phase exits through a
+gate carrying its **named deliverable** (project charter, feasibility verdict, SRS + RTM, HLD/LLD +
+`DESIGN.md`, source + CI, test plan/summary, release notes + user manual, runbook) — kept
+**agile-right-sized**: just-enough living artifacts, never phase-gate tomes. This is the dedicated
+command the orchestrator hands `build-feature` greenfield scope to. "Done" is **passing acceptance across six weighted dimensions** —
+**logic 0.30** · functional 0.30 · **ux 0.20** · devops 0.15 · monitoring 0.15 · hardening 0.20 — measured
+by `scripts/score-build.sh pass-rate`. **`logic` is first-class for complex, multi-rule domains**
+(payroll, accounting, POS): business-rule computations are pinned to **golden cases** (exact
+`input → expected output`) and are **must-pass** — while any `logic` row is red the pass-rate is
+**capped at 0.50**, so a build can never ride ux/devops polish to "done" with wrong math. UI/UX is also
+first-class: a working-but-ugly or inaccessible app is capped, never shipped as "done". A **seed-only
+demo** — pre-seeded read-only data with no create/persist path, or a store that resets on restart — is
+likewise **not "done"**: a real product runs on the user's **own, durably-persisted data** (accounts,
+full CRUD, settings, onboarding from an empty state, per reviewed scope and exceptions), not fixtures. **Done also
+requires full coverage** — every PRD requirement (`FR-`/`NFR-`) and every `DESIGN.md` token group
+traces to ≥1 acceptance assertion (`scripts/score-build.sh coverage`), so a green pass-rate can never
+hide an unbuilt requirement. **Coverage is necessary but not sufficient — every requirement must also be
+EXERCISED at the right level.** The logic dimension's **wired-in rule generalizes to all user-facing
+FRs** (a workflow, an output, a screen): a FR is satisfied only by a **live Playwright e2e that drives it
+through the running app** — a generator / engine / unit test never called from the UI does **not**
+satisfy it ("defined but never called"). Before convergence, a **requirement-satisfaction audit**
+re-reads `requirements.md` and confirms every **goal (G-n) + FR + NFR** is genuinely met by such an
+exercise — not merely traced. **Self-contained** — the SDLC phase-gate table + principles are folded in
+at the end of this doc. Companion contracts: `references/uiux-checklist.md`,
+`references/design-protocol.md` (visitor modes, direction protocol, DESIGN.md schema, craft floor, design QA),
+`references/fullstack-hardening-checklist.md`, `references/integrations-protocol.md` (optional MCP
+families: generative media for real imagery/animation/3D, Figma-class design bridge, Linear-class
+tracker sync — availability-gated, degrade to the named fallback).
+
+**Whose repository?** `build` creates and owns a fresh output repository. Run
+`node scripts/host.cjs detect` in the invoking directory first (`references/host-protocol.md`):
+inside someone else's repository (`role: contributor`, §3) never `git init` a nested repository,
+create an output repo, add a remote or push — greenfield work there is a branch and a merge request
+in *their* repository (`/forge:backlog`), and §3 overrides every owner default in this file.
+
+## Required acceptance completion
+
+Follow `references/acceptance-evidence.md`: pin the reviewed expected check set before implementation,
+then require `scripts/score-build.sh completion <results.tsv> <acceptance-plan.json> <project-root>`
+before completion or a release-ready verdict. Keep weighted scoring for iteration selection.
+Missing, blocked, flaky, unexecuted or unjustifiably skipped required checks cannot be waived by
+a lower target or soft gates. Emit schema `3.3.0` with the pinned `acceptance` reference; feature
+runs preserve the previous accepted floor. Design-system output without an audit remains separate.
+
+## Seam & reference resolution (read once, applies to every `scripts/…` and `references/…` mention)
+
+The mechanical gates (`score-build.sh`, `score-requirements.sh`, `score-regression.sh`,
+`orchestrate.sh`, `doctor.sh`) ship in `skills/forge/scripts/` and the companion contracts in
+`skills/forge/references/`, wherever this skill is installed. Resolve `AR_ROOT` to the FIRST
+that exists, then read every `scripts/<x>` below as `$AR_ROOT/scripts/<x>` and every
+`references/<x>` as `$AR_ROOT/references/<x>`:
+1. `${CLAUDE_PLUGIN_ROOT}/skills/forge` — installed Claude Code plugin.
+2. `.claude/skills/forge` — project-local install (or this repo's canonical tree).
+3. The directory containing this command file — OpenCode/Codex merged layouts.
+4. Last resort: glob `**/skills/forge/scripts/score-build.sh` and take its grandparent.
+If nothing resolves, STOP and tell the user to reinstall (`bash scripts/install.sh`) — the gates are
+mechanical requirements of this pipeline, not optional helpers. Run `bash $AR_ROOT/scripts/doctor.sh
+--require-build` once at Phase 0: a missing Playwright/docker means the ux/devops dimensions cannot be
+verified, which blocks convergence later — surface that now, not at iteration 30.
+
+## Output repository — every build lives on GitHub (transparency contract)
+
+Every project this command builds gets its **own private GitHub repository** under the
+authenticated `gh` account, created in Phase 0 right after the local `git init`:
+`gh repo create <account>/<slug> --private` (slug = the spec/scope name; `Repo:` argument
+overrides). Then wire `origin` and push. This is non-optional plumbing, not shipping: the full
+GitHub lifecycle — Actions CI, PRs, issues, code review, merge conflicts, releases/pre-releases —
+must be exercisable on the ACTUAL output, so the client/owner can inspect what was built in a
+transparent, standard way. A generated `ci.yml` that never executes on GitHub is theater — the
+devops dimension's CI assertion is only satisfiable by a **workflow run on the output repo**.
+
+Cadence:
+- **Push at every phase gate** (minimum) and at every green milestone — CI runs accumulate as
+  evidence alongside `evidence/`.
+- **Branch + PR for feature-scale slices** once main is green; the PR's CI check is part of the
+  verify step. Small inner-loop experiment commits may push straight to the working branch.
+- **PRs merge themselves** (`gh pr merge --squash --delete-branch`, preferring `--auto`) once every
+  CI check is green, the branch is `MERGEABLE`, and the diff stays inside Scope with no secrets —
+  the loop does its own repo chores. Then confirm the base branch's own CI run is green; a
+  PR-green/main-red split re-opens the loop. Blocked by branch protection or a required review →
+  say so and leave it open (the owner's rule stands). `--no-merge` opts out. Merging is not
+  deploying: `ship` stays human-gated.
+- **Found-but-deferred defects become GitHub issues** on the output repo (label `autoforge`),
+  not lost notes in the summary.
+- **Tracker sync (optional):** with `Tracker: linear` (argument or spec field) and a Linear-class
+  MCP connected, the tracker of record moves to Linear per `references/integrations-protocol.md`
+  §3 — engagement → project, each phase gate → status update, deferred/unresolved defects →
+  issues carrying the `forge:<run-id>/<defect-id>` marker (dedupe by marker; severity mapped;
+  `fixed` → in-review, `verified` → done). Exactly one tracker of record — never dual-file;
+  no team resolvable unattended → fall back to GitHub and say so. GitHub stays the default.
+- **Releases are `ship`'s job** (human-gated): tag + `gh release create` (`--prerelease` until
+  acceptance is fully converged). `build` never tags releases on its own.
+- Record the repo URL in `handoff.json` (`repo` field) and in the run summary.
+The repo stays **private** and its visibility is never changed by the loop. If `gh` is
+unauthenticated, say so and continue local-only — do not silently skip the contract.
+
+**Other hosts:** `Host: gitlab` (or a GitLab remote already wired) puts the output project on GitLab
+instead — `glab repo create <namespace>/<slug> --private`, a generated `.gitlab-ci.yml`, merge
+requests and pipelines in place of PRs and workflow runs, all per `references/host-protocol.md` §1;
+§2 lists what stays GitHub-only and is reported `blocked` there. This whole section assumes the
+repository is **yours** (`node scripts/host.cjs detect` → `role: owner`): never create an output
+repo, push a mirror or self-merge for code that belongs to someone else (`role: contributor`, §3).
+
+## Reuse before build (efficiency principle)
+
+For every already-solved problem — input validation, auth/JWT/TOTP, password hashing, money/decimal
+and date math, ORM + migrations, file upload/storage, rate limiting, logging — **prefer the stack's
+battle-tested package over hand-rolled code** (e.g. zod, jose, otplib, bcrypt, decimal.js, Prisma).
+Check the ecosystem registry (npm/PyPI/crates.io) before writing any utility module. Hand-roll ONLY
+the domain layer the `logic` golden vectors own — tax/payroll/pricing/ledger business rules are the
+product; primitives are not. A hand-rolled implementation of a solved problem is a defect, not
+diligence: it adds untested surface that the hardening dimension must then re-verify from zero.
+Record each major library choice with a one-line rationale in the HLD (Phase 4 deliverable).
+
+## Ponytail discipline — the lazy senior dev (token + time economy)
+
+Method adopted from [ponytail](https://github.com/dietrichgebert/ponytail) (dietrichgebert; measured
+on a real agent editing `full-stack-fastapi-template`, Haiku 4.5, n=4 × 12 feature tasks: **−54 %
+lines of code, −22 % tokens, −20 % cost, −27 % time, 100 % of validation / error handling / security /
+a11y kept** — vendor benchmark, treat as directional). The best code is the code never written: every
+line the loop does not write is a line it never reads back, tests, hardens, or re-verifies. Works
+**with** the plugin when installed (`/ponytail`, `/ponytail-review`, `/ponytail-debt`,
+`/ponytail-audit`) and **inline** without it — this section is the fallback definition.
+
+**The ladder — run on every implementation, fix and refactor slice; stop at the first rung that holds:**
+1. **Does it need to exist at all?** Speculative need → skip it and say so in one line (YAGNI).
+2. **Already in this codebase?** A helper, type, util or pattern a few files over → reuse it.
+3. **Stdlib does it?** Use it.
+4. **Native platform feature covers it?** `<input type="date">` over a picker lib, CSS over JS, a DB
+   constraint over app code, the framework's built-in over a wrapper.
+5. **Already-installed dependency solves it?** Use it — never add a dependency for what a few lines
+   do (this is the "Reuse before build" rung; the registry check lives there).
+6. **Can it be one line?** One line.
+7. **Only then:** the minimum code that works.
+
+**Lazy about the solution, never about the reading.** The ladder runs *after* the problem is
+understood, never instead of it: read the task and every file the change touches, trace the real
+flow end to end, then climb. A bug report names a symptom — grep every caller before editing; the
+lazy fix IS the root-cause fix (one guard in the shared function beats a guard in each caller — the
+Defect Loop's iron law, restated). Two rungs work → take the higher one and move on.
+
+**Rules (per slice):**
+- **Shortest working diff, fewest files.** No unrequested abstractions (no interface with one
+  implementation, no factory for one product, no config for a value that never changes), no
+  scaffolding "for later", no boilerplate; deletion over addition; boring over clever.
+- **`ponytail:` markers.** A deliberate simplification with a known ceiling (global lock, O(n²) scan,
+  naive heuristic) carries a comment naming the ceiling and the upgrade path —
+  `// ponytail: global lock; per-account locks if throughput matters`. Never a silent shortcut.
+- **One runnable check per non-trivial logic** (a branch, loop, parser, money/security path) — the
+  smallest thing that fails if the logic breaks, in the project's existing runner; no per-function
+  suites, no new framework, no fixtures for a one-liner. The golden cases and the acceptance rows
+  already are that check for the domain — do not duplicate them.
+- **Output pattern** in the iteration log and the summary: `[change] → skipped: [X], add when [Y].`
+  Three lines max per slice; no essays, no feature tours — an explanation longer than the code is
+  complexity smuggled back in as prose. Deliverables the pipeline names (charter, SRS, runbook …)
+  are requested prose: write them in full.
+- **Debt harvest before DONE.** `grep -rn 'ponytail:'` over the Scope → `DEBT.md` (file:line ·
+  ceiling · upgrade path · trigger) + one GitHub issue per row (labels `autoforge`, `ponytail-debt`;
+  Linear when it is the tracker of record) — so later never becomes never. The count prints in the
+  Summary and rides `handoff.json` findings. `/ponytail-debt` does this when installed.
+
+**Token + time mechanics (the measured savings come from here as much as from the code):**
+- Read each file once; `grep` / `sed -n` ranges over whole-file reads past ~300 lines; never re-read
+  what is already in context; never paste a full file or a full test log into the transcript — every
+  verification is tee'd to `evidence/` anyway, so read the tail and the failing lines only.
+- Batch independent commands into one call; fail fast — run the suite the slice touches first, the
+  full guard second (the guard still decides keep/discard; the whole pyramid runs at every phase gate
+  and at the independent verify, not after every one-file change).
+- Browser sweeps and guard cadence follow `references/speed-protocol.md`: one Playwright session per
+  sweep, `design-scan.cjs --sheet` (the contact sheet, not every PNG), `--prev` delta re-scans of
+  unchanged pages, the touched suite per slice + the full Guard at gates; `--thorough` restores the
+  exhaustive form.
+- Narrate the phase and the gate, not the keystrokes: the `iterations.tsv` line is the explanation.
+- Measure it: log `loc_delta` (insertions + deletions of the slice) per iteration; the keep rule's
+  "simplicity wins" compares it. A row turned green with a negative `loc_delta` is the best kind.
+
+**Levels** (`Ponytail: lite|full|ultra|off`, default **ultra**; mirrors `/ponytail <level>`): *lite* —
+ladder advisory, standard prose; *full* — ladder enforced, shortest diff and explanation; *ultra* —
+**YAGNI extremist**: deletion before addition, ship the one-liner and challenge the rest of the
+requirement in the same breath (`skipped: X, add when Y` names what was cut and the trigger that
+brings it back), a **delete-list pass** on every slice's diff before it is measured (`/ponytail-review`
+or inline: delete anything no acceptance row needs) and a **whole-repo pass** at the Phase 8 gate
+(`/ponytail-audit`); *off* — this section is inert. In forge the spec is the requirement: ultra
+challenges a spec row in the summary, it never drops or waters one down. No level ever relaxes the
+Defect Loop or a gate.
+
+**Never lazy about (what the ladder may not cut):** input validation at trust boundaries, error
+handling that prevents data loss, every `hardening` row (security headers, authZ, CSRF/SSRF, rate
+limits, secret hygiene), accessibility basics (the `ux` rows), the real-product / anti-demo
+persistence contract, the golden cases, and anything the Spec / Goal explicitly requests. A user or a
+spec that asks for the full version gets the full version — no re-arguing. The ladder shortens the
+solution, never the reading, never the verification.
+
+## Asset-heavy targets (games, media-heavy apps)
+When the spec is a game or the target bundles significant assets (sprites, models, audio, fonts,
+large datasets), follow `references/game-assets-protocol.md` from Phase 1 on. Non-negotiables:
+**sourcing ladder** (checked reuse/CC0 packs → **generated-on-brief** via Codex-native image tools or a matching media MCP
+(integrations-protocol §1: planned slots, style-contract prompts, provenance rows, 12-job cap) →
+procedural/code-generated → CC-BY with rendered attribution; never
+unlicensed/ripped assets) with a **license ledger** (`assets/CREDITS.md`, one hardening row asserts
+it covers every asset file); **size discipline** (no file ≥ 50 MB in git, runtime formats only —
+WebP/OGG/GLB/WOFF2, initial-payload budget as a mechanical `devops` row, LFS declared BEFORE the
+first large commit when needed); **determinism seams built in from slice one** (seeded RNG, a
+`window.__game` test API, a pure headless rules engine carrying the `logic` golden vectors —
+canvas is opaque to Playwright, so the game must expose its own truth); and the **game edition of
+anti-demo**: progress persists across reload, first-run teaches, settings save — a game that resets
+everything on refresh is still a demo.
+
+## Parse Arguments
+
+Extract from $ARGUMENTS:
+- `Spec:` / `--spec` — eval spec file/glob (`evals/fullstack/*.spec.yaml`). Declares stack + acceptance.
+- `Goal:` / `--goal` — free-text product description when no spec file is given (a PRD is derived).
+- `Scope:` / `--scope` — directory the build may write into (default: a fresh subdir, never the skill repo).
+- `Stack:` / `--stack` — stack hint (e.g. `node+postgres+react`). A **candidate carrying a
+  constraint, never a bypass** of the evidence-based selection (`references/stack-selection-protocol.md`
+  §1): it enters the option set, gets scored against real alternatives, and the owner approves.
+- `Design:` / `--design` — DESIGN.md source: a catalog slug (getdesign.md / `awesome-design-md`,
+  e.g. `linear`), a file path, a URL — a **Figma URL** routes through the design bridge
+  (integrations-protocol §2: variables/components/frames → DESIGN.md) — or `generate`. Default:
+  the spec's `design:` block, else generate.
+- `Tracker:` / `--tracker` — `github` (default) | `linear` (arms tracker sync, integrations-protocol §3).
+- `Host:` / `--host` — `github` (default) | `gitlab`: where the output repo lives (`references/host-protocol.md`).
+- `Assets: N|off` — generation-attempt budget (default 12 when suitable native/MCP tools are available;
+  `off` disables new generation, preserving asset validation, checked reuse, SVG icons and UI motion).
+- `Ponytail:` / `--ponytail` — `lite | full | ultra | off` (default `ultra`): the lazy-senior-dev
+  discipline level (section above).
+- `Iterations:` / `--iterations` — default 40. "unlimited" for unbounded.
+- `Target-rate:` — pass-rate to stop at (default 1.00).
+- `--evals`, `--evals-interval N`, `--chain <targets>`, `--<subcommand>`
+
+## Setup (if required context missing)
+
+For a free-text Goal without a reviewed requirements spec, first run `/forge:requirements` with
+the Goal as the Brief (and supplied Stack/Assets hints), following `references/elicitation-protocol.md`:
+show the owner the understanding, assumptions, stories and scenarios before detailed questions.
+Resume build after the current review is approved and the generated spec is VALID; reuse that
+handoff without re-interviewing settled decisions. This happens before charter scope is committed
+or product scaffolding starts. A supplied Spec remains the build input; surface any newly discovered
+scope-changing assumptions through the same review instead of silently adding them. Recorded
+requirements exceptions govern the product-surface defaults (accounts, organizations, CRUD, etc.);
+do not silently restore excluded features. Explain any actual conflict and resolve it in the review.
+
+If neither Spec nor Goal is provided, ask only "What should I build?", then use the requirements
+route above. Stack, design and launch choices belong in that visible review.
+If a spec file is provided → derive everything from it and skip setup — **except the stack**: run
+`REQUIRE_STACK_DECISION=1 scripts/score-requirements.sh validate <spec>` on intake. A spec whose
+`stack.decision` is missing, BLOCKED (no evidence, approval missing or stale) or still marked
+`NEEDS CLARIFICATION` has an **unjustified stack**: run `references/stack-selection-protocol.md`.
+First elicit the §2 inputs and record the answers as `A-n` in `<run-dir>/stack/client-review.md`;
+reuse existing answers. Then research → knock-outs → cited matrix → recommendation → owner
+approval via AskUserQuestion until `STACK_DECISION: READY`. Save the whole approved bundle beside
+the spec in tracked `<name>.stack/`, point `decision:` there, and re-run validation. A hand-written
+`stack:` block or a mandate alone never substitutes for the evidence and owner approval record.
+
+## Precondition Checks
+
+git repo exists, working tree clean (or target is an isolated subdir), no detached HEAD. Resolve the
+build target dir. **Never scaffold into the forge skill tree** — build into the declared Scope
+or a fresh `build-output/<name>/`. Fail fast on a dirty unrelated tree.
+
+---
+
+# The SDLC Pipeline (phase-gated)
+
+The **standard eight SDLC phases**, each with an **exit gate**; the loop does not advance until the
+gate passes. Phases map onto the forge subcommands so each reuses a proven bounded loop.
+**Standard phases, agile execution (hybrid):** the iteration loop re-slices the phases so every slice
+touches requirements → test at small scale; deliverables are kept but **right-sized** — just-enough,
+just-in-time living documents; **working software is the primary measure of progress** (the pass-rate,
+not document completion, is the metric), and the convergence criteria are the **Definition of Done**.
+Full gate criteria + principles: the **Phase-gate protocol** section at the end of this doc.
+
+## Phase 1 — Planning / Initiation
+Summarize what is being built, why, and how from the reviewed requirements or supplied Spec. Produce the
+**Project Charter** (`charter.md`, agile-right-sized to ~1 page): objectives + product vision (the
+elevator pitch), explicit **in/out scope** lists, stakeholders/ICP, the **iteration budget** (the
+`Iterations:` bound is the schedule/budget analog), constraints (stack hints, compliance), and a
+**risk register** (top technical + domain risks, each with a mitigation). Reuse `plan` to convert the
+Goal into a validated Scope / Metric / Direction / Verify config; `predict` personas flag delivery
+risks early. When a Spec file or a `requirements` handoff already covers an item, derive the charter
+from it instead of re-asking.
+**Gate:** `charter.md` committed with objectives, in/out scope, iteration budget, and ≥3 risks with
+mitigations; build target dir resolved (never the skill repo).
+
+## Phase 2 — Feasibility
+A lightweight **go/no-go spike**, not a study (the agile adaptation of the Feasibility Study /
+Business Case): prove the build can succeed in THIS environment before iterations are committed.
+- **Technical** — the toolchain boots: runtime + package manager resolve, DB/docker reachable (or a
+  fallback picked), a hello-world of the target stack compiles and runs.
+- **Stack confirmation (the decision's *Confirmation* section — protocol §9)** — the approved
+  `stack-decision.md` pre-registered spike hypotheses (load model from the usage-model `A-n`,
+  thresholds from the performance/functional-fit drivers). Run them now on the scaffold: identical
+  hardware and load model for every candidate still in play, thresholds fixed **before** the run,
+  ≥5 runs reported as a distribution (p50/p95), the harness's proficiency asymmetry disclosed (it
+  writes its favourite stack's spike better). Write measured results to `confirmation-results.md`
+  beside the immutable approved record. Copy and commit the whole decision bundle to
+  `docs/adr/0001-tech-stack/` (record: `docs/adr/0001-tech-stack/stack-decision.md`, the spec's
+  `stack.adr`); point the target spec's `decision:` there and re-run the spec gate in the target repo.
+  A miss against
+  a pre-registered threshold **supersedes the decision**: stop, show the numbers, AskUserQuestion
+  (approve anyway as accepted risk · switch to the runner-up · re-scope) — never pin a stack that
+  failed its own test, never adjust the threshold to fit the result.
+- **Operational** — ports free, throwaway dev creds obtainable via env, Playwright available for e2e.
+- **Schedule** — acceptance-row estimate vs the iteration budget (a 200-row rule matrix does not fit
+  10 iterations); surface the mismatch now, not at iteration 39.
+- **Legal/licensing** — direct dependencies carry permissive licenses (no copyleft surprise) — the
+  decision's licence knock-out re-checked against the actual lockfile (SPDX ids).
+**Gate:** verdict recorded in `charter.md` as **GO** (stack pinned = the approved decision with its
+spike results recorded separately, ADR bundle committed) or **NO-GO** → AskUserQuestion to re-scope/re-stack (a new
+record, owner re-approval). Never enter Phase 3 on an unproven toolchain or an unapproved stack.
+
+## Phase 3 — Requirements Analysis
+Turn the Spec/Goal into a concrete **SRS/PRD** + an enumerated **acceptance** list (every assertion tagged
+with a dimension + weight). Give every PRD requirement a **stable ID** — `FR-n` (functional) / `NFR-n`
+(non-functional), per the `requirements` command's SRS/spec rules. **Seed the `logic` dimension from the
+spec's `logic:` block** — one acceptance row per **golden case** (a concrete `input → expected output`
+for a business rule: a tax bracket, a contribution band/cap, an overtime multiplier, a ledger
+invariant), each must-pass. Reuse `probe` / `predict` to interrogate ambiguity and **enumerate the
+rule matrix + edge cases** (boundary + interaction cases — ceiling snaps, proration, compound
+multipliers, rounding — each become more golden rows). Every acceptance row carries a **`traces`**
+field (TSV col 7) naming the requirement ID(s) it satisfies — **no requirement without an assertion,
+no assertion without a requirement**.
+**Gate:** `requirements.md` written (the SRS — IEEE 830 / ISO 29148-shaped via the `requirements`
+command's rules); acceptance rows seeded into `build-results.tsv` as `fail` (baseline) **with `traces`
+filled** — the `traces` column + coverage report IS the **Requirements Traceability Matrix (RTM)**;
+full traceability — `scripts/score-build.sh coverage build-results.tsv requirements.md` reports
+`REQ_COVERAGE: 1.00` (every `FR-`/`NFR-` traced; an orphan requirement or an assertion tracing to
+nothing = gate FAIL). Baseline metric:
+`scripts/score-build.sh pass-rate build-results.tsv` → expect `0.00`.
+
+## Phase 4 — Design (HLD + LLD + UI/UX + data)
+Design the system **and** the interface before coding:
+- **HLD (high-level design)** — modules, data model, API contract, data flow, dependency boundaries
+  (repository pattern), tech stack = the approved decision record (`docs/adr/0001-tech-stack/stack-decision.md`),
+  cited not re-argued; every new major dependency is checked against the record's rejected options.
+- **LLD — domain model (logic-heavy apps)** — identify bounded contexts and a **pure, side-effect-free
+  calculation engine** (tax / contribution / ledger / pricing rules) separate from the app shell.
+  Write the **rule matrix** — tables, formulas, multipliers, caps — with source citations; this is
+  what the `logic` golden cases assert. The **state machines + decision flowcharts from requirements**
+  drive the engine's control flow — implement one transition/branch at a time, each with its golden
+  case. The engine is implemented and golden-tested before any UI.
+- **Database design** — the concrete schema/ER + a forward-only migration plan derived from the
+  domain model.
+- **Adopt a `DESIGN.md` via the direction protocol** — run `/forge:design system` (inline; same
+  run dir) per `references/design-protocol.md` §3: read the room (audience, scene, **visitor mode**
+  per surface — Operate for app UI, Persuade for the landing page — brand assets, the client's
+  dislikes from `requirements`), declare the Design Read, set the dials, pick the foundation honestly
+  (official design-system package when the brief reads as one; the stack's component library
+  otherwise), choose color/type **strategy** before values (Operate floor = Restrained, one workhorse
+  family, tabular data), calibrate against the saturated AI attractors (cream+oxblood · navy+blue
+  shadcn · near-black+neon — the "could someone guess it from the category?" test), list 5–7
+  directions, roll with `scripts/score-design.sh seed`, commit. Resolve the source in order: the
+  `Design:` arg → the spec's `design:` block (`source`, `ref`, `mode`) → else **generate**. Catalog
+  slugs (getdesign.md / `awesome-design-md`), files and URLs are copied to the project root as
+  `DESIGN.md` and normalized to the same frontmatter schema.
+- **DESIGN.md is machine-readable** (protocol §4): YAML frontmatter (`name`, `mode`, `colors` with
+  every `on-X` pair + a muted text token budgeted for the lightest surface, `typography` roles,
+  `spacing`, `rounded`, optional `components`) + prose sections (Overview · Colors · Typography ·
+  Layout · Elevation & Depth · Shapes · Imagery · Components · Motion · States · Do's and Don'ts) + the
+  direction-contract comment in the root layout. `scripts/score-design.sh lint DESIGN.md` must print
+  `DESIGN_LINT: VALID` (schema + computed contrast pairs).
+- **Tokens FROM DESIGN.md** — translate its typography scale, color palette (with contrast targets),
+  spacing, radius, motion, and component states (loading / empty / error / success) into the app's
+  style tokens. The UI is built from these tokens, never improvised. Per `references/uiux-checklist.md`.
+- **Asset pass** — always run design-protocol §3a's imagery opportunity pass, including app surfaces.
+  Plan a small coherent set of real photos, illustrations or artworks in DESIGN.md `## Imagery`,
+  with purpose, placement, mobile crops and task-specific omissions. For selected slots or scoped
+  motion (integrations-protocol §1), adopt the
+  existing inventory or write `assets/manifest.json` plus `assets/PLAN.md`. Reuse approved files and
+  the existing icon family first; `asset-check.cjs select` chooses code for SVG/icons/UI motion and
+  prefers Codex-native imagegen for raster work, with an available media MCP fallback. API generation
+  requires explicit authorization. Keep the DESIGN.md style contract in `assets/PROMPTS.md`, count
+  every attempt under the `Assets:` cap, **read every asset**, copy kept output into the project,
+  and record actual provenance in the manifest + `assets/CREDITS.md`. Model/cost may be unknown.
+  Approved hashes are pinned; snapshot the manifest before fix/resume and run `asset-check.cjs check
+  <target> --previous <snapshot>` after changes. Missing required assets stay failing acceptance
+  rows; optional placeholders name their reason. Declare bounded motion and its reduced behavior
+  in the same manifest; native CSS/Web Animations own UI feedback, not raster generation.
+  If the spec supplies `assets.manifest`, read it as planning input, preserve its required slots,
+  and resolve paths into the Target. Throwaway moodboards are direction evidence, not automatically
+  approved product assets. Carry the manifest/report paths, providers, attempts/cap, kept count and
+  motion evidence in the optional handoff `assets` object (handoff-schema.md).
+  Wire kept files into their declared routes during implementation. Every required image slot gets
+  a `ux` row tracing `design:floor` that checks loading and visible rendering at its route/selector;
+  inspect desktop/mobile crops and task hierarchy in Phase 6. A manifest or chat preview is not delivery.
+- **Archetype rows** — every screen maps to a surface archetype (dashboard, list+CRUD, record,
+  form/wizard, POS/kiosk, settings, auth, onboarding/empty, landing …; protocol §2) whose required
+  patterns become `ux` acceptance rows now, alongside the seven `design:*` coverage rows.
+- **Navigation table = the wireframes** — write the `## Navigation` table in `DESIGN.md` (protocol §4):
+  one row per route — Route · Archetype · primary Object · Roles · Placement (global/local/contextual) ·
+  Primary action · the SC-n steps it serves · Cross-links — derived from the objects and lifecycles in
+  the SRS (each core object gets list, detail and create/edit; each relationship is navigable both
+  ways). Walk the top scenarios through it before any frontend slice. Export the router's routes
+  (one per line) and run `scripts/score-design.sh routes DESIGN.md <routes.txt> requirements.md` →
+  **`ROUTES: PARITY`**: an undeclared route, a table route the router lacks, or a confirmed SC-n with
+  no screen is `DRIFT`. Navigation labels come from the SRS glossary (`terms:`).
+**Gate:** `DESIGN.md` committed with `DESIGN_LINT: VALID` + design tokens derived from it; full design
+traceability — `scripts/score-build.sh coverage` reports `DESIGN_COVERAGE: 1.00`, i.e. every DESIGN.md
+token group (`design:type` · `design:color` · `design:spacing` · `design:radius` · `design:motion` ·
+`design:states` · `design:floor`) is traced by ≥1 `ux` acceptance row (orphan token = gate FAIL).
+(Reuse `reason` to pick between options.)
+
+## Phase 5 — Implementation (TDD)
+Build in a **red → green** TDD ladder, one slice per iteration. Pick the lowest-scoring dimension
+first — **but the gating `logic` dimension is attacked before ops/UX polish** while it has red rows,
+since the pass-rate is capped at 0.50 until every golden case is green. Every slice climbs the
+**ponytail ladder** before a line is written — shortest working diff, fewest files, `ponytail:`
+markers on deliberate ceilings. Order within a build:
+1. **Scaffold** — skeleton, dependency manifest, linter/formatter, test runner.
+2. **Logic (domain engine first)** — implement the **pure, dependency-free calculation engine** and
+   drive **every `logic` golden case** red → green against its exact expected output. Then add one
+   **end-to-end golden case** that runs real input through the live app path and asserts the same
+   number — this proves the engine is **wired in**, catching "function defined but never called" (the
+   classic multi-rule failure). The engine is green before the functional shell leans on it.
+3. **Functional (real product, not a demo)** — wire the app to the **real datastore end-to-end**
+   (UI → API → DB + migrations); data created in the UI **persists** (survives a restart). Build the
+   **full CRUD** surface (create / edit / delete) for each core entity, **accounts + auth**, **settings**
+   (account + org), and **onboarding** so a **fresh account/tenant starts EMPTY** and creates its own
+   data. Seeded rows are **fixtures for tests only — never the app's only data path** (an in-memory /
+   seed-only store that resets is a demo, not a product). Frontend wired to the design system → tests green.
+4. **DevOps** — multi-stage **Dockerfile** (non-root, `HEALTHCHECK`), compose/IaC, CI (lint+test+build+dep-scan),
+   forward-only migrations, `SIGTERM` graceful shutdown, env config + `.env.example`.
+5. **Monitoring** — `/healthz`, `/readyz`, `/metrics` (Prometheus), structured JSON logs, trace/correlation IDs.
+6. **UX** — implement the design system under the surface's **visitor-mode rules** (protocol §1:
+   Operate = earned familiarity, restrained color, one family, 150–250 ms state motion only, no
+   modal-first) and archetype patterns (§2); responsive layouts; **accessibility** (WCAG 2.2 AA:
+   labels, contrast, keyboard nav incl. dialogs, focus visible + not obscured, aria, ≥24px targets);
+   every component state (default/hover/focus/active/disabled/loading/empty/error/success); the
+   **craft floor** loaded before editing UI (protocol §5) — no emoji icons, no kicker on every
+   heading, no nested cards, no reflex palette; run `design-scan.cjs` on the touched routes before
+   the slice is measured.
+7. **Hardening (security + performance layers)** —
+   - **Security layer** — no hardcoded **secret**s; security headers (CSP/HSTS/X-CTO/X-Frame); input
+     validation at the boundary; authN + **per-resource** authZ (no IDOR); CSRF + SSRF guards;
+     rate-limiting; dependency scan clean; secrets redacted from logs; TLS-ready. Reuse
+     `/forge:security` for an **OWASP Top 10** pass (`references/security-checklist.md`).
+   - **Performance layer** — meet the **p95 latency SLO under expected load** (load test: k6 /
+     autocannon / locust); **no N+1** (JOIN/batch); every collection endpoint **paginated + bounded**
+     (`LIMIT`/cursor); indexes on hot filter/join/sort columns; **caching** on expensive reads with
+     correct invalidation; response compression; frontend **bundle budget + Core Web Vitals**
+     (LCP/CLS/INP) measured via Playwright.
+A floor-guard keeps scaffolding commits that compile and add no failures but pass zero assertions.
+
+## Defect Loop — Debugging (cross-phase, runs inside Phases 5–6)
+On any failing assertion, run a systematic root-cause loop (reuse `debug`): hypothesize → test →
+falsify → fix. **Iron law: no fix without an identified root cause** — never patch a symptom. Each
+defect gets a minimal record (symptom → falsified hypotheses → root cause → fix commit) — the
+IEEE-829-style incident report, right-sized to its `iterations.tsv` line.
+
+## Phase 6 — Testing (comprehensive: the test pyramid)
+"Tests pass" is not enough — the suite must be **comprehensive**:
+- **Golden oracle (domain logic)** — the pure engine computes **every golden vector's exact expected
+  output** across the rule matrix and its edge/boundary/interaction cases (ceiling snaps, proration,
+  compound multipliers, rounding). At least one **end-to-end** golden case drives real input through
+  the running app and asserts the same number, proving the engine is wired into the live flow. Maps to
+  the gating `logic` dimension — all golden cases must be green to lift the 0.50 cap.
+- **Unit** — pure logic, repos, middleware, validators.
+- **Integration** — API endpoints against the real router + a test repo (supertest / httpx).
+- **Real-product (anti-demo)** — a record **created through the UI persists across a restart** (durable
+  store, not in-memory); a **fresh account/tenant starts empty** (no pre-seed); each core entity's
+  **create / edit / delete** round-trips; **settings** save. An app that only renders seeded, read-only
+  data fails this layer.
+- **e2e (end-to-end)** — drive the running app in a real browser with **Playwright** (headless
+  Chromium, installed as a project devDependency so CI runs the same suite): the primary user flow
+  must actually work click-by-click.
+- **Accessibility** — run **axe** against rendered pages via Playwright; zero serious/critical violations.
+- **Design QA (the craft floor + conformance + critique)** — run `/forge:design audit` (protocol
+  §7) against the running app: **valid captures** at 1280×800 + 390×844 (settled motion, full-page,
+  the `--sheet` contact sheet opened and every cell confirmed, flagged PNGs individually — a
+  blank/black/wrong-route capture is RECAPTURE, never scored);
+  `node scripts/design-scan.cjs --url <every primary route> --mode <mode> --design DESIGN.md --shots
+  evidence/screens --out evidence/design-scan.json` then `scripts/score-design.sh scan` →
+  **`SLOP_GATE: PASS`** is the `design:floor` `ux` row (zero error/warn findings: no emoji icons,
+  placeholder copy, em-dash UI copy, kickers, nested cards, purple gradients, glow halos, side
+  stripes, tiny/low-contrast text, unlabelled inputs, zoom locks, overflow, console errors, and no
+  `design-*-drift` — the computed styles match the DESIGN.md frontmatter); the heuristic critique
+  (`DESIGN_HEALTH`), the persona walk and the ledger; `scripts/score-design.sh verdict …` →
+  `DESIGN_VERDICT: SHIP`. `FIX` routes the ledger back into the loop (`design --fix` semantics);
+  `REBUILD` means the world failed — re-run `design system --refresh`, don't patch.
+  For scoped assets/motion, run `scripts/score-design.sh assets <target>` fresh, add `--assets <target>`
+  to the scan and pass `<target>` as the fifth verdict argument after defects, scan, DESIGN.md and
+  critique. Require both motion profiles on every applicable route × viewport, and a keyboard e2e
+  assertion of the actual task outcome (`design:motion`). Inspect normal/reduced captures and verify
+  image decoding, intrinsic dimensions, alt text and loading. Map provenance to `hardening` and
+  actual file/initial-payload budgets to `devops`; preserve the six dimensions and seven design tags.
+- **Performance** — run a **load test** (k6 / autocannon / locust) asserting the p95 latency SLO and
+  **zero N+1** on the primary flows; check frontend bundle budget + Core Web Vitals via Playwright.
+- **Security (mandatory completion gate)** — run `/forge:security` on this candidate, with High or
+  stricter failure threshold, the baseline from `references/fullstack-hardening-checklist.md`, and
+  every applicable security acceptance assertion. Include real negative tests for access, session
+  revocation, data exposure and integration boundaries; secret/dependency scans alone are insufficient.
+  When the spec or existing audit selects Strix, run security with `--strix` using the isolated-scan
+  protocol in `references/security-checklist.md`; carry `config.strix: true`, its check, native reports
+  and findings into the build handoff.
+  `scripts/validate-handoff.sh <audit>/handoff.json security --require-pass` must pass. Record the
+  candidate commit/digest and relevant config; re-audit affected checks after changes. Copy the typed
+  `security` record and its redacted evidence into the build run (paths relative to that run), then
+  require `scripts/validate-handoff.sh <run>/handoff.json build --require-pass` before completion.
+  FAIL/BLOCKED checks or unresolved Critical/High findings prevent completion regardless of score,
+  Target-rate, skipped acceptance rows, or accepted-risk labels. Remediate and retest.
+- **Coverage** — unit+integration coverage ≥ the project floor (default 80%).
+Deliverables, right-sized per IEEE 829's intent: the **Test Plan** is the acceptance TSV + this
+pyramid (scope, approach, item pass/fail criteria); **test cases** are the executable suites;
+**defect reports** are the Defect Loop's records; the **Test Summary Report** is the final
+per-dimension breakdown (written into `evals-summary.md` / the Summary).
+**Gate:** every layer green; coverage ≥ floor; e2e + axe clean; UI conforms to `DESIGN.md`
+(`SLOP_GATE: PASS`, no design drift), the design audit's verdict is `SHIP`, and security readiness PASS.
+
+## Phase 7 — Deployment
+Write the release deliverables, then hand to `forge:ship` (8-phase: checklist → dry-run →
+deploy → verify) then a canary check:
+- **Deployment/Release plan** — ship's checklist: steps, environments, env vars, rollback.
+- **Release Notes** (`RELEASE_NOTES.md`) — features, fixes, known issues for stakeholders/users.
+- **User manual** — a user-facing quickstart (in `README.md` or `docs/`): first-run onboarding, the
+  primary workflows, settings. When the app replaces an existing process or system, it includes an
+  old-step → new-step guide that maps every former step (the spreadsheet column, the paper form, the
+  legacy screen) to its new place — preparing users for change is part of the deliverable.
+**Deployment is human-gated** — `build` never deploys to production, tags releases, or publishes on
+its own (pushing to the private output repo per the "Output repository" contract is standard-loop, not
+deployment).
+
+## Phase 8 — Operations / Maintenance
+The SDLC is a **cycle** — maintenance feeds back into planning. Build's share is docs + wiring (build
+never operates prod):
+- **Runbook** (`RUNBOOK.md`) — boot/stop commands, the health (`/healthz`, `/readyz`) + `/metrics`
+  endpoints to watch, datastore backup/restore, common failures → fixes, log locations +
+  correlation-ID usage. Every command/endpoint named in it is **verified against the running app**.
+- **Security operations** — access-removal/key-rotation procedure, patch ownership, security alerts
+  with redacted data, incident contact and a restore exercise using test data. Record what production
+  settings still need verification at release; a local pass does not prove live configuration.
+- **Change-request path** — post-release changes are new work items: `feature` (delta acceptance +
+  the hard non-regression ratchet), `fix` (error burn-down), `improve` (ICP research → PRDs) — each
+  re-enters this pipeline with the shipped acceptance baseline as the regression floor.
+**Gate:** `RUNBOOK.md` committed with verified commands/endpoints; release notes + user manual
+current; maintenance path recorded in the handoff.
+
+---
+
+## Iteration Loop — the forge first principle
+The SDLC phases above are *executed as an forge loop*: a **mechanical metric**
+(`fullstack_pass_rate`) driven up by **bounded, atomic, auto-reverting** iterations with **git as
+memory**. The phases say *what* to build; this loop is *how* every change is made and judged. Each
+iteration:
+
+1. **Read before write** — read `build-results.tsv` + `git log`/`git diff` of recent `experiment:`
+   commits to see what's been tried, what worked, what regressed; pick the lowest-scoring dimension
+   that still has red rows — **but while any `logic` (golden) row is red, fix it first**: the headline
+   pass-rate is capped at 0.50 until the `logic` dimension is 100% green, so logic is the only
+   dimension that lifts the ceiling.
+2. **One change** — make ONE focused slice: the **shortest working diff** that turns the target row
+   green (ponytail ladder — skip / reuse / stdlib / native / installed dep before new code; fewest
+   files). Atomic: if it breaks, you know exactly which change did it.
+3. **Commit before verify** — `git commit -m "experiment: <dimension> — <slice>"` BEFORE measuring, so
+   every attempt is recoverable. Git is the experiment ledger.
+4. **Verify mechanically (run it, don't self-report) — and leave evidence.** Build, boot, probe
+   endpoints, run the test pyramid + Playwright e2e/axe; **tee every verification's raw output into
+   `<run-dir>/evidence/`** (test-runner stdout with exit code, probe responses, Playwright screenshot
+   paths, axe reports — one file per suite/probe, e.g. `evidence/unit-tests.txt`,
+   `evidence/e2e-checkout.txt`). A row may only be flipped to `pass` with its `detail` column set to
+   `evidence:<relpath>[#locator]` naming the file that proves it. Then recompute
+   `scripts/score-build.sh pass-rate --strict-evidence` — strict mode **demotes any `pass` row whose
+   evidence file does not exist**, and every scorer invocation is auto-logged (timestamp + TSV content
+   hash) to `<run-dir>/score-log.tsv`. No subjective "looks good" — only the metric + guard decide,
+   and the metric only believes rows it can check.
+5. **Keep or roll back automatically** —
+   - **keep** — pass-rate increased AND guard (existing tests) green.
+   - **keep (scaffold)** — floor-guarded scaffold slice that compiles and adds no new failures.
+   - **simplicity wins** — equal pass-rate with a smaller `loc_delta` (less code) → keep the simpler version.
+   - **discard** — pass-rate flat/lower, a green assertion went red, or build/probe crashed →
+     `git revert HEAD --no-edit`. Failures revert instantly; the incumbent is never left worse.
+6. **Log** — append the iteration (change, pass_rate, delta, guard, keep/discard, `loc_delta` =
+   insertions + deletions from `git diff --shortstat HEAD~1..HEAD`, and the ponytail line
+   `skipped: X, add when Y`) to `iterations.tsv`.
+7. **Repeat** until (`pass-rate --strict-evidence >= Target-rate` **AND** `logic_gate == PASS` **AND**
+   `REQ_COVERAGE == 1.00` **AND** `DESIGN_COVERAGE == 1.00` **AND** `SLOP_GATE == PASS` with
+   `DESIGN_VERDICT: SHIP` **AND** security readiness PASS **AND** the requirement-satisfaction audit
+   passes **AND** `scripts/score-build.sh bound iterations.tsv <N>` prints `BOUND: OK`) or the bound
+   (`Iterations: N`, default 40) is reached — **bounded by default**; `Iterations: unlimited` opts out.
+   The bound is itself mechanical: `BOUND: EXCEEDED` means the run may NOT report CONVERGED — either
+   stop as BOUNDED, or ask the user for an explicit extension and record their approval + the new bound
+   in `handoff.json` (`bound_extension`). The cap makes the logic gate mechanical:
+   a `Target-rate` of 1.00 is unreachable while any golden case is red, so a complex domain cannot
+   converge "done" on stub math. A green pass-rate with coverage < 1.00 is **not** done — an unmapped
+   requirement/token is unbuilt work, so add the missing assertion and keep going. When stuck, re-read
+   git history and combine near-misses before trying a bigger change.
+
+**Independent verify before convergence:** before declaring DONE at `Target-rate`, re-run acceptance on
+a fresh boot (cold container, clean DB) — a held-out check separate from the inner-loop signal — to
+prevent overfitting a flaky pass. High-impact slices set `pending_verify`; route a verify pass
+(`reason`/`predict`) before convergence.
+
+**Requirement-satisfaction audit (mandatory before DONE):** re-read `requirements.md` and walk **every
+goal (G-n) + FR + NFR**, confirming the LIVE app satisfies each via the *right* exercise — `logic`
+golden for computations; a **live Playwright e2e for every user-facing FR** (the run create→calculate→
+approve→pay workflow, file generate/download, CRUD, timesheets, leave, settings, onboarding); real-DB
+integration for persistence; the `hardening` checks for each NFR. A requirement met **only** by an
+isolated unit/generator test, where the FR implies a user-facing workflow or output, is **UNSATISFIED**
+("defined but never called") — add the e2e acceptance row, build the missing UI/wiring, and keep
+going. Convergence is blocked until **no FR is engine-only** and every goal is exercised end-to-end. A
+sub-requirement that is built-but-not-applied (e.g. an encryption helper that no write path calls) fails
+its NFR.
+
+## Coverage — every requirement + token is built (no orphans)
+Pass-rate alone can read `1.00` while a PRD line or a design token was never turned into an assertion.
+Two **structural** gates close that gap — both mechanical counts (not judgement), computed by
+`scripts/score-build.sh coverage build-results.tsv requirements.md`:
+- **`REQ_COVERAGE`** = (`FR-`/`NFR-` IDs in `requirements.md` named by ≥1 row's `traces`) ÷ (total
+  `FR-`/`NFR-` IDs). Must be `1.00` from the Phase 3 gate onward.
+- **`DESIGN_COVERAGE`** = (DESIGN.md token groups traced by ≥1 `ux` row) ÷ (total groups — seven:
+  type · color · spacing · radius · motion · states · **floor**). Must be `1.00` from the Phase 4 gate
+  onward.
+- **`traces` column** (TSV col 7, comma-separated `FR-n`/`NFR-n`/`design:<group>`; the `detail` col may
+  be empty but the tab must be present) — every acceptance row names what it satisfies. The reverse is
+  enforced too: a trace pointing to a requirement/token that does not exist is an **invented** assertion
+  (`orphan_traces`) and fails the gate — delete or re-point it.
+
+Convergence (DONE) requires `pass-rate --strict-evidence >= Target-rate` **and** both coverages
+`== 1.00` **and** `BOUND: OK` **and** the security completion gate **and** the requirement-satisfaction audit — every goal/FR/NFR exercised
+end-to-end in the live app, **no user-facing FR satisfied by an engine/unit test alone**. The evidence
+store closes the loop: the final `<run-dir>` must contain `evidence/` (raw verification outputs),
+`score-log.tsv` (hashed scorer invocations), `build-results.tsv`, and `iterations.tsv` — a third party
+can re-run the scorer on the stored ledger and check every pass row's evidence file. This is what makes
+"satisfy all PRD + design requirements" mechanical rather than a matter of opinion.
+
+## Safety Invariants
+- **Never deploy to production, publish packages, or make a repo public.** Those stay human-gated
+  (`ship`). Pushing to the project's **own private output repo** (created in Phase 0, below) is NOT
+  publishing — it is part of the standard loop and is how the generated CI actually runs.
+- **Build into the declared Scope only** — never mutate the skill repo or unrelated trees.
+- Every derived shell command is safety-screened via `scripts/orchestrate.sh screen-cmd`. DB URLs obey
+  the anchored localhost/_test allowlist. No real secrets — throwaway dev creds via env, never committed.
+
+## Summary
+Print: final pass-rate, **logic_gate (PASS|CAPPED)**, **REQ_COVERAGE + DESIGN_COVERAGE**, **`SLOP` +
+`SLOP_GATE` + `DESIGN_VERDICT`** (the design QA line), per-dimension
+scores (incl **logic** + **ux**), assertions green/total, **security PASS|FAIL|BLOCKED with evidence and
+untested production assumptions**, **requirement-satisfaction audit verdict**,
+phases completed (of the 8 SDLC phases), iterations used, kept vs discarded slices, total `loc_delta`
++ **ponytail debt rows** harvested into `DEBT.md`, build output
+path, and a **deliverables checklist** (charter · SRS + RTM · HLD/LLD + `DESIGN.md` · test summary ·
+release notes · user manual · runbook — each present/missing). List still-red
+assertions — **golden/`logic` failures first** — and any untraced requirements/tokens **plus any FR
+satisfied engine-only (audit gaps)** as remaining work.
+
+## Eval Checkpoint (--evals flag)
+Interval: floor(max_iterations / 3), min 1 (fixed 10 if unbounded; override `--evals-interval N`). Every
+interval, print pass-rate trend + per-dimension breakdown (F/ux/D/M/H). Plateau across 3+ checkpoints →
+recommend a spec/stack/design rethink. At loop end → `evals-summary.md` in the output directory.
+
+## Chain Handoff
+Write handoff.json: version "3.3.0", source "build", timestamp, status
+(COMPLETE|BOUNDED|CONVERGED|BLOCKED|USER_INTERRUPT|ERROR), results_tsv, metric (fullstack_pass_rate),
+coverage{requirements, design}, design{lint, slop, verdict, design_md}, phases_completed, findings = remaining red
+assertions + untraced requirements/tokens + open design defects + ponytail debt rows, config{spec,
+scope, stack, stack_decision: <decision-directory path>, target_rate}.
+For COMPLETE/CONVERGED, include the existing typed `security` record from the current audit, with
+High-or-stricter threshold and redacted evidence files beneath this run. Both statuses are rejected
+without passing security, even when the weighted score reaches Target-rate. Run
+`scripts/validate-handoff.sh <run-dir>/handoff.json build --require-pass` before either completion
+claim or a downstream delivery chain. Use BOUNDED/BLOCKED for unfinished work; do not relabel a
+failed audit as an accepted risk to finish.
+The handoff shape is the chain contract — `references/handoff-schema.md`. After writing it, run
+`scripts/validate-handoff.sh <run-dir>/handoff.json build`; on `INVALID`, fix the handoff before
+printing the summary — a run with an invalid handoff is NOT finished.
+Invoke next target in --chain order (commonly `regression` then `ship`). Propagate --evals.
+
+---
+
+# Phase-gate protocol (canonical)
+
+The build follows the **standard software-engineering lifecycle** (ISO/IEC 12207 lineage; the
+widely-taught 8-phase model). Each phase has an **exit gate** and a **named deliverable**; the loop
+does not advance until the gate's criteria are met. Phases reuse existing forge subcommands so
+each is a proven bounded loop. Deliverables follow the agile adaptation — just-enough, just-in-time,
+living — never heavyweight documents for their own sake.
+
+| # | Phase | Reuses | Key deliverables | Exit gate (must all pass) |
+|---|---|---|---|---|
+| 1 | **Planning / Initiation** | `plan`, `predict` | **Project charter** (`charter.md`): vision, in/out scope, stakeholders/ICP, iteration budget, risk register | charter committed with objectives, in/out scope, iteration budget, ≥3 risks + mitigations; build target dir resolved (never the skill repo) |
+| 2 | **Feasibility** | `requirements` Phase 2b (stack decision) | **Feasibility verdict** in `charter.md` (spike results: technical, **stack confirmation**, operational, schedule, licensing) + the **stack ADR bundle** (`docs/adr/0001-tech-stack/`) | toolchain spike boots (runtime + DB/docker + Playwright); `score-requirements.sh stack` returns `STACK_DECISION: READY` and the pre-registered spike thresholds are met (≥5 runs, results in `confirmation-results.md`; a miss supersedes the decision → owner re-approval); acceptance-size vs iteration budget sane; licenses permissive; verdict **GO** with stack pinned (NO-GO → re-scope with the user) |
+| 3 | **Requirements Analysis** | `probe`, `predict` | **SRS** (`requirements.md`, IEEE 830 / ISO 29148-shaped) + **RTM** (the `traces` column + coverage report) | every requirement carries a stable `FR-`/`NFR-` ID; **for logic-heavy domains, logic diagrams (ER + state machines + sequence + decision flowcharts) with every state transition / decision branch mapped to a golden vector**; every acceptance assertion enumerated + tagged `dimension`+`weight`+`traces`; `REQ_COVERAGE == 1.00` (every ID traced, no orphan assertion); baseline `build-results.tsv` seeded (`fail`) → pass-rate `0.00` |
+| 4 | **Design** | `design system`, `reason` | **HLD** (architecture) + **LLD** (domain engine + rule matrix, diagrams) + **DB schema** + **UI/UX system** (`DESIGN.md` via the direction protocol + tokens + the `## Navigation` route table, which is the wireframes deliverable, `ROUTES: PARITY`) | `DESIGN.md` (architecture: modules, data model, API contract; **for logic-heavy domains, a pure calculation engine + the rule matrix with citations**) **and** UI/UX design system (visitor mode per surface; machine-readable tokens: type, color+contrast pairs, spacing, radius, motion, component states; `DESIGN_LINT: VALID`; wireframes) committed; `DESIGN_COVERAGE == 1.00` (every token group incl. `design:floor` traced by ≥1 `ux` assertion) |
+| 5 | **Implementation** | TDD ladder | **Source code + build artifacts + CI** (lint, tests, container) | domain engine built first and **every `logic` golden case green** (incl one end-to-end case proving it is wired in); each accepted slice turns a red assertion green; guard green; no green→red regression; the app is wired to a **real persisted datastore** (UI→API→DB) with full CRUD + accounts + settings + onboarding (**fresh account starts empty**), not a seed-only/in-memory demo; headline pass-rate stays capped at 0.50 until the `logic` gate clears |
+| ‡ | **Defect loop (debugging — cross-phase, inside 5–6)** | `debug` | **Defect records** (symptom → root cause → fix, in `iterations.tsv`) | every failing assertion traced to a **root cause** before a fix lands (iron law: no symptom patches) |
+| 6 | **Testing** | — | **Test plan** (acceptance TSV + pyramid) + **test cases** (suites) + **Test summary report** (`evals-summary.md`) | test pyramid green: **golden oracle (every rule-matrix vector + edge cases, incl end-to-end)** + unit + integration + e2e (Playwright) + accessibility (axe) + **design QA (`SLOP_GATE: PASS`, DESIGN.md conformance, heuristic critique, `DESIGN_VERDICT: SHIP`)** + **load/perf (p95 SLO, no N+1)** + **security (OWASP Top 10)** + **real-product (anti-demo): a UI-created record persists across a restart, a fresh account starts empty, CRUD + settings round-trip**; **requirement-satisfaction audit — every goal/FR/NFR exercised end-to-end in the live app, no user-facing FR met by an engine/unit test alone**; coverage ≥ floor (80%) |
+| 7 | **Deployment** | `ship` | **Deployment/release plan** + **Release notes** (`RELEASE_NOTES.md`) + **user manual** (quickstart) | checklist → dry-run → deploy → verify + canary — **human-gated**, never automatic |
+| 8 | **Operations / Maintenance** | `feature`, `fix`, `improve` | **Runbook** (`RUNBOOK.md`) + **change-request path** (handoff to feature/fix/improve) | runbook committed with commands/endpoints **verified against the running app**; maintenance path in handoff — the cycle feeds back into planning |
+
+## Principles
+- **Gates are hard by default.** A phase that fails its gate blocks the next; the loop iterates within
+  the failing phase (its own bounded sub-loop) until the gate clears or the budget is hit.
+  `--soft-gates` downgrades a blocking gate to advisory.
+- **Plan before requirements.** Phases 1–2 make scope, risks, and feasibility explicit before the
+  acceptance list is enumerated — a build that can't boot its toolchain or fit its iteration budget
+  fails in the cheap spike, not at iteration 39.
+- **Requirements precede code.** No implementation slice runs before the Phase 3 acceptance list exists
+  — the list IS the metric's denominator.
+- **Deliverables kept, right-sized.** Every standard SDLC deliverable exists — charter, feasibility
+  verdict, SRS + RTM, HLD/LLD, `DESIGN.md`, test plan/summary, release notes, user manual, runbook —
+  as a just-enough, just-in-time **living** artifact. Working software stays the primary measure of
+  progress; a document never substitutes for the metric.
+- **Full coverage, no orphans.** Every PRD requirement (`FR-`/`NFR-`) and every `DESIGN.md` token group
+  traces to ≥1 acceptance assertion, and every assertion traces back to a real requirement/token;
+  `REQ_COVERAGE` + `DESIGN_COVERAGE` must be `1.00` before convergence.
+- **Real product, not a demo.** Unless the user scoped a throwaway / prototype / game / static site,
+  the app runs on the user's **own, durably-persisted data**: a real datastore wired end-to-end
+  (UI-created data survives a restart), accounts + auth, full CRUD of core entities, settings, and
+  onboarding from an **empty** state. Seeded data is fixtures-for-tests only — a read-only, seed-only
+  app that resets on restart is not a product and does not converge.
+- **Wired-in, end-to-end (every requirement).** The logic dimension's "defined but never called" guard
+  generalizes to all requirements: a user-facing FR is satisfied only by a **live Playwright e2e** that
+  drives it through the running app, and an NFR only when its control is **applied** (an encryption
+  helper that no write path calls does not satisfy "encrypt at rest"). Coverage (every FR *traced*) is
+  necessary; *exercised* is sufficient. The pre-convergence **requirement-satisfaction audit** re-reads
+  `requirements.md` and walks every goal/FR/NFR — no FR converges as engine-only.
+- **Domain logic precedes the app shell.** For computational domains, a pure side-effect-free engine is
+  built and **golden-tested before** the data/API/UI lean on it — names + numbers from a cited rule
+  matrix, not improvised. This makes the `logic` dimension measurable.
+- **Business rules are golden-tested and gated.** Each rule is pinned to golden cases
+  (`input → exact output`) + boundary/interaction edge cases + one end-to-end case (catching "defined
+  but never called"). `logic` is **must-pass**: the headline pass-rate is capped at 0.50 until every
+  golden case is green, so a complex domain cannot converge "done" on shallow or disconnected math.
+- **Design precedes UI code — and the floor is mechanical.** The design system (mode-aware tokens +
+  states, `DESIGN_LINT: VALID`) is committed before frontend slices, so UX is built to a spec; the
+  craft floor (`design-scan.cjs` → `SLOP_GATE`) and the design audit's verdict make the `ux`
+  dimension measurable beyond axe — a generic, tell-ridden UI is capped exactly like an inaccessible one.
+- **Root cause before fix.** The defect loop forbids symptom patching; a fix references the falsified
+  hypothesis.
+- **Lazy senior dev (ponytail).** Every slice climbs the ladder — skip → reuse → stdlib → native →
+  installed dep → one line → minimum — *after* reading the whole flow, never instead of it; shortest
+  working diff, fewest files, `ponytail:` markers harvested into `DEBT.md` before DONE. Less code is
+  fewer tokens read back, tested, hardened and re-verified — the speed comes from what is never
+  written. Validation, data-loss handling, security, a11y and anything requested are never cut.
+- **Comprehensive ≠ "tests pass".** Phase 6 requires the whole pyramid (unit→integration→e2e→a11y→design QA),
+  not just unit green. e2e + a11y + the design floor run against the *running* app via Playwright.
+- **Deployment is human-gated.** Phase 7 reuses `ship`; `build` never deploys to production or cuts
+  releases on its own — pushes to the private output repo are the standard loop, everything beyond is `ship`'s.
+- **Maintenance closes the cycle.** Phase 8 documents operations (runbook) and routes change requests
+  to `feature`/`fix`/`improve` with the shipped acceptance baseline as the regression floor —
+  maintenance feeds back into planning.
+
+## Mapping to the metric
+Phases 5–6 (with the cross-phase defect loop) drive `fullstack_pass_rate` (logic + functional + ux +
+devops + monitoring + hardening). The
+**`logic` dimension is gated** — while any business-rule golden case is red the pass-rate is capped at
+0.50, so domain correctness is a precondition for convergence, not a tradeable component. Phases 1–4
+produce the artifacts (`charter.md` incl the feasibility verdict, `requirements.md` incl the rule
+matrix + golden vectors, `DESIGN.md`, tokens)
+the rubric + gates check; Phases 7–8 are post-convergence + human-gated. Convergence also requires
+`logic_gate == PASS`, `REQ_COVERAGE == 1.00`, and `DESIGN_COVERAGE == 1.00`. A run reports
+`phases_completed`, `logic_gate`, `REQ_COVERAGE`, and `DESIGN_COVERAGE` in its handoff.
+
+## Hosting applicability at intake
+
+Export the approved stack decision into the existing pinned acceptance definition: `hosting: {kind: managed|static|container, stateful: boolean, decision: "docs/adr/stack-decision.md", target: "exact-isolated-target"}`. Pin the decision file as a snapshot input. Each check names its `outcome`. Require delivery, configuration, health and observability for every app; persistence, compatibility, backup and restore for stateful apps; container_nonroot, container_health and container_image when containers are selected. Mechanism exclusions require the existing applicability reason and never waive a required outcome.
+
+At spec intake run `REQUIRE_STACK_DECISION=1 REQUIRE_ACCEPTANCE_PLAN=1 bash "$AR_ROOT/scripts/score-requirements.sh" validate "$SPEC" "$PLAN" "$PROJECT"`. A legacy YAML spec may still be read, but its `legacy-unverified` result cannot authorize a new build/release until hosting acceptance is reviewed and pinned. Use the [acceptance contract](../../skills/forge/references/acceptance-evidence.md); do not invent a second profile document or an ad hoc YAML parser.
+
+For services with an SLO, pin the journey definition, numeric target/window, telemetry coverage, alert destination, responder and runbook before rollout. Apply `operational.cjs budget` and the [operational contract](../../skills/forge/references/operational-recovery.md); a short pilot proves mechanics only. Test an authorized safe alert sink and dependency-readiness recovery before declaring operations complete.

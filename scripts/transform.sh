@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Transform Claude Code canonical source → OpenCode / Codex platform formats.
+# Transform Claude Code canonical source → OpenCode / Codex / Cursor platform formats.
 # Run after any change to .claude/ source files.
 #
 # Usage:
 #   ./scripts/transform.sh              # transform to all platforms
 #   ./scripts/transform.sh --opencode   # OpenCode only
 #   ./scripts/transform.sh --codex      # Codex only
+#   ./scripts/transform.sh --cursor     # Cursor only
 
 set -euo pipefail
 
@@ -17,12 +18,14 @@ CLAUDE_COMMANDS="$REPO_ROOT/.claude/commands"
 
 DO_OPENCODE=1
 DO_CODEX=1
+DO_CURSOR=1
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --opencode) DO_OPENCODE=1; DO_CODEX=0 ;;
-    --codex)    DO_OPENCODE=0; DO_CODEX=1 ;;
-    -h|--help)  printf 'Usage: %s [--opencode|--codex]\n' "$0"; exit 0 ;;
+    --opencode) DO_OPENCODE=1; DO_CODEX=0; DO_CURSOR=0 ;;
+    --codex)    DO_OPENCODE=0; DO_CODEX=1; DO_CURSOR=0 ;;
+    --cursor)   DO_OPENCODE=0; DO_CODEX=0; DO_CURSOR=1 ;;
+    -h|--help)  printf 'Usage: %s [--opencode|--codex|--cursor]\n' "$0"; exit 0 ;;
     *)          printf 'Unknown flag: %s\n' "$1" >&2; exit 1 ;;
   esac
   shift
@@ -91,34 +94,39 @@ BINDING
   printf 'OpenCode: transformed %s → %s\n' ".claude/" ".opencode/"
 }
 
-# --- Codex Transform ---
-# Differences: colon → space in invocations, /forge:X → $forge X,
-# Codex router binds the shared command contracts to native tools and bundle paths.
+# --- Codex / Cursor Transform ---
+# Both use one skill router with shared command contracts beside SKILL.md.
 
-transform_codex() {
+transform_skill() {
+  local platform="$1"
   local dst_skills="$REPO_ROOT/plugins/forge/skills/forge"
   local dst_agents="$REPO_ROOT/.agents/skills/forge"
+  if [[ "$platform" == cursor ]]; then dst_skills="$REPO_ROOT/.cursor/skills/forge"; fi
 
-  rm -rf "$dst_skills" "$dst_agents"
-  mkdir -p "$dst_skills/references" "$dst_agents/references"
+  rm -rf "$dst_skills"
+  mkdir -p "$dst_skills/references"
 
-  adapt_codex() {
+  adapt_skill() {
     # Adapt invocation tokens, never filesystem paths or URLs containing /forge.
-    node - "$1" <<'JS'
+    node - "$1" "$platform" <<'JS'
 const fs = require('node:fs');
+const cursor = process.argv[3] === 'cursor';
+const invocation = cursor ? '/forge' : '$forge';
 let text = fs.readFileSync(process.argv[2], 'utf8').replace(/\r\n/g, '\n')
   .replace(/^version: (.+)$/m, 'metadata:\n  version: $1')
-  .replace(/AskUserQuestion/g, 'request_user_input')
+  .replace(/AskUserQuestion/g, cursor ? 'available question tool' : 'request_user_input')
   .replace(/(?<![\w/.:$-])\/forge(?::([a-z]+))?(?![\w/.:-])/g,
-    (_, command) => '$forge' + (command ? ' ' + command : ''));
+    (_, command) => invocation + (command ? ' ' + command : ''));
 const binding = [
-  '## Codex command loading',
+  cursor ? '## Cursor command loading' : '## Codex command loading',
   '',
   '- Set `AR_ROOT` to the absolute directory containing this loaded `SKILL.md`. Read bundled `scripts/` and `references/` from that directory. This binding takes precedence over the shared contracts\' Claude path examples and project-local copies.',
-  '- Treat text after `$forge` as the invocation. If its first word is a subcommand listed below, read `<subcommand>.md` beside this file and execute that contract with the remaining text as `$ARGUMENTS`. Do this before bare-goal dispatch. Load only the selected contract and references it needs; use the same dispatch for chained commands.',
+  '- Treat text after `' + invocation + '` as the invocation. If its first word is a subcommand listed below, read `<subcommand>.md` beside this file and execute that contract with the remaining text as `$ARGUMENTS`. Do this before bare-goal dispatch. Load only the selected contract and references it needs; use the same dispatch for chained commands.',
   '- For a bare invocation, use the dispatch table below; read `forge.md` for Classic or Setup wizard mode. A natural-language goal uses the Orchestrator section.',
-  '- Command and reference files are shared across agents: interpret canonical slash/colon Forge invocations as `$forge <subcommand>`. `$ARGUMENTS` means user input, not a shell variable to evaluate.',
-  '- In shared contracts, `AskUserQuestion` means the available Codex question tool (`request_user_input` in Plan mode, `request_user_input_async` when available), or a concise chat question when no tool is available. Translate other tool examples to actual session tools; never assume a Claude-only tool exists.',
+  '- Command and reference files are shared across agents: interpret canonical slash/colon Forge invocations as `' + invocation + ' <subcommand>`. `$ARGUMENTS` means user input, not a shell variable to evaluate.',
+  cursor
+    ? '- In shared contracts, `AskUserQuestion` means the available Cursor question tool, or a concise chat question when no tool is available. Translate other tool examples to actual session tools; never assume a Claude-only tool exists. Use Agent mode for file edits and terminal execution. Claude Code hooks are not installed by this skill; required verification gates still run through the bundled scripts.'
+    : '- In shared contracts, `AskUserQuestion` means the available Codex question tool (`request_user_input` in Plan mode, `request_user_input_async` when available), or a concise chat question when no tool is available. Translate other tool examples to actual session tools; never assume a Claude-only tool exists.',
   '- Run project commands in the user\'s repository and write project output there. Quote absolute bundle paths. On Windows use Git Bash for `.sh` scripts; PowerShell\'s `bash` may resolve to an unconfigured WSL installation.',
   '',
 ].join('\n');
@@ -128,32 +136,28 @@ JS
   }
 
   # Skills
-  adapt_codex "$CLAUDE_SKILLS/SKILL.md" > "$dst_skills/SKILL.md"
-  cp "$dst_skills/SKILL.md" "$dst_agents/SKILL.md"
+  adapt_skill "$CLAUDE_SKILLS/SKILL.md" > "$dst_skills/SKILL.md"
 
   for ref in "$CLAUDE_SKILLS"/references/*.md; do
     [[ -f "$ref" ]] || continue
     local base
     base="$(basename "$ref")"
     cp "$ref" "$dst_skills/references/$base"
-    cp "$dst_skills/references/$base" "$dst_agents/references/$base"
   done
 
-  # Command files (Codex merges commands into skills directory)
+  # Command files are loaded on demand by the skill router.
   cp "$CLAUDE_COMMANDS/forge.md" "$dst_skills/forge.md"
-  cp "$dst_skills/forge.md" "$dst_agents/forge.md"
 
   for cmd in "$CLAUDE_COMMANDS"/forge/*.md; do
     [[ -f "$cmd" ]] || continue
     local cbase
     cbase="$(basename "$cmd")"
     cp "$cmd" "$dst_skills/$cbase"
-    cp "$dst_skills/$cbase" "$dst_agents/$cbase"
   done
 
-  # Restore agents config
-  mkdir -p "$dst_agents/agents" "$dst_skills/agents"
-  cat > "$dst_agents/agents/openai.yaml" <<'YAML'
+  if [[ "$platform" == codex ]]; then
+    mkdir -p "$dst_skills/agents"
+    cat > "$dst_skills/agents/openai.yaml" <<'YAML'
 interface:
   display_name: "AutoForge"
   short_description: "Autonomous goal-directed iteration engine"
@@ -163,9 +167,12 @@ interface:
 policy:
   allow_implicit_invocation: true
 YAML
-  cp "$dst_agents/agents/openai.yaml" "$dst_skills/agents/openai.yaml"
+    rm -rf "$dst_agents"
+    mkdir -p "$(dirname "$dst_agents")"
+    cp -R "$dst_skills" "$dst_agents"
+  fi
 
-  printf 'Codex: transformed %s → plugins/ + .agents/\n' ".claude/"
+  printf '%s: transformed .claude/ → %s\n' "$platform" "${dst_skills#"$REPO_ROOT/"}"
 }
 
 # --- Claude Plugin Hooks Transform ---
@@ -212,8 +219,9 @@ transform_scripts() {
               "claude-plugin/skills/forge" \
               ".opencode/skills/forge" \
               ".agents/skills/forge" \
+              ".cursor/skills/forge" \
               "plugins/forge/skills/forge"; do
-    mkdir -p "$REPO_ROOT/$tree/scripts"
+    mkdir -p "$REPO_ROOT/$tree/scripts" "$REPO_ROOT/$tree/references"
     if [[ -f "$REPO_ROOT/.github/workflows/forge-pilot.yml" ]]; then
       cp "$REPO_ROOT/.github/workflows/forge-pilot.yml" "$REPO_ROOT/$tree/references/vercel-pilot.yml"
     fi
@@ -224,7 +232,7 @@ transform_scripts() {
       cp "$REPO_ROOT/scripts/$s" "$REPO_ROOT/$tree/scripts/$s"
     done
   done
-  printf 'Scripts: synced %d seam scripts into all 5 skill trees\n' "${#runtime[@]}"
+  printf 'Scripts: synced %d seam scripts into all 6 skill trees\n' "${#runtime[@]}"
 }
 
 # --- Main ---
@@ -236,7 +244,8 @@ cp "$CLAUDE_COMMANDS"/forge/*.md "$REPO_ROOT/claude-plugin/commands/forge/"
 cp "$CLAUDE_SKILLS/SKILL.md" "$REPO_ROOT/claude-plugin/skills/forge/SKILL.md"
 cp "$CLAUDE_SKILLS"/references/*.md "$REPO_ROOT/claude-plugin/skills/forge/references/"
 if [[ $DO_OPENCODE -eq 1 ]]; then transform_opencode; fi
-if [[ $DO_CODEX -eq 1 ]]; then transform_codex; fi
+if [[ $DO_CODEX -eq 1 ]]; then transform_skill codex; fi
+if [[ $DO_CURSOR -eq 1 ]]; then transform_skill cursor; fi
 transform_hooks
 transform_scripts
 

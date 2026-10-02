@@ -332,7 +332,7 @@ printf '\n--- v2.3.1 distribution: version consistency + shipped enforcement ---
 # ============================================================================
 
 # One version, everywhere the user can read one.
-CANON_VER=$(grep -m1 '^version:' "$REPO_ROOT/.claude/skills/forge/SKILL.md" | sed 's/version:[[:space:]]*//')
+CANON_VER=$(grep -m1 '^version:' "$REPO_ROOT/.claude/skills/forge/SKILL.md" | sed 's/version:[[:space:]]*//' | tr -d '\r')
 for vf in "$REPO_ROOT/.claude-plugin/marketplace.json" "$REPO_ROOT/claude-plugin/.claude-plugin/plugin.json"; do
   if grep -q "\"version\": \"$CANON_VER\"" "$vf"; then
     pass "version consistency: ${vf#$REPO_ROOT/} == $CANON_VER"

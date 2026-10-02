@@ -9,7 +9,7 @@ const assert = require('node:assert/strict'), { spawnSync } = require('node:chil
 const root = process.argv[2], validator = path.join(root, 'scripts/validate-handoff.sh');
 const acceptance = require(path.join(root, 'scripts/acceptance.cjs'));
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'forge-security-ship-'));
-let count = 0, sequence = 0;
+let count = 0, sequence = 0, skipped = 0;
 const check = id => ({ id, status: 'pass', evidence: 'evidence/check.txt' });
 const core = source => ({ version: '3.1.0', source, timestamp: '2026-09-11T12:00:00Z', status: 'COMPLETE' });
 const audit = () => ({ ...core('security'), security: { verdict: 'PASS', fail_on: 'high', checks: [check('auth')], findings: [] } });
@@ -158,10 +158,16 @@ test('Strix unavailable preflight stays readable and blocks readiness', () => {
   Object.assign(j.security.checks[1], { status: 'blocked', exit_code: null, evidence: 'evidence/check.txt' });
   expect(j, 0); expect(j, 1, true);
 });
-test('Strix native sidecar cannot escape via symlink', () => expectStrix(strixAudit(), 1, undefined, true, dir => {
-  const file = path.join(dir, 'evidence/strix/findings.sarif'), outside = path.join(temp, 'outside.sarif');
-  fs.copyFileSync(file, outside); fs.unlinkSync(file); fs.symlinkSync(outside, file);
-}));
+try {
+  test('Strix native sidecar cannot escape via symlink', () => expectStrix(strixAudit(), 1, undefined, true, dir => {
+    const file = path.join(dir, 'evidence/strix/findings.sarif'), outside = path.join(temp, 'outside.sarif');
+    fs.copyFileSync(file, outside); fs.unlinkSync(file); fs.symlinkSync(outside, file);
+  }));
+} catch (error) {
+  if (process.platform !== 'win32' || error.syscall !== 'symlink' || !['EPERM', 'ENOTSUP'].includes(error.code)) throw error;
+  skipped++;
+  console.log('  SKIP: Strix file-symlink escape control requires Windows symlink privileges (' + error.code + ')');
+}
 test('Strix validation does not reinterpret optional ship metadata', () => {
   const j = delivery(); j.security = { checks: 'historical audit summary' }; expect(j, 0, true);
 });
@@ -260,5 +266,5 @@ for (const source of ['ship', 'security']) test('legacy ' + source + ' is readab
 for (const source of ['loop', 'forge', 'debug', 'plan']) test('existing ' + source + ' contract stays valid', () => expect(core(source), 0));
 for (const tree of ['.claude', 'claude-plugin', '.agents', '.opencode', 'plugins/forge'])
   test('validator mirror ' + tree, () => assert.equal(fs.readFileSync(path.join(root, tree, 'skills/forge/scripts/validate-handoff.sh'), 'utf8').replace(/\r\n/g, '\n'), fs.readFileSync(validator, 'utf8').replace(/\r\n/g, '\n')));
-console.log(`=== ${count}/${count} passed ===`);
+console.log(`=== ${count}/${count} passed (${skipped} skipped) ===`);
 JS

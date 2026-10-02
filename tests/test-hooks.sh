@@ -69,6 +69,19 @@ assert_not_contains() {
   fi
 }
 
+# The installed wrapper must retain the configured shell and OS temp directory.
+set +e
+STDOUT=$(CLAUDE_CODE_GIT_BASH_PATH='forge-custom-bash' bash "$HOOKS_DIR/node-hook-runner.sh" - <<'JS'
+const assert = require('node:assert/strict'), fs = require('node:fs'), os = require('node:os');
+assert.equal(process.env.CLAUDE_CODE_GIT_BASH_PATH, 'forge-custom-bash');
+assert.ok(process.env.TMPDIR);
+assert.equal(fs.realpathSync(process.env.TMPDIR), fs.realpathSync(os.tmpdir()));
+JS
+)
+EXIT_CODE=$?
+set -e
+assert_exit 0 "hook wrapper: preserves configured Git Bash and temp directory"
+
 # ============================================================================
 # Test: scout-block.cjs
 # ============================================================================

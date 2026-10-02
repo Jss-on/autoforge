@@ -1,0 +1,110 @@
+# Orchestrator Routing
+
+## Goal Archetypes
+
+| Archetype | Trigger Keywords | Mode | Preset Pipeline |
+|---|---|---|---|
+| `ship-ready` | ship, release, deploy, publish, production-ready, merge | loop | probe, debug, fix, regression, ship |
+| `optimize-metric` | improve, optimize, increase, reduce, faster, smaller, coverage, score | loop | plan, (classic loop), evals |
+| `fix-broken` | fix, broken, failing, error, crash, bug, can't run, tests fail | loop | debug, fix, regression |
+| `harden` | security, vulnerability, audit, OWASP, CVE, harden, lock down | loop | security, fix, security |
+| `build-feature` | build, add, implement, create, new feature, acceptance test | loop | (acceptance-test derive), build (greenfield), debug, fix, regression |
+| `explore` | understand, explore, investigate, what does, how does, edge cases | loop | probe, scenario, plan |
+| `document` | document, wiki, generate docs, explain codebase, write guide | dispatch | learn |
+| `what-to-build` | what should I build, ideas, improvements, PRD, roadmap | dispatch | improve |
+| `decide-design` | which approach, compare options, design decision, architecture choice | dispatch | reason |
+| `polish-ui` | redesign, UI/UX, user interface, look and feel, looks ugly/generic/dated, polish the UI, slop, usability, accessibility | loop | design (audit), design --fix, regression — predicate: `score-design.sh verdict … → DESIGN_VERDICT: SHIP` (SLOP 0, no blocking design defects); units = SLOP + blocking defects |
+| `package-android` | android, apk, aab, play store, google play, TWA, trusted web activity | dispatch | android — owns its own PWA → trust → package → device-gate → release loop; self-terminates on `score-android.sh verdict → ANDROID_VERDICT: STORE_READY` or `BLOCKED` (native-only needs, red gate) |
+| `clear-backlog` | backlog, assigned to me, my issues / my tickets, GitLab / GitHub / Jira issues or tickets | dispatch | backlog — owns its own intake → triage → branch → merge request → review-handoff loop; self-terminates when `host.cjs ledger` reports `remaining=0`, at the WIP cap, or at its bound. It never merges, so there is no ship gate to route to |
+
+Keyword matching is fuzzy — partial matches and synonyms qualify. When a goal matches multiple archetypes, prefer the more specific one (fix-broken over explore; ship-ready over fix-broken if "ship" is explicit). When ambiguous, show the top two candidates in the upfront confirm and let the user choose.
+
+## Router Decision Table
+
+The `next-hop` subcommand of `scripts/orchestrate.sh` reads `orchestrator-state.json` and applies these rules in order. First match wins.
+
+| State Signal | Source | Next Hop |
+|---|---|---|
+| `errors > 0` in last handoff | handoff.json `findings` | `fix` |
+| regression verdict `UNSTABLE` | handoff.json `verdict` | `regression` |
+| `untested_gaps` flagged | handoff.json or units output | `debug` |
+| `pending_verify` true | orchestrator-state.json | `verify` (fresh independent acceptance check) |
+| predicate met | Success predicate command exit/output | `DONE`; only a `ship-ready` state with explicit `terminal_choice: proceed-to-ship` may route to human-gated `ship` |
+| hop outcome `blocked` or `failed`, no retry route | orchestrator-state.json | `BLOCKED` (checkpoint + stop) |
+| plateau detected | `scripts/orchestrate.sh plateau` | `PLATEAU` (stop + report) |
+| archetype pipeline has remaining steps | preset pipeline sequence | next preset step |
+| all preset steps exhausted, predicate not met | — | `regression` (convergence re-check) |
+
+State signals are cheap reads — last `handoff.json` plus the regression verdict field and error count. No re-run of the full suite just to route.
+
+`stop` and `stop-at-verified` never authorize shipping. Missing terminal choices also
+produce `ship=no`; convergence alone is not permission. The `ship=yes` verdict means
+the ship workflow may be entered, and never waives its approval and deployment checks.
+
+`screen-cmd` screens each database URI independently: one local/test destination cannot
+waive another production destination. The dev-container password exception applies only
+to approved DB variable names on the same docker/podman command. Static quoted/escaped
+executable names and common interpreter wrappers are screened too; dynamic executable
+selection is refused. This is lexical screening, not
+a shell interpreter or sandbox; runtime expansion, aliases and script contents require
+the host's execution isolation and explicit authorization checks.
+
+## Independent Verify & Overfit Guard
+
+The orchestrator must not optimize and accept against the same signal — that lets a
+change game its own metric. For `optimize-metric` and `build-feature`, the acceptance
+check runs on a **held-out** set (a fresh scenario set or holdout assertions), separate
+from the `units` signal used to choose the change. When a high-impact change is accepted
+on the working signal, the orchestrator sets `pending_verify` in `orchestrator-state.json`;
+`next-hop` then routes to a **verify** hop (dispatched to `reason` or `predict` as an
+independent adversarial check) before declaring `DONE` or shipping. The verify hop is
+advisory input to convergence — it never auto-approves ship, which stays human-gated.
+
+## Two-Mode Split
+
+**Orchestration loop** — used when the goal has an external, mechanical Success predicate: a shell command that returns a value the orchestrator can compare across cycles. Progress is objective (Units remaining falls), plateau is well-defined, and the loop terminates on convergence or a safety backstop. Archetypes: ship-ready, optimize-metric, fix-broken, harden, build-feature, explore, polish-ui.
+
+**Single-pass dispatch** — used when no mechanical predicate exists. The goal is subjective or the subcommand is internally-converging (reason runs its own adversarial loop) or a one-shot terminal emitter (learn, improve produce a document and stop). The orchestrator routes once, the subcommand self-terminates, and the orchestrator reports the result. No Units remaining, no Plateau counter, no ship gate. Archetypes: document, what-to-build, decide-design, package-android (the android command runs its own bounded gate loop and ends on a mechanical `STORE_READY | BLOCKED` verdict — the orchestrator reports it, never re-routes around a `BLOCKED` native-needs verdict), clear-backlog (the backlog command runs its own bounded item loop against someone else's tracker and ends at review handoff — "done" there is the repository owner's merge, which the orchestrator can neither perform nor route toward).
+
+The criterion is: "Can the orchestrator independently verify done without re-running the subcommand?" If yes → loop. If no → dispatch.
+
+## Build-Feature: TDD Ladder
+
+The `build-feature` archetype has no pre-existing metric, so progress is reframed as `green-assertion-count` (monotone integer, higher-is-better). A change that turns a red sub-test green is kept; a change that regresses a green sub-test is reverted. A floor-guard prevents reverting scaffolding commits that compile and add no new failures but pass zero new tests. Large net-new scope (greenfield with no existing test suite) is detected and the orchestrator hands off to the dedicated `forge:build` command, which scaffolds the full stack and drives `fullstack_pass_rate` (logic + functional + ux + DevOps + monitoring + hardening acceptance) up to its target instead of grinding the bare TDD ladder on an empty repo. For a **logic-heavy domain** (payroll, accounting, POS, billing), the `logic` dimension is a **gated golden oracle** — `build` caps the pass-rate at 0.50 until every business-rule golden case passes — and the orchestrator chains `predict` (expert personas) over the rule matrix before implementation to validate the tables/formulas and surface missing edge cases. When the greenfield work starts from a **client brief** rather than an existing spec, `forge:requirements` runs the standard requirements-engineering process first (elicit → analyze → specify → validate) and emits the validated build spec it hands to `build`. For an **existing** codebase, the same archetype
+routes to `forge:feature` instead — a brownfield delta loop (append the feature's acceptance to
+the app's spec, drive it green) with a **hard non-regression ratchet** (any existing green→red
+auto-reverts; reuses `regression`). So: greenfield → `build`, existing app → `feature`; both run the
+same modify→verify→keep/discard loop, `feature` just adds the ratchet so improvements compound.
+
+## Preset Pipelines (Reference)
+
+| Archetype | Step 1 | Step 2 | Step 3 | Step 4 | Step 5 |
+|---|---|---|---|---|---|
+| ship-ready | probe | debug | fix | regression | ship |
+| optimize-metric | plan | (classic loop) | holdout-verify | evals | — |
+| fix-broken | debug | fix | regression | — | — |
+| harden | security | fix | security | — | — |
+| build-feature | (acceptance-test derive) | build | debug | fix | regression |
+| explore | probe | scenario | plan | — | — |
+| document | learn | — | — | — | — |
+| what-to-build | improve | — | — | — | — |
+| decide-design | reason | — | — | — | — |
+| package-android | android | — | — | — | — |
+| clear-backlog | backlog | — | — | — | — |
+
+Presets are starting pipelines. The router adapts per cycle from observed state — it may skip, repeat, or reorder steps based on the decision table above. The preset is a prior, not a fixed schedule.
+
+## Glossary
+
+Terms used consistently across this file, SKILL.md, and orchestrator-state.json. Definitions live in CONTEXT.md.
+
+| Term | Short meaning |
+|---|---|
+| Goal archetype | Classification of the user's natural-language goal into one of the 12 categories above |
+| Success predicate | Exact shell command + expected output that defines "done" for Orchestration loop goals |
+| Units remaining | Scalar measure of open gaps (failing tests, errors, metric delta); lower-is-better; computed by `scripts/orchestrate.sh units` |
+| Plateau | Units remaining flat or worse for N consecutive computed cycles (default 5); oscillation that nets zero also qualifies |
+| Orchestration loop | The cycle-bounded assess→route→run→record loop used for predicate-bearing archetypes |
+| Single-pass dispatch | One-shot routing to a self-terminating subcommand; no loop, Plateau, ceiling, or ship gate |
+| Independent verify hop | A `verify` routing step (reason/predict) that checks an accepted high-impact change against a fresh signal before DONE/ship; gated by `pending_verify` |
+| Holdout-verify | Acceptance check run on a held-out set, separate from the `units` signal used to choose the change, to prevent overfitting the metric |

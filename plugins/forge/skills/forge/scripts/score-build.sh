@@ -181,7 +181,7 @@ log_invocation() {
   dir="$(dirname "$file")" || return 0
   [[ -d "$dir" && -w "$dir" ]] || return 0
   ts="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null)" || ts="unknown"
-  sha="$(sha256sum "$file" 2>/dev/null | cut -c1-16)" || sha=""
+  sha="$(node -e 'console.log(require("crypto").createHash("sha256").update(require("fs").readFileSync(process.argv[1])).digest("hex").slice(0,16))' "$file" 2>/dev/null)" || sha=""
   printf '%s\t%s\t%s\t%s\t%s\n' "$ts" "$sub" "$(basename "$file")" "${sha:-nohash}" "$headline" \
     >> "$dir/score-log.tsv" 2>/dev/null || true
 }
@@ -203,7 +203,7 @@ apply_evidence_strict() {
       '#'*|'spec'$'\t'*) printf '%s\n' "$line" >> "$tmp"; continue ;;
     esac
     local IFS=$'\t'; read -r -a c <<< "$line"; unset IFS
-    if [[ "${#c[@]}" -ge 5 && "${c[4]}" == "pass" ]]; then
+    if [[ "${c[4]:-}" == "pass" ]]; then
       local detail="${c[5]:-}" ref="" ok=0
       ref="$(printf '%s' "$detail" | grep -oE 'evidence:[^#[:space:],;]+' | head -1 | cut -d: -f2-)"
       if [[ -n "$ref" ]]; then

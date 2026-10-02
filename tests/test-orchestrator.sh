@@ -121,7 +121,7 @@ run_next_hop state-clean-ship.json
 assert_eq "ship"       "$NH_OUT" "next-hop: all clear + explicit proceed-to-ship → ship"
 
 # state with no ship archetype and all clear → DONE
-_tmp_state=$(mktemp /tmp/orch-test-XXXXXX.json)
+_tmp_state=$(mktemp)
 printf '{"archetype":"explore","errors_remaining":0,"regression_verdict":"STABLE","untested_gaps":0}' > "$_tmp_state"
 NH_OUT=$(bash "$ORCH" next-hop "$_tmp_state" 2>/dev/null); NH_CODE=$?
 rm -f "$_tmp_state"
@@ -728,7 +728,7 @@ done
 # Version stamp must agree across ALL mirrors — drift here shipped a 2.2.1 router
 # missing three commands while the manifest advertised 2.3.0. Compare against the
 # canonical stamp, not a literal, so version bumps can't silently rot this test.
-CANON_SKILL_VER="$(grep -m1 '^version:' "$REPO_ROOT/.claude/skills/forge/SKILL.md" | sed 's/version:[[:space:]]*//')"
+CANON_SKILL_VER="$(grep -m1 '^version:' "$REPO_ROOT/.claude/skills/forge/SKILL.md" | sed 's/version:[[:space:]]*//' | tr -d '\r')"
 for mirror in claude-plugin .agents .opencode plugins/forge; do
   mv_line="$(grep -m1 '^[[:blank:]]*version:' "$REPO_ROOT/$mirror/skills/forge/SKILL.md" 2>/dev/null)"
   if printf '%s' "$mv_line" | grep -qF "$CANON_SKILL_VER"; then

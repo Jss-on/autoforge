@@ -1,0 +1,2 @@
+# Shell entry points must also run from Windows checkouts in Git Bash.
+*.sh text eol=lf

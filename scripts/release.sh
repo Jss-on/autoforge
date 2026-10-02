@@ -46,7 +46,7 @@ for(const f of ['.claude-plugin/marketplace.json','claude-plugin/.claude-plugin/
   if(Array.isArray(j.plugins)) for(const p of j.plugins) if(p.name==='forge') p.version=v;
   fs.writeFileSync(f,JSON.stringify(j,null,2)+'\n');
 }
-for(const root of ['.claude','claude-plugin','.agents','.opencode','plugins/forge']) {
+for(const root of ['.claude','claude-plugin','.agents','.opencode','.cursor','plugins/forge']) {
   const f=root+'/skills/forge/SKILL.md';
   if(fs.existsSync(f)) fs.writeFileSync(f,fs.readFileSync(f,'utf8').replace(/^([ \t]*)version: .*$/m,(_,indent)=>indent+'version: '+v));
 }
@@ -58,13 +58,13 @@ read -rp "Press ENTER after review (or 'abort' to stop before publishing): " DOC
 [[ "$DOC_RESPONSE" != abort ]] || { echo 'Stopped; local release changes are available for review.'; exit 0; }
 [[ "$(git rev-parse HEAD)" == "$HEAD_BEFORE" ]] || { echo 'ERROR: source commit changed during document review.' >&2; exit 1; }
 # The pause allows document edits, never arbitrary files to be swept into a release.
-RELEASE_PATHS=(.claude-plugin/marketplace.json claude-plugin/.claude-plugin/plugin.json plugins/forge/.codex-plugin/plugin.json .claude/skills/forge/SKILL.md claude-plugin/skills/forge/SKILL.md .agents/skills/forge/SKILL.md .opencode/skills/forge/SKILL.md plugins/forge/skills/forge/SKILL.md README.md guide CONTRIBUTING.md COMPARISON.md)
+RELEASE_PATHS=(.claude-plugin/marketplace.json claude-plugin/.claude-plugin/plugin.json plugins/forge/.codex-plugin/plugin.json .claude/skills/forge/SKILL.md claude-plugin/skills/forge/SKILL.md .agents/skills/forge/SKILL.md .opencode/skills/forge/SKILL.md .cursor/skills/forge/SKILL.md plugins/forge/skills/forge/SKILL.md README.md guide CONTRIBUTING.md COMPARISON.md)
 for RELEASE_PATH in "${RELEASE_PATHS[@]}"; do
   if [[ -e "$RELEASE_PATH" ]] || git ls-files --error-unmatch -- "$RELEASE_PATH" >/dev/null 2>&1; then git add -- "$RELEASE_PATH"; fi
 done
 node - <<'JS'
 const {execFileSync}=require('node:child_process');
-const allowed=new Set(['.claude-plugin/marketplace.json','claude-plugin/.claude-plugin/plugin.json','plugins/forge/.codex-plugin/plugin.json',...['.claude','claude-plugin','.agents','.opencode','plugins/forge'].map(p=>p+'/skills/forge/SKILL.md'),'README.md','CONTRIBUTING.md','COMPARISON.md']);
+const allowed=new Set(['.claude-plugin/marketplace.json','claude-plugin/.claude-plugin/plugin.json','plugins/forge/.codex-plugin/plugin.json',...['.claude','claude-plugin','.agents','.opencode','.cursor','plugins/forge'].map(p=>p+'/skills/forge/SKILL.md'),'README.md','CONTRIBUTING.md','COMPARISON.md']);
 const files=execFileSync('git',['diff','--cached','--name-only','-z']).toString().split('\0').filter(Boolean);
 if(files.some(f=>!allowed.has(f)&&!f.startsWith('guide/'))) {console.error('ERROR: staged files outside release/documentation scope.');process.exit(1);}
 JS

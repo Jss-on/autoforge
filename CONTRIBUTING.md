@@ -4,7 +4,7 @@ Whether you're fixing a typo, adding examples, creating a new sub-command, or im
 
 ## Quick Start
 
-AutoForge is Markdown files that Claude Code, OpenCode, and Codex discover from `skills/` and `commands/` directories. No build step, no compilation — edit a `.md` file, invoke the skill, see your changes.
+AutoForge is Markdown files that Claude Code, OpenCode, Codex, and Cursor discover from `skills/` and `commands/` directories. No build step, no compilation — edit a `.md` file, invoke the skill, see your changes.
 
 ```bash
 # 1. Clone the repo
@@ -14,6 +14,7 @@ cd autoforge
 # 2. Install via guided installer
 ./scripts/install.sh --claude --global   # Claude Code
 ./scripts/install.sh --opencode --global # OpenCode
+bash scripts/install.sh --cursor --global # Cursor native skill
 codex plugin marketplace add .          # Codex local plugin source
 codex plugin add forge@forge-local
 
@@ -28,9 +29,10 @@ ln -s $(pwd)/.claude/commands/forge.md ~/.claude/commands/forge.md
 The canonical source is `.claude/`. After making changes, run the transform to sync all platforms:
 
 ```bash
-./scripts/transform.sh              # sync to OpenCode + Codex
+./scripts/transform.sh              # sync to OpenCode + Codex + Cursor
 ./scripts/transform.sh --opencode   # OpenCode only
 ./scripts/transform.sh --codex      # Codex only
+./scripts/transform.sh --cursor     # Cursor only
 ```
 
 ### Codex plugin development
@@ -50,6 +52,20 @@ Plugin Creator cachebuster helper, then run `codex plugin add forge@forge-local`
 new thread. Product releases still use `scripts/release.sh`. For a GitHub installation, use the
 [README update commands](README.md#codex-quick-start) instead of the local development marketplace.
 
+### Cursor skill development
+
+Edit canonical commands and references under `.claude/`, then run
+`bash scripts/transform.sh --cursor` and `bash tests/test-cursor.sh`.
+The generated `.cursor/skills/forge/` bundle uses the shared
+Codex/Cursor generator: command contracts are copied unchanged, with a small Cursor router for
+`/forge <subcommand>`, questions and resource paths. Do not edit the generated bundle directly.
+
+Install with `bash scripts/install.sh --cursor --global`, or from another project's root run
+`bash /path/to/autoforge/scripts/install.sh --cursor --local` to test a project installation.
+Reload/reopen Cursor, start Agent chat in that project, and invoke `/forge design` or another
+workflow. Git, Node.js and Bash are required; use Git Bash on Windows. Claude Code hooks are
+not installed. See [Cursor skills](https://cursor.com/docs/skills).
+
 ## Repository Structure (v2.1.0)
 
 ```
@@ -63,10 +79,11 @@ forge/
 │       └── forge/                          ← 12 subcommand files (self-contained)
 ├── .opencode/                                     ← OpenCode port (generated via transform.sh)
 ├── .agents/ + plugins/                            ← Codex port (generated via transform.sh)
+├── .cursor/skills/forge/                           ← Cursor port (generated via transform.sh)
 ├── claude-plugin/                                 ← Distribution package (Claude Code plugin install)
 ├── scripts/
-│   ├── install.sh                                 ← Guided installer (3 platforms)
-│   ├── transform.sh                               ← .claude/ → .opencode/ + .agents/ sync
+│   ├── install.sh                                 ← Guided installer (4 platforms)
+│   ├── transform.sh                               ← .claude/ → .opencode/ + .agents/ + plugins/ + .cursor/ sync
 │   ├── release.sh                                 ← Release automation
 │   └── release.md                                 ← Release checklist
 ├── guide/                                         ← Guides — one per command + advanced patterns
@@ -85,7 +102,7 @@ forge/
 | `references/security-checklist.md` | STRIDE + OWASP checklist (loaded by security command) | Adding security checks |
 | `references/predict-personas.md` | 5 expert personas (loaded by predict command) | Adding/modifying personas |
 | `references/reason-judge-protocol.md` | Adversarial refinement protocol (loaded by reason command) | Changing judge/critic behavior |
-| `scripts/transform.sh` | Platform transform (.claude/ → .opencode/ + .agents/) | Adding new commands or reference files |
+| `scripts/transform.sh` | Platform transform (.claude/ → .opencode/ + .agents/ + plugins/ + .cursor/) | Adding new commands or reference files |
 | `claude-plugin/` | Distribution package — synced from .claude/ during release | Don't edit directly — edit .claude/ |
 
 ## What to Contribute
@@ -132,7 +149,7 @@ Only create a reference in `references/` if shared by multiple commands. Single-
 ### 4. Run transform + update docs
 
 ```bash
-./scripts/transform.sh   # sync to OpenCode + Codex
+./scripts/transform.sh   # sync to OpenCode + Codex + Cursor
 ```
 
 Update: README.md (commands table), guide/ (new guide file), COMPARISON.md (subcommand count).
@@ -162,7 +179,10 @@ Update: README.md (commands table), guide/ (new guide file), COMPARISON.md (subc
 The harness has automated behavioral suites in `tests/test-*.sh`, a deterministic execution/handoff
 seam in `scripts/smoke-seam.sh`, and installed-agent evaluations with an external oracle. Run affected
 suites while editing, regenerate bundles with `scripts/transform.sh`, and run the full suite before
-release. Use Git Bash and Node 24 on Windows. CI runs Linux suites and a Windows smoke.
+release. Use Node 24 and Bash (Git Bash on Windows). CI runs every suite and the seam smoke on
+Linux, Windows and macOS; macOS uses system Bash and BSD tools. Shell files stay LF via
+`.gitattributes`, including on Windows. Run `bash tests/test-install.sh` and
+`bash tests/test-portability.sh` when changing platform support.
 
 Required release evaluations use `AR_SMOKE_MODEL_REQUIRED=1` with `FORGE_EVAL_AGENT=claude|codex`;
 a missing CLI, authentication, sandbox or oracle blocks the run. See

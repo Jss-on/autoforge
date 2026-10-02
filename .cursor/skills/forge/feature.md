@@ -1,0 +1,180 @@
+---
+name: forge:feature
+description: "Add a feature to existing software via the forge loop — delta acceptance, a hard non-regression ratchet, conforming to the app's DESIGN.md"
+argument-hint: "[Feature: <text>] [Target: <dir>] [Spec: <file>] [Iterations: N] [--chain <targets>]"
+---
+
+EXECUTE IMMEDIATELY.
+
+The **brownfield** sibling of `build`. Software is an iteration process: `build` gets you to first-green;
+`feature` continues the *same forge loop* on a **growing acceptance set** with a **hard
+non-regression ratchet** — every feature stacks, nothing backslides (compounding gains). It modifies an
+existing app, not a fresh repo. Loop engine + metric are shared with `build`
+(`scripts/score-build.sh pass-rate`); the floor is `forge:regression`.
+
+**Whose repository?** Before the first write, commit or host call run
+`node scripts/host.cjs detect` and read `references/host-protocol.md` (§1 maps every `gh` / PR /
+Actions step in this file to GitLab). `role: contributor` — an employer's, a client's or a
+community's repository — puts §3 above every owner default in this file, wherever it sits:
+**never create a repository or add a remote for code that is not yours**; never hand off to `build`
+from inside their repository — scaffold on the item's branch instead; their branch and
+merge-request conventions; forge's spec, acceptance and result files live under the run directory,
+never in their tree; never merge — hand the merge request to their reviewers. For a tracker backlog
+there use `/forge:backlog`.
+
+## Required acceptance completion
+
+Follow `references/acceptance-evidence.md`: pin the reviewed expected check set before implementation,
+then require `scripts/score-build.sh completion <results.tsv> <acceptance-plan.json> <project-root>`
+before completion or a release-ready verdict. Keep weighted scoring for iteration selection.
+Missing, blocked, flaky, unexecuted or unjustifiably skipped required checks cannot be waived by
+a lower target or soft gates. Emit schema `3.3.0` with the pinned `acceptance` reference; feature
+runs preserve the previous accepted floor. Design-system output without an audit remains separate.
+
+## Parse Arguments
+- `Feature:` / `--feature` — what to add (a sentence or a brief).
+- `Target:` / `--target` — the existing app directory (e.g. `build-output/money-tracker`).
+- `Spec:` / `--spec` — the app's existing `evals/fullstack/<app>.spec.yaml` to extend (auto-detected from Target if omitted).
+- `Assets: N|off` — generation-attempt cap (default 12); `off` still permits checked reuse, icons and UI motion.
+- `Iterations:` / `--iterations` — default 25. "unlimited" to opt out.
+- `Target-rate:` — pass-rate to stop at (default 1.00). `--chain`, `--evals`.
+
+## Autonomy — greenfield vs brownfield (decide, don't ask)
+Inspect `Target`:
+- **Empty / missing / no app** → this is greenfield → **hand to `forge:build`** (don't scaffold here)
+  — owner role only; inside someone else's repository the new code is a branch in *their* repository.
+- **Existing app present** → feature mode below.
+This is also how the orchestrator routes the `build-feature` archetype: greenfield → `build`, existing
+code → `feature`.
+
+## Precondition
+Git repo, clean working tree, on a branch (not detached). The incumbent app **builds + passes its
+current acceptance** — confirm the baseline is green before adding to it (you cannot ratchet off a red
+baseline). Read the app: source, `git log`, current `build-results.tsv`, and its **`DESIGN.md`**.
+
+## Phase 1 — Requirements delta
+Read the existing client security review and threat model. Changes to roles, data, public exposure,
+integrations or privileged actions add/reopen linked A-n / SC-n decisions and security NFRs in the
+same plain-language review. Carry new negative security tests into the hardening delta; preserve
+existing protections and include affected shared callers, not just changed files.
+Derive the feature's acceptance (reuse `requirements`/`probe`): new, mechanical assertions across the
+**six** dimensions (**logic** + functional + **ux incl design-conformance** + devops + monitoring +
+hardening), weighted by MoSCoW. **Any new business rule ships its `logic` golden vectors first** (exact
+`input → expected output` rows) — the same 0.50 logic-gate cap from `build` applies to the union, so a
+feature with wrong domain math cannot converge on polish. **Append** them to the app's spec +
+`build-results.tsv` as new `fail` rows. Existing rows are untouched — they are the **regression
+floor**. Re-baseline: `scripts/score-build.sh pass-rate` dips (new fails); that drop is the work to
+recover.
+
+## Phase 2 — Design delta
+Extend **within the existing `DESIGN.md`** — reuse its tokens (color, type, spacing, components/states);
+a feature that adds or changes a route extends the `## Navigation` table (route · archetype · object ·
+roles · placement · primary action · SC-n · cross-links) and re-runs `scripts/score-design.sh routes
+DESIGN.md <routes.txt> requirements.md` → `ROUTES: PARITY` before the ratchet; new UI text uses the
+`terms:` vocabulary;
+a feature inside an established surface inherits that surface’s visitor mode and world, never a new
+identity (`references/design-protocol.md` §1/§3). Do NOT introduce a new design system; new UI must pass
+`design-conformance` against the same DESIGN.md **and the craft floor**: run
+`node scripts/design-scan.cjs --url <touched routes> --mode <mode> --design DESIGN.md` on every touched
+route and keep `SLOP` at zero (a `design:floor` `ux` row in the delta) — no emoji icons, kickers, nested
+cards, placeholder copy, off-token colors/faces. Missing tokens the feature genuinely needs are added to
+`DESIGN.md` (re-lint: `scripts/score-design.sh lint`), never improvised inline. When the feature adds a
+whole new surface archetype (a dashboard to a CRUD app), its required patterns (§2) join the delta rows,
+and `design audit` runs on it before the ratchet. Imagery the delta genuinely needs follows
+`references/integrations-protocol.md` §1 (reuse → Codex-native images → matching media MCP, within
+the existing style contract and attempt cap; missing required imagery stays unmet); `Tracker: linear` arms
+tracker sync for the delta's defects (§3), GitHub issues stay the default.
+
+For scoped assets/motion, snapshot the existing `assets/manifest.json` before changes (or adopt
+the incumbent files once), extend it for the delta, and reuse the existing icon family. Use
+`asset-check.cjs select` for the observed provider decision; copy generated outputs into the Target
+and record actual receipts/prompts/provenance. Do not reset attempts or regenerate approved images.
+`asset-check.cjs check <target> --previous <snapshot>` must pass before keeping the change.
+Add `--assets <target>` to the touched-route scan, include every route affected by shared motion,
+and assert the keyboard task in normal and reduced preferences. Keep provenance and payload rows
+in the existing `hardening`/`devops` dimensions; motion traces `design:motion`, never a new tag.
+
+## Phase 3 — Implement (the forge loop)
+Per iteration, exactly as `build`:
+1. **Read before write** — `git log`/`diff` of recent `experiment:` commits + `build-results.tsv`; pick
+   the lowest-scoring *new* assertion.
+2. **One change** — one atomic slice toward that assertion.
+3. **Commit before verify** — `git commit -m "experiment: feature/<slice>"` (git is the ledger).
+4. **Verify mechanically, leave evidence** — build/boot/probe + test pyramid + Playwright
+   e2e/axe/conformance; tee raw outputs into `<run-dir>/evidence/`; a row flips to `pass` only with
+   `detail` = `evidence:<relpath>` naming its proof file; recompute
+   `scripts/score-build.sh pass-rate --strict-evidence` (unproven pass rows are demoted; invocations
+   are hash-logged to `score-log.tsv`). Seam scripts + references resolve exactly as in `build`'s
+   "Seam & reference resolution" section.
+
+## GitHub flow (the output repo is the workbench)
+Owner role — in a repository that is not yours, "Whose repository?" at the top of this file governs
+instead. The app's private output repo (`build` created it; if forge built the app and the repo is
+missing, create it now per `build`'s "Output repository" section — existing code forge did not
+build gets a remote only on the user's explicit instruction) is where this feature is visible
+end-to-end: work on a
+`feat/<slug>` branch, push it, **open a PR** with the delta acceptance rows in the description,
+let the repo's CI run, and merge only after Phase 4's ratchet is STABLE and CI is green. Deferred
+findings become issues on that repo. Record the PR URL in `handoff.json`.
+
+## Phase 4 — Regression ratchet (HARD gate)
+Every iteration, after the feature verify, run the floor:
+`scripts/score-regression.sh verdict <results.tsv>` (baseline = incumbent greens, candidate = now).
+- **Any existing assertion green→red → auto-revert the slice** `git revert HEAD --no-edit`. No exceptions —
+  a feature may never break what already worked. The baseline only rises.
+- **Efficiency ratchet** beside the floor: `scripts/score-build.sh interactions <baseline.tsv> <results.tsv>`
+  must print `INTERACTIONS: STABLE` — a key-path row's `interactions=N` count may not rise unless the
+  row's `detail` carries `interactions-reason=<why>` (a feature that legitimately adds a step says so;
+  silent excise is a regression, the same as a red assertion).
+- **keep** iff new-assertion pass-rate increased **AND** regression `STABLE` **AND** `INTERACTIONS: STABLE` **AND** guard green.
+- **simplicity wins**; **discard** otherwise (revert). Append the outcome to `iterations.tsv`.
+
+## Phase 5 — Verify + Ratchet (convergence)
+When the feature's assertions are green and `regression` is `STABLE`:
+- **Independent verify** on a fresh boot (held-out) to avoid overfitting a flaky pass.
+- **Security completion gate:** reuse build Phase 6's audit baseline and High-or-stricter threshold.
+  Recheck the current candidate, including all existing and new applicable security assertions and
+  affected shared boundaries. Require `validate-handoff.sh <audit>/handoff.json security --require-pass`.
+  Preserve a selected Strix check across the feature audit; rerun `security --strix` on the changed
+  candidate using `references/security-checklist.md`, and carry `config.strix: true`, its check,
+  native reports and findings into the feature handoff.
+  Copy the typed `security` record and redacted evidence beneath the feature run, with paths relative
+  to that run; `validate-handoff.sh <run>/handoff.json feature --require-pass` must pass before
+  COMPLETE/CONVERGED. A lower Target-rate, `skip`, an accepted risk or an old audit cannot waive this.
+- For a scoped manifest, rerun `scripts/score-design.sh assets <target>` and the scan with
+  `--assets <target>`; pass the target as the fifth `score-design.sh verdict` argument after
+  defects, scan, DESIGN.md and critique. Missing/stale motion evidence or missing required assets
+  prevents convergence. Preserve the existing non-regression ratchet.
+- **Ratchet**: fold the new assertions permanently into `evals/fullstack/<app>.spec.yaml` (they are now
+  baseline). The next feature starts from this higher floor — compounding. Bounded by `Iterations`.
+
+## Safety Invariants
+- **Never deploy to production, publish packages, or make a repo public** — that stays human-gated
+  (`ship`). Pushing the feature branch to the app's own private output repo and opening a PR is part
+  of the standard loop (see "GitHub flow" below).
+- **Mutate only the `Target` app** (its declared dir); git is the safety net — every slice is an
+  `experiment:` commit, auto-reverted on regression. Never touch the skill repo or unrelated trees.
+- Derived shell commands safety-screened via `scripts/orchestrate.sh screen-cmd`.
+
+## Summary
+Print: feature, baseline→final pass-rate (over the union), new assertions green/total, regression verdict
+(must be STABLE), security PASS|FAIL|BLOCKED with evidence/remaining risks, iterations, kept vs reverted
+slices, and confirmation the delta was ratcheted into the spec.
+
+## Chain Handoff
+Write handoff.json: version "3.3.0", source "feature", status
+(COMPLETE|CONVERGED|BOUNDED|BLOCKED|USER_INTERRUPT|ERROR), results_tsv, metric (fullstack_pass_rate),
+regression_verdict, findings = remaining red, config{feature, target, spec}.
+COMPLETE/CONVERGED also carry the passing typed `security` record with evidence in this run; run
+`scripts/validate-handoff.sh <run-dir>/handoff.json feature --require-pass` before claiming either.
+When assets are scoped, carry the optional `assets` manifest/report/previous snapshot, providers,
+attempts/cap, kept count and motion evidence paths; never replace acceptance results with that summary.
+Schema: `references/handoff-schema.md`; after writing, `scripts/validate-handoff.sh <run-dir>/handoff.json
+feature` must print VALID before the summary. Chain commonly
+`regression` → `ship` (human-gated). Propagate `--evals`.
+
+## Hosting applicability at intake
+
+Export the approved stack decision into the existing pinned acceptance definition: `hosting: {kind: managed|static|container, stateful: boolean, decision: "docs/adr/stack-decision.md", target: "exact-isolated-target"}`. Pin the decision file as a snapshot input. Each check names its `outcome`. Require delivery, configuration, health and observability for every app; persistence, compatibility, backup and restore for stateful apps; container_nonroot, container_health and container_image when containers are selected. Mechanism exclusions require the existing applicability reason and never waive a required outcome.
+
+At spec intake run `REQUIRE_STACK_DECISION=1 REQUIRE_ACCEPTANCE_PLAN=1 bash "$AR_ROOT/scripts/score-requirements.sh" validate "$SPEC" "$PLAN" "$PROJECT"`. A legacy YAML spec may still be read, but its `legacy-unverified` result cannot authorize a new build/release until hosting acceptance is reviewed and pinned. Use the [acceptance contract](../../skills/forge/references/acceptance-evidence.md); do not invent a second profile document or an ad hoc YAML parser.

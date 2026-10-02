@@ -51,7 +51,7 @@ function artifact(policy, receipt) {
 }
 async function verify(root, policy, head, io = {}) {
   const local = policy.local_report_sha256 !== undefined;
-  const jobs = ['Harness test suites', 'Harness Windows smoke'];
+  const jobs = ['Harness test suites', 'Harness Windows smoke', 'Harness macOS test suites'];
   if (!local) jobs.push('Installed Forge evaluations');
   a.need(policy.ci?.head === head && /^[a-f0-9]{40}$/.test(head) &&
     jobs.every(j => policy.ci.required_jobs?.includes(j)), 'Exact candidate and all required CI jobs must be pinned');

@@ -1,6 +1,6 @@
 # Installed evaluation and release evidence
 
-Run Node 24 and Git Bash on Windows, or Bash on Linux. Use the native Claude and Codex CLIs.
+Run Node 24 and Git Bash on Windows, or Bash on Linux/macOS. Use the native Claude and Codex CLIs.
 The current runner uses Claude 2.1.282 and Codex 0.156.1; CLI changes require a
 new evaluation. Codex applies a named OS permission profile to its tools; that same native sandbox
 wraps the Claude CLI. The runner first proves that task writes and disposable Git commits work,
@@ -39,7 +39,8 @@ application secrets. CI retains summaries and redacted traces for seven days. Di
 paths in local reports can be removed after reviewing the exact reported directories and retaining
 necessary evidence; never recursively remove a computed parent directory.
 
-GitHub-hosted Actions run the Linux suites and Windows smoke on every PR. Native model evaluations
+GitHub-hosted Actions run all harness suites and the seam smoke on Linux, Windows and macOS
+on every PR. Native model evaluations
 run on the operator's signed-in computer before release, using the subscription commands above.
 No self-hosted runner, model API key, or uploaded subscription credential is required. The current
 verified model routes are Windows Claude Code and Codex; other platforms remain unverified until
@@ -57,7 +58,9 @@ stale or different-bundle report blocks release. The report hash records the ope
 local evidence; it does not turn local execution into independently executed GitHub model evidence.
 
 Policy ci pins the repository, candidate head, run ID/attempt, workflow, protected source revision,
-and protected file digests. Required hosted jobs are Harness test suites and Harness Windows smoke.
+and protected file digests. Required hosted jobs are Harness test suites, Harness Windows smoke
+(the existing name is retained for compatibility; it now runs the full suite), and
+Harness macOS test suites. Include all three in release policies.
 Protect .github/workflows/ci.yml, scripts/{installed-eval,release-evidence,ci-evidence}.cjs and
 evals/devops/installed-oracle.cjs. Run the release consumer in ci mode from the signed-in machine;
 it independently checks GitHub, validates the local subscription report, then rechecks GitHub.

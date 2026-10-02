@@ -1,6 +1,6 @@
 # AGENTS.md — AutoForge
 
-> Drop this file into your project root. Any AI agent (Claude Code, Codex, OpenCode, Gemini CLI, etc.) can then use AutoForge immediately.
+> Drop this file into your project root. Any AI agent (Claude Code, Codex, Cursor, OpenCode, Gemini CLI, etc.) can then use AutoForge immediately.
 
 ## What is AutoForge?
 
@@ -36,6 +36,23 @@ Works from PowerShell without Bash for installation. Start a new Codex thread in
 repository and invoke `$forge <subcommand> [flags]`. Update with
 `codex plugin marketplace upgrade forge-local`, then repeat `codex plugin add forge@forge-local`.
 Workflow shell checks still require Bash (Git Bash on Windows) and Node.js.
+
+### Cursor (native skill)
+
+After authenticating Git, run in Bash (Git Bash on Windows):
+
+```bash
+git clone https://github.com/Jss-on/autoforge
+cd autoforge
+bash scripts/install.sh --cursor --global
+```
+
+This installs `~/.cursor/skills/forge/`. For project-local installation, run
+`bash /path/to/autoforge/scripts/install.sh --cursor --local` from the target project's root;
+it writes `.cursor/skills/forge/` there. Reload/reopen Cursor and start an Agent chat with
+`/forge <subcommand> [flags]`, for example `/forge design`. All 22 workflows are included.
+Git, Node.js and Bash are required; Claude Code hooks are not installed. See
+[Cursor skills](https://cursor.com/docs/skills).
 
 ### Manual (any agent)
 
@@ -328,6 +345,13 @@ iteration  commit   metric  delta   status    description
 - Plugin files: `plugins/forge/.codex-plugin/plugin.json` and `skills/`; marketplace: `.agents/plugins/marketplace.json`
 - Command contracts live in each command file under `plugins/forge/skills/forge/`
 
+### Cursor
+
+- Commands are invoked as `/forge` and `/forge <subcommand>` in Agent chat
+- Interactive setup uses Cursor's available question tool or direct question batches
+- The self-contained bundle is `.cursor/skills/forge/`, generated with `bash scripts/transform.sh --cursor`
+- Its router loads the selected command and bundled references/scripts; Claude Code hooks do not apply
+
 ### Other Agents (OpenCode, Gemini CLI, etc.)
 
 - Read this file for the command surface and configuration contract
@@ -350,6 +374,7 @@ autoforge/
 ├── claude-plugin/                     ← Claude Code distribution package
 │   ├── skills/forge/SKILL.md   ← Main skill + references/
 │   └── commands/forge/         ← Subcommand registrations
+├── .cursor/skills/forge/       ← Cursor skill router + commands + references + scripts
 └── plugins/forge/              ← Codex distribution package
     └── skills/forge/SKILL.md   ← Codex skill router + references/
 ```

@@ -33,7 +33,7 @@ log_invocation() {
   dir="$(dirname "$file")" || return 0
   [[ -d "$dir" && -w "$dir" ]] || return 0
   ts="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null)" || ts="unknown"
-  sha="$(sha256sum "$file" 2>/dev/null | cut -c1-16)" || sha=""
+  sha="$(node -e 'console.log(require("crypto").createHash("sha256").update(require("fs").readFileSync(process.argv[1])).digest("hex").slice(0,16))' "$file" 2>/dev/null)" || sha=""
   printf '%s\t%s\t%s\t%s\t%s\n' "$ts" "$sub" "$(basename "$file")" "${sha:-nohash}" "$headline" \
     >> "$dir/score-log.tsv" 2>/dev/null || true
 }
@@ -209,14 +209,14 @@ verdict() {
         [[ -n "$rq" ]] || continue
         if awk -v FS='\t' -v q="$rq" '$1 ~ /^C-/ && $2 == q { found = 1 } END { exit (found ? 0 : 1) }' "$cfile"; then
           covered=$((covered + 1))
-        elif grep -i "scarcity" "$plan" | grep -q "$rq\b"; then
+        elif grep -i "scarcity" "$plan" | grep -qE "(^|[^[:alnum:]_])$rq([^[:alnum:]_]|$)"; then
           covered=$((covered + 1))
           echo "  note: $rq covered by an explicit evidence-scarcity note" >&2
         else
           echo "  $rq: no claims and no scarcity note" >&2
           missing=$((missing + 1))
         fi
-      done < <(grep -o 'RQ-[0-9]\+' "$plan" | sort -u)
+      done < <(grep -oE 'RQ-[0-9]+' "$plan" | sort -u)
       if [[ "$missing" -eq 0 && "$covered" -gt 0 ]]; then
         echo "criterion rq-coverage: $covered/$covered PASS" >&2
       elif [[ "$covered" -eq 0 && "$missing" -eq 0 ]]; then

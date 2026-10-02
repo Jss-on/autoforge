@@ -63,11 +63,12 @@ printf '\n--- stack: the technology-selection gate (evidence + owner approval) -
 READY="$FIX/stack-ready"
 T="$(mktemp -d)"
 trap 'rm -rf "$T"' EXIT
+SED_NEWLINE=$'\\\n'
 # the approval pins ledgers + record (minus the Status/Approval lines), CR-stripped
-pin_of() { (cat "$1/sources.tsv" "$1/claims.tsv"; grep -vE '^(Approval|Status):' "$1/stack-decision.md") | tr -d '\r' | sha256sum | cut -c1-16; }
-repin()  { local h; h=$(pin_of "$1"); sed -i -E "s/ledger:[0-9a-fA-F]+/ledger:$h/" "$1/stack-decision.md"; }
+pin_of() { (cat "$1/sources.tsv" "$1/claims.tsv"; grep -vE '^(Approval|Status):' "$1/stack-decision.md") | tr -d '\r' | node -e 'process.stdout.write(require("node:crypto").createHash("sha256").update(require("node:fs").readFileSync(0)).digest("hex").slice(0,16))'; }
+repin()  { local h; h=$(pin_of "$1"); sed -i.bak -E "s/ledger:[0-9a-fA-F]+/ledger:$h/" "$1/stack-decision.md"; }
 # clone_ready <name> <sed-expr-on-record>: a mutated copy of the READY fixture, re-pinned so only the mutation is under test
-clone_ready() { mkdir -p "$T/$1"; cp -r "$READY/." "$T/$1/"; sed -i -E "$2" "$T/$1/stack-decision.md"; repin "$T/$1"; }
+clone_ready() { mkdir -p "$T/$1"; cp -r "$READY/." "$T/$1/"; sed -i.bak -E "$2" "$T/$1/stack-decision.md"; repin "$T/$1"; }
 run_stack()   { S_OUT=$(bash "$SCORE_SH" stack "$1" 2>"$T/stderr"); S_RC=$?; S_ERR=$(cat "$T/stderr"); }
 
 run_stack "$READY"
@@ -116,7 +117,7 @@ assert_eq "STACK_DECISION: BLOCKED" "$S_OUT" "stack: approval without owner deci
 assert_contains "$S_ERR" "approval-shape" "stack: approval shape named"
 
 clone_ready nopin 's/x/x/'
-sed -i 's/, ledger:[0-9a-f]*//' "$T/nopin/stack-decision.md"
+sed -i.bak 's/, ledger:[0-9a-f]*//' "$T/nopin/stack-decision.md"
 run_stack "$T/nopin"
 assert_eq "STACK_DECISION: BLOCKED" "$S_OUT" "stack: approval without a ledger pin => BLOCKED"
 assert_contains "$S_ERR" "approval-pin: approval must pin what it approved" "stack: missing pin named with the hash to append"
@@ -129,13 +130,13 @@ assert_eq "STACK_DECISION: BLOCKED" "$S_OUT" "stack: evidence edited after appro
 assert_contains "$S_ERR" "approval-stale: evidence or record changed after sign-off" "stack: stale approval named"
 
 clone_ready edited 's/x/x/'
-sed -i -E 's/^\| RQ-1 \| Support horizon(.*)\| 3 \| NFR-5, A-5 \|/| RQ-1 | Support horizon\1| 1 | NFR-5, A-5 |/; s/^Recommendation: .*/Recommendation: O-3/' "$T/edited/stack-decision.md"
+sed -i.bak -E 's/^\| RQ-1 \| Support horizon(.*)\| 3 \| NFR-5, A-5 \|/| RQ-1 | Support horizon\1| 1 | NFR-5, A-5 |/; s/^Recommendation: .*/Recommendation: O-3/' "$T/edited/stack-decision.md"
 run_stack "$T/edited"
 assert_eq "STACK_DECISION: BLOCKED" "$S_OUT" "stack: weights/recommendation edited after approval => BLOCKED (pin covers the record)"
 assert_contains "$S_ERR" "approval-stale" "stack: record edit detected as stale approval"
 
 clone_ready upperhex 's/x/x/'
-sed -i -E 's/ledger:([0-9a-f]+)/ledger:\U\1/' "$T/upperhex/stack-decision.md"
+node -e 'const fs=require("node:fs"),f=process.argv[1];fs.writeFileSync(f,fs.readFileSync(f,"utf8").replace(/ledger:([0-9a-f]+)/g,(_,h)=>"ledger:"+h.toUpperCase()))' "$T/upperhex/stack-decision.md"
 run_stack "$T/upperhex"
 assert_eq "STACK_DECISION: READY" "$S_OUT" "stack: uppercase hex pin is accepted"
 
@@ -169,7 +170,7 @@ run_stack "$T/nodisconfirmation"
 assert_eq "STACK_DECISION: BLOCKED" "$S_OUT" "stack: every candidate needs a disconfirmation search"
 
 clone_ready shallow 's/x/x/'
-sed -i 's/\tfull\t/\tabstract\t/g' "$T/shallow/sources.tsv"
+sed -i.bak $'s/\tfull\t/\tabstract\t/g' "$T/shallow/sources.tsv"
 repin "$T/shallow"
 run_stack "$T/shallow"
 assert_eq "STACK_DECISION: BLOCKED" "$S_OUT" "stack: abstract-only research cannot justify a stack"
@@ -209,7 +210,7 @@ clone_ready dupopts 's/^### O-2 Next.js/### O-1 duplicate heading/'
 run_stack "$T/dupopts"
 assert_eq "STACK_DECISION: BLOCKED" "$S_OUT" "stack: duplicate option headings do not count as alternatives => BLOCKED"
 
-clone_ready madr '/^## Pros and cons of the options/a ### O-2 Next.js (app router) + Postgres\n### O-3 Python + Django + Postgres + HTMX'
+clone_ready madr $'/^## Pros and cons of the options/a\\\n### O-2 Next.js (app router) + Postgres\\\n### O-3 Python + Django + Postgres + HTMX'
 run_stack "$T/madr"
 assert_eq "STACK_DECISION: READY" "$S_OUT" "stack: MADR-style per-option headings under Pros and cons are not double-counted"
 
@@ -277,11 +278,11 @@ run_stack "$T/norow"
 assert_eq "STACK_DECISION: BLOCKED" "$S_OUT" "stack: a criterion with no comparison-matrix row => BLOCKED"
 assert_contains "$S_ERR" "matrix-row: RQ-2 has no comparison-matrix row" "stack: missing matrix row named"
 
-clone_ready run2 '/^\| weighted total/a | RQ-1 | 4 [S-04] | 5 [S-10] |\n| RQ-2 | 5 [S-06] | 3 [S-06] |'
+clone_ready run2 $'/^\\| weighted total/a\\\n| RQ-1 | 4 [S-04] | 5 [S-10] |\\\n| RQ-2 | 5 [S-06] | 3 [S-06] |'
 run_stack "$T/run2"
 assert_eq "STACK_DECISION: READY" "$S_OUT" "stack: a run-2 (survivors-only) table after the gated matrix is a view, not a false BLOCKED"
 
-clone_ready uncovered 's/^\| RQ-4 \| Licensing/| RQ-5 | Hiring pool | 1 | A-5 |\n| RQ-4 | Licensing/; s/^\| RQ-4 \| 5 \[S-01, S-04\]/| RQ-5 | 3 [S-08] | 3 [S-08] | 2 [S-08] |\n| RQ-4 | 5 [S-01, S-04]/'
+clone_ready uncovered "s/^\| RQ-4 \| Licensing/| RQ-5 | Hiring pool | 1 | A-5 |${SED_NEWLINE}| RQ-4 | Licensing/; s/^\| RQ-4 \| 5 \[S-01, S-04\]/| RQ-5 | 3 [S-08] | 3 [S-08] | 2 [S-08] |${SED_NEWLINE}| RQ-4 | 5 [S-01, S-04]/"
 run_stack "$T/uncovered"
 assert_eq "STACK_DECISION: BLOCKED" "$S_OUT" "stack: a criterion with no claim in claims.tsv => BLOCKED"
 assert_contains "$S_ERR" "claim-coverage: RQ-5 has no claim" "stack: uncovered criterion named"
@@ -315,7 +316,7 @@ assert_contains "$S_ERR" "criterion source-ledger: sources.tsv missing FAIL" "st
 assert_contains "$S_ERR" "sources.tsv missing (claims unverifiable)" "stack: claims reported unverifiable, not missing"
 
 mkdir -p "$T/crlf"; cp -r "$READY/." "$T/crlf/"
-sed -i 's/\r$//; s/$/\r/' "$T/crlf/sources.tsv" "$T/crlf/claims.tsv" "$T/crlf/stack-decision.md"
+node -e 'const fs=require("node:fs");for(const f of process.argv.slice(1))fs.writeFileSync(f,fs.readFileSync(f,"utf8").replace(/\r?\n/g,"\r\n"))' "$T/crlf/sources.tsv" "$T/crlf/claims.tsv" "$T/crlf/stack-decision.md"
 run_stack "$T/crlf"
 assert_eq "STACK_DECISION: READY" "$S_OUT" "stack: CRLF checkout (core.autocrlf=true) validates and keeps the same pin => READY"
 
@@ -334,22 +335,22 @@ assert_contains "$V_OUT" "VALIDATION: INVALID" "validate: REQUIRE_STACK_DECISION
 assert_contains "$V_OUT" "stack_decision=missing" "validate: missing decision reported"
 assert_eq 1 "$V_RC" "validate: missing decision exit 1"
 
-sed "s|^stack:|stack:\n  decision: $READY|; s|framework: express|framework: fastify@5|" "$FIX/valid.spec.yaml" > "$T/with-decision.spec.yaml"
+sed "s|^stack:|stack:${SED_NEWLINE}  decision: $READY|; s|framework: express|framework: fastify@5|" "$FIX/valid.spec.yaml" > "$T/with-decision.spec.yaml"
 V_OUT=$(REQUIRE_STACK_DECISION=1 bash "$SCORE_SH" validate "$T/with-decision.spec.yaml" 2>/dev/null); V_RC=$?
 assert_contains "$V_OUT" "VALIDATION: VALID" "validate: decision: -> READY dir whose recommendation names the spec's framework => VALID"
 assert_contains "$V_OUT" "stack_decision=ready" "validate: ready decision reported"
 
-sed "s|^stack:|stack:\n  decision: $READY|" "$FIX/valid.spec.yaml" > "$T/foreign.spec.yaml"
+sed "s|^stack:|stack:${SED_NEWLINE}  decision: $READY|" "$FIX/valid.spec.yaml" > "$T/foreign.spec.yaml"
 V_OUT=$(REQUIRE_STACK_DECISION=1 bash "$SCORE_SH" validate "$T/foreign.spec.yaml" 2>/dev/null)
 assert_contains "$V_OUT" "VALIDATION: INVALID" "validate: spec framework (express) not in the approved option (Fastify) => INVALID"
 assert_contains "$V_OUT" "stack_decision=mismatch(express not in O-1)" "validate: mismatch names the token and option"
 
-sed "s|^stack:|stack:\n  decision: $T/pending|" "$FIX/valid.spec.yaml" > "$T/with-pending.spec.yaml"
+sed "s|^stack:|stack:${SED_NEWLINE}  decision: $T/pending|" "$FIX/valid.spec.yaml" > "$T/with-pending.spec.yaml"
 V_OUT=$(REQUIRE_STACK_DECISION=1 bash "$SCORE_SH" validate "$T/with-pending.spec.yaml" 2>/dev/null); V_RC=$?
 assert_contains "$V_OUT" "VALIDATION: INVALID" "validate: decision: -> BLOCKED dir (approval pending) => INVALID"
 assert_contains "$V_OUT" "stack_decision=blocked" "validate: blocked decision reported"
 
-sed "s|^stack:|stack:\n  decision: $T/nowhere|" "$FIX/valid.spec.yaml" > "$T/nowhere.spec.yaml"
+sed "s|^stack:|stack:${SED_NEWLINE}  decision: $T/nowhere|" "$FIX/valid.spec.yaml" > "$T/nowhere.spec.yaml"
 V_OUT=$(REQUIRE_STACK_DECISION=1 bash "$SCORE_SH" validate "$T/nowhere.spec.yaml" 2>/dev/null)
 assert_contains "$V_OUT" "stack_decision=missing-dir" "validate: nonexistent decision dir reported as missing-dir, not blocked"
 
@@ -357,40 +358,40 @@ printf 'name: inline\nstack: { language: typescript, framework: fastify, decisio
 V_OUT=$(REQUIRE_STACK_DECISION=1 bash "$SCORE_SH" validate "$T/inline.spec.yaml" 2>/dev/null)
 assert_contains "$V_OUT" "stack_decision=ready" "validate: inline-map stack block with decision: resolves"
 
-sed "s|^stack:|stack:\n  decision: owner-mandated|" "$FIX/valid.spec.yaml" > "$T/mandated.spec.yaml"
+sed "s|^stack:|stack:${SED_NEWLINE}  decision: owner-mandated|" "$FIX/valid.spec.yaml" > "$T/mandated.spec.yaml"
 V_OUT=$(REQUIRE_STACK_DECISION=1 bash "$SCORE_SH" validate "$T/mandated.spec.yaml" 2>/dev/null); V_RC=$?
 assert_contains "$V_OUT" "VALIDATION: INVALID" "validate: owner-mandated literal cannot bypass evidence and owner approval"
 
-sed "s|^stack:|stack:\n  decision: $T/mandated|; s|framework: express|framework: django|" "$FIX/valid.spec.yaml" > "$T/mandated-choice.spec.yaml"
+sed "s|^stack:|stack:${SED_NEWLINE}  decision: $T/mandated|; s|framework: express|framework: django|" "$FIX/valid.spec.yaml" > "$T/mandated-choice.spec.yaml"
 V_OUT=$(REQUIRE_STACK_DECISION=1 bash "$SCORE_SH" validate "$T/mandated-choice.spec.yaml" 2>/dev/null)
 assert_contains "$V_OUT" "VALIDATION: VALID" "validate: owner-selected alternative binds the spec, not the recommendation"
 
-sed "s|^stack:|stack:\n  decision: $READY|; s|framework: express|framework: fast|" "$FIX/valid.spec.yaml" > "$T/partial-framework.spec.yaml"
+sed "s|^stack:|stack:${SED_NEWLINE}  decision: $READY|; s|framework: express|framework: fast|" "$FIX/valid.spec.yaml" > "$T/partial-framework.spec.yaml"
 V_OUT=$(REQUIRE_STACK_DECISION=1 bash "$SCORE_SH" validate "$T/partial-framework.spec.yaml" 2>/dev/null)
 assert_contains "$V_OUT" "VALIDATION: INVALID" "validate: a framework substring is not the approved framework"
 
-sed "s|^stack:|stack:\n  decision: $READY\n  hosting: NEEDS CLARIFICATION|; s|framework: express|framework: fastify|" "$FIX/valid.spec.yaml" > "$T/unresolved.spec.yaml"
+sed "s|^stack:|stack:${SED_NEWLINE}  decision: $READY${SED_NEWLINE}  hosting: NEEDS CLARIFICATION|; s|framework: express|framework: fastify|" "$FIX/valid.spec.yaml" > "$T/unresolved.spec.yaml"
 V_OUT=$(REQUIRE_STACK_DECISION=1 bash "$SCORE_SH" validate "$T/unresolved.spec.yaml" 2>/dev/null)
 assert_contains "$V_OUT" "VALIDATION: INVALID" "validate: NEEDS CLARIFICATION in the stack block => INVALID (unresolved stack field)"
 assert_contains "$V_OUT" "stack_decision=ready+unresolved" "validate: unresolved marker reported"
 
-sed "s|^stack:|stack:\n  decision: $READY|; s|framework: express|framework: fastify|; s|assert: app boots and binds port|assert: no NEEDS CLARIFICATION marker remains in docs|" "$FIX/valid.spec.yaml" > "$T/marker-elsewhere.spec.yaml"
+sed "s|^stack:|stack:${SED_NEWLINE}  decision: $READY|; s|framework: express|framework: fastify|; s|assert: app boots and binds port|assert: no NEEDS CLARIFICATION marker remains in docs|" "$FIX/valid.spec.yaml" > "$T/marker-elsewhere.spec.yaml"
 V_OUT=$(REQUIRE_STACK_DECISION=1 bash "$SCORE_SH" validate "$T/marker-elsewhere.spec.yaml" 2>/dev/null)
 assert_contains "$V_OUT" "VALIDATION: VALID" "validate: the marker outside the stack block does not flip the verdict"
 
 printf '# decision: pending owner review (a comment above the stack block)\n' > "$T/commented.spec.yaml"
-sed "s|^stack:|stack:\n  decision: $READY|; s|framework: express|framework: fastify|" "$FIX/valid.spec.yaml" >> "$T/commented.spec.yaml"
+sed "s|^stack:|stack:${SED_NEWLINE}  decision: $READY|; s|framework: express|framework: fastify|" "$FIX/valid.spec.yaml" >> "$T/commented.spec.yaml"
 V_OUT=$(REQUIRE_STACK_DECISION=1 bash "$SCORE_SH" validate "$T/commented.spec.yaml" 2>/dev/null)
 assert_contains "$V_OUT" "stack_decision=ready" "validate: a decision: token in a comment is ignored; the stack block's wins"
 
-sed "s|^stack:|stack:\n  # decision: pending owner review\n  decision: $READY|; s|framework: express|framework: fastify|" "$FIX/valid.spec.yaml" > "$T/stack-comment.spec.yaml"
+sed "s|^stack:|stack:${SED_NEWLINE}  # decision: pending owner review${SED_NEWLINE}  decision: $READY|; s|framework: express|framework: fastify|" "$FIX/valid.spec.yaml" > "$T/stack-comment.spec.yaml"
 V_OUT=$(REQUIRE_STACK_DECISION=1 bash "$SCORE_SH" validate "$T/stack-comment.spec.yaml" 2>/dev/null)
 assert_contains "$V_OUT" "stack_decision=ready" "validate: comments within stack are ignored"
 
 # a committed spec with a project-relative decision path validates from any cwd
 mkdir -p "$T/proj/evals/fullstack" "$T/proj/evals/fullstack/app.stack"
 cp -r "$READY/." "$T/proj/evals/fullstack/app.stack/"
-sed "s|^stack:|stack:\n  decision: evals/fullstack/app.stack|; s|framework: express|framework: fastify|" "$FIX/valid.spec.yaml" > "$T/proj/evals/fullstack/app.spec.yaml"
+sed "s|^stack:|stack:${SED_NEWLINE}  decision: evals/fullstack/app.stack|; s|framework: express|framework: fastify|" "$FIX/valid.spec.yaml" > "$T/proj/evals/fullstack/app.spec.yaml"
 V_OUT=$(cd "$T" && REQUIRE_STACK_DECISION=1 bash "$SCORE_SH" validate "$T/proj/evals/fullstack/app.spec.yaml" 2>/dev/null)
 assert_contains "$V_OUT" "stack_decision=ready" "validate: project-relative decision: resolves against the spec's project from another cwd"
 

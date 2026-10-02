@@ -1,0 +1,109 @@
+name: Isolated Forge delivery
+
+# Install/enable only for the approved isolated pilot. CI has already completed
+# in a separate workflow; this job never runs candidate build scripts.
+on:
+  workflow_dispatch:
+    inputs:
+      request_sha256:
+        description: SHA256 of the exact approved delivery request
+        required: true
+        type: string
+  pull_request:
+    paths:
+      - '.github/workflows/forge-pilot.yml'
+
+permissions:
+  contents: read
+  actions: read
+  deployments: write
+
+# Staging, promotion, and recovery share the same native target lock.
+concurrency:
+  group: forge-pilot-${{ vars.FORGE_PILOT_PROJECT_ID }}
+  cancel-in-progress: false
+
+jobs:
+  deliver:
+    if: github.event_name == 'workflow_dispatch' && github.event.repository.private && github.ref_protected && github.ref_name == github.event.repository.default_branch && vars.FORGE_PILOT_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: forge-pilot-production
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ vars.FORGE_DEPLOY_TOOLS_REF }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Install pinned provider CLI
+        run: npm install --global --ignore-scripts vercel@50.37.0
+      - name: Materialize reviewed target and action
+        env:
+          POLICY: ${{ vars.FORGE_DELIVERY_POLICY }}
+          REQUEST: ${{ vars.FORGE_DELIVERY_REQUEST }}
+          FORGE_DELIVERY_POLICY_SHA256: ${{ vars.FORGE_DELIVERY_POLICY_SHA256 }}
+          PROJECT_ID: ${{ vars.FORGE_PILOT_PROJECT_ID }}
+          FORGE_DEPLOY_TOOLS_REF: ${{ vars.FORGE_DEPLOY_TOOLS_REF }}
+          FORGE_APPROVED_REQUEST_SHA256: ${{ inputs.request_sha256 }}
+        run: |
+          node - <<'JS'
+          const fs=require('node:fs'),a=require('./scripts/acceptance.cjs');
+          const raw=process.env.POLICY,p=JSON.parse(raw),r=JSON.parse(process.env.REQUEST);
+          a.need(a.sha(raw)===process.env.FORGE_DELIVERY_POLICY_SHA256,'Reviewed policy digest changed');
+          a.need(p.repository===process.env.GITHUB_REPOSITORY && p.project_id===process.env.PROJECT_ID && p.environment==='forge-pilot-production','Wrong workflow destination');
+          a.need(p.approved_request_sha256===a.sha(JSON.stringify(r)) && p.approved_request_sha256===process.env.FORGE_APPROVED_REQUEST_SHA256,'Request differs from manual dispatch approval');
+          a.need(p.ci?.artifact?.digest && p.ci.protected_ref===process.env.FORGE_DEPLOY_TOOLS_REF,'Reviewed tooling and artifact required');
+          a.need(p.workspace==='pilot-work','Pin the isolated runner workspace in policy');
+          fs.mkdirSync('pilot-work',{recursive:true});
+          fs.writeFileSync('pilot-work/policy.json',raw);fs.writeFileSync('pilot-work/request.json',JSON.stringify(r));
+          JS
+        # Reference is separate from candidate source and must be a reviewed commit.
+      - name: Retrieve verified build output as data
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/ci-evidence.cjs <(node -e 'console.log(JSON.stringify(JSON.parse(require("fs").readFileSync("pilot-work/policy.json")).ci))') > pilot-work/ci.json
+          node - <<'JS'
+          const fs=require('node:fs'),cp=require('node:child_process'),a=require('./scripts/acceptance.cjs');
+          const p=JSON.parse(fs.readFileSync('pilot-work/policy.json')),r=JSON.parse(fs.readFileSync('pilot-work/ci.json'));
+          const data=cp.execFileSync('gh',['api',`repos/${p.repository}/actions/artifacts/${r.artifact.id}/zip`],{maxBuffer:128*1024*1024});
+          a.need('sha256:'+a.sha(data)===p.ci.artifact.digest,'Downloaded artifact digest mismatch');fs.writeFileSync('pilot-work/candidate.zip',data);
+          JS
+          python3 - <<'PY'
+          import json, pathlib, stat, zipfile
+          root=pathlib.Path('pilot-work').resolve()
+          with zipfile.ZipFile(root/'candidate.zip') as archive:
+              assert sum(i.file_size for i in archive.infolist()) <= 100*1024*1024
+              for item in archive.infolist():
+                  parts=pathlib.PurePosixPath(item.filename).parts
+                  assert parts[:2]==('.vercel','output') and not any(p in ('..','.') for p in parts)
+                  assert '\\' not in item.filename and not stat.S_ISLNK(item.external_attr >> 16)
+                  dest=(root/item.filename).resolve(); assert dest.is_relative_to(root)
+              archive.extractall(root)
+          policy=json.loads((root/'policy.json').read_text())
+          (root/'.vercel/project.json').write_text(json.dumps({'projectId':policy['project_id'],'orgId':policy['team_id']}))
+          PY
+      - name: Apply or reconcile the approved operation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERCEL_TOKEN: ${{ secrets.FORGE_PILOT_DEPLOY_TOKEN }}
+          FORGE_PILOT_KEY: ${{ secrets.FORGE_PILOT_KEY }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.FORGE_PILOT_BYPASS_SECRET }}
+          FORGE_DELIVERY_POLICY_SHA256: ${{ vars.FORGE_DELIVERY_POLICY_SHA256 }}
+          FORGE_APPROVED_REQUEST_SHA256: ${{ inputs.request_sha256 }}
+        run: |
+          export VERCEL_CLI_PATH="$(npm root --global)/vercel/dist/vc.js"
+          node scripts/vercel-delivery.cjs run pilot-work/policy.json pilot-work/request.json pilot-work/operation.json
+      - name: Retain redacted operation evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: delivery-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            pilot-work/ci.json
+            pilot-work/operation.json
+          if-no-files-found: error
+          retention-days: 7

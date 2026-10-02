@@ -190,16 +190,12 @@ validate() {
 stack() {
   local dir="${1:?usage: stack <decision-dir>}"
   local doc="$dir/stack-decision.md" src="$dir/sources.tsv" clm="$dir/claims.tsv"
-  local sr="$SCRIPT_DIR/score-research.sh" shatool
+  local sr="$SCRIPT_DIR/score-research.sh"
   if [[ ! -f "$doc" ]]; then
     echo "STACK_DECISION: ERROR"; echo "reason=missing $doc" >&2; return 2
   fi
   if [[ ! -f "$sr" ]]; then
     echo "STACK_DECISION: ERROR"; echo "reason=missing $sr (seam scripts ship together — reinstall)" >&2; return 2
-  fi
-  if command -v sha256sum >/dev/null 2>&1; then shatool="sha256sum"
-  elif command -v shasum >/dev/null 2>&1; then shatool="shasum -a 256"
-  else echo "STACK_DECISION: ERROR"; echo "reason=no sha256sum/shasum on PATH (the approval pin needs one)" >&2; return 2
   fi
   local blocked=0 line="" cline=""
   if [[ -f "$src" ]] && line=$(AR_SCORE_LOG=0 bash "$sr" sources "$src" 2>/dev/null) && [[ "$line" == "SOURCES: VALID"* ]]; then
@@ -236,7 +232,7 @@ stack() {
   # The approval pins EXACTLY what the owner saw: ledgers + the record (minus the lines the
   # approval itself writes), CR-stripped so LF and CRLF checkouts agree.
   local ledger_sha nhigh=0
-  ledger_sha=$( (cat "$src" "$clm" 2>/dev/null; grep -vE '^(Approval|Status):' "$doc") | tr -d '\r' | $shatool | cut -c1-16)
+  ledger_sha=$( (cat "$src" "$clm" 2>/dev/null; grep -vE '^(Approval|Status):' "$doc") | tr -d '\r' | node -e 'console.log(require("crypto").createHash("sha256").update(require("fs").readFileSync(0)).digest("hex").slice(0,16))')
   echo "approval-pin: ledger:$ledger_sha (record only after the owner's answer)" >&2
   [[ "$cline" =~ high=([0-9]+) ]] && nhigh="${BASH_REMATCH[1]}"
   awk -v FS='\t' -v src="$src" -v clm="$clm" -v ledger="$ledger_sha" -v nhigh="$nhigh" '
