@@ -241,7 +241,9 @@ screen-cmd() {
   # boundaries and quoted arguments together when checking URL/credential scope.
   # ponytail: lexical screening cannot resolve expansions, scripts or aliases;
   # the host sandbox and explicit execution approvals remain the real boundary.
-  if ! cmd=$(MSYS2_ARG_CONV_EXCL='*' node - "$cmd" <<'NODE'
+  # Bash 3.2 misparses these JavaScript quotes inside a command-substitution heredoc.
+  local screen_js
+  IFS= read -r -d '' screen_js <<'NODE' || :
 const raw = process.argv[2];
 const tokenPattern = /(?:[^\s'"\\;&|()]+|\\[^\n]|"(?:\\.|[^"\\])*"|'[^']*')+|&&|\|\||[;&|()\n]/g;
 const tokens = raw.match(tokenPattern) || [];
@@ -316,7 +318,7 @@ process.stdout.write(raw.replace(tokenPattern, token => {
   return /^[A-Za-z0-9_./-]+$/.test(value) ? value : token;
 }));
 NODE
-  ); then
+  if ! cmd=$(MSYS2_ARG_CONV_EXCL='*' node - "$cmd" <<< "$screen_js"); then
     echo "refuse"; return 1
   fi
   # Shell operators delimit commands even without whitespace; do not let the
