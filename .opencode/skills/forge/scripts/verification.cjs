@@ -1,5 +1,5 @@
 // Execute a pinned assertion and validate its retained receipt. Receipts are data.
-const fs = require('node:fs'), path = require('node:path'), cp = require('node:child_process');
+const fs = require('node:fs'), path = require('node:path'), cp = require('node:child_process'), { TextDecoder } = require('node:util');
 const a = require('./acceptance.cjs');
 const same = (x, y) => JSON.stringify(x) === JSON.stringify(y);
 const envName = s => typeof s === 'string' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(s);
@@ -39,7 +39,7 @@ function context(p) {
   const git = args => cp.spawnSync('git', args, { cwd: p.root, encoding: 'utf8', timeout: 10000, maxBuffer: 16 * 1024 * 1024 });
   const top = git(['rev-parse', '--show-toplevel']);
   let candidate = { revision: null, dirty_sha256: null };
-  if (top.status === 0 && fs.realpathSync(top.stdout.trim()) === p.root) {
+  if (top.status === 0 && fs.realpathSync.native(top.stdout.trim()) === fs.realpathSync.native(p.root)) {
     const head = git(['rev-parse', 'HEAD']), diff = git(['diff', '--no-ext-diff', '--no-textconv', '--binary', 'HEAD', '--']);
     a.need(head.status === 0 && diff.status === 0, 'Candidate identity unavailable');
     candidate = { revision: head.stdout.trim(), dirty_sha256: a.sha(diff.stdout) };
@@ -65,7 +65,8 @@ function redact(value, secrets) {
     .replace(/(:\/\/)[^/\s]+@/g, '$1[REDACTED]@');
 }
 async function run(argv, options) {
-let bytes = 0, stdout = '', stderr = '', failure = null;
+let bytes = 0, failure = null;
+const chunks = { stdout: [], stderr: [] };
 const result = await new Promise(resolve => {
   const child = cp.spawn(argv[0], argv.slice(1), { cwd: options.cwd, env: options.env, shell: false, detached: process.platform !== 'win32', windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
   const stop = reason => {
@@ -78,14 +79,18 @@ const result = await new Promise(resolve => {
   const timer = setTimeout(() => stop('timeout'), options.timeout_ms);
   const collect = stream => data => {
     const remaining = Math.max(0, options.output_limit - bytes); bytes += data.length;
-    const text = data.subarray(0, remaining).toString('utf8');
-    if (stream === 'stdout') stdout += text; else stderr += text;
+    if (remaining) chunks[stream].push(Buffer.from(data.subarray(0, remaining)));
     if (bytes > options.output_limit) stop('output_limit');
   };
   child.stdout.on('data', collect('stdout')); child.stderr.on('data', collect('stderr'));
   child.on('error', error => { failure = error.code || 'spawn_error'; });
   child.on('close', (code, signal) => { clearTimeout(timer); resolve({ exit_code: Number.isInteger(code) && code >= 0 ? code : null, signal: signal || null }); });
 });
+const decode = stream => {
+  try { return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(Buffer.concat(chunks[stream])); }
+  catch { failure ??= 'invalid_utf8'; return ''; }
+};
+const stdout = decode('stdout'), stderr = decode('stderr');
 return { ...result, stdout, stderr, error: failure };
 }
 async function execute(project, planFile, spec, id, output) {

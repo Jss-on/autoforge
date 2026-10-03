@@ -15,7 +15,7 @@ An autonomous iteration engine for Claude Code, OpenCode, OpenAI Codex, and Curs
 ![Version](https://img.shields.io/badge/version-3.6.0-blue.svg)
 [![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 
-**23 commands · 4 agent platforms · bounded iteration · evidence-backed gates**
+**24 commands · 4 agent platforms · bounded iteration · evidence-backed gates**
 
 [Capabilities](#capabilities) · [Scenarios](#practical-scenarios) · [Install](#quick-start) · [Commands](#commands) · [Build Software](#building-complex-software) · [Secure & Ship](#security-and-shipping-guide) · [Guides](guide/)
 
@@ -46,6 +46,9 @@ the packaged release; see the [project changelog](docs/project-changelog.md) for
 - **Stronger security completion:** build and feature completion require current passing checks
   and saved evidence. Optional **Strix** adds isolated dynamic testing; incomplete scans, missing
   reports and unresolved blocking findings prevent readiness. [Security guide](guide/forge-security.md).
+- **Language and framework migrations:** `migrate` inventories existing behavior, ports verified
+  slices, checks target-only operation and reports production cutover separately.
+  [Migration guide](guide/forge-migrate.md).
 - **GitLab, and work in a repository that is not yours:** `/forge:backlog` works an employer's or
   client's issue backlog — one item, one branch, one merge request, their pipeline green, handed to
   their reviewers. Forge now detects the git host and whose repository it is; on GitLab the
@@ -61,6 +64,7 @@ the packaged release; see the [project changelog](docs/project-changelog.md) for
 | Research and decisions | Primary-source reading, cited claims and confidence, disconfirmation, expert perspectives, blind judging, Markdown dossiers and arXiv/IEEE paper output | `research`, `predict`, `reason` |
 | Product discovery | Customer problems, competitor gaps, ranked improvements and selected feature PRDs | `improve` |
 | Software delivery | Greenfield builds and existing-app features; logic, functional, UX, DevOps, monitoring and hardening acceptance; non-regression ratchets | `build`, `feature` |
+| Language and framework migration | Frozen source-to-target inventory, behavior parity, data compatibility, target-only operation and cutover handoff | `migrate` |
 | Visual design and assets | Design direction, `DESIGN.md`, purposeful imagery, asset provenance and budgets, responsive crops, accessible motion, browser design audits and remediation | `design` |
 | QA and debugging | Scenario exploration, risk-based plans, requirements traceability, domain-logic vectors, exploratory tests, defect ledgers, root-cause repairs and independent retesting | `scenario`, `test`, `debug`, `fix` |
 | Stakeholder investigations | Authorized source retrieval, research into explanations, captured observations, explicit uncertainty and plain-language reports | `investigate` |
@@ -71,7 +75,7 @@ the packaged release; see the [project changelog](docs/project-changelog.md) for
 | Documentation and memory | Codebase docs, navigable wikis, checked links, run history and scoped procedures retained from verified recoveries | `learn`, [procedural lessons](.claude/skills/forge/references/procedural-lessons.md) |
 | Integrations and runtime | Native image tools or media MCP, Figma import, GitHub/GitLab/Linear tracking, environment checks, safety hooks and validated command handoffs | [Integrations and assets](#integrations-assets-and-memory), [hooks](#hooks--safety) |
 
-The [command reference](#commands) lists all 23 commands. Required checks remain required when
+The [command reference](#commands) lists all 24 commands. Required checks remain required when
 a tool or integration is unavailable; the run reports what is blocked instead of assuming success.
 
 ---
@@ -179,6 +183,7 @@ See [guide/hooks.md](guide/hooks.md) for full reference.
 | `/forge:requirements` | Review assumptions and scenarios, research and approve the stack, then validate the SRS and build spec | one-shot |
 | `/forge:build` | Build a new app through the SDLC, with six acceptance dimensions and separate logic/design/security gates | 40 |
 | `/forge:feature` | Extend an existing app with new acceptance checks and a hard non-regression ratchet | 25 |
+| `/forge:migrate` | Replace a language/framework with complete scoped inventory, behavioral parity, target-only acceptance and cutover handoff | 25 |
 | `/forge:test` | Plan and execute independent QA, trace requirements, record defects and gate release readiness | 20 |
 | `/forge:design` | Create `DESIGN.md`, plan imagery, audit a running UI and remediate design/accessibility defects | 12 (`--fix`) |
 | `/forge:research` | Produce a cited dossier with checked claims; optionally generate arXiv/IEEE papers | 15 |
@@ -218,6 +223,7 @@ they are workflows, not a standalone `forge` shell executable.
 | Turn a client brief into a validated build spec | `/forge:requirements` |
 | Compare technology stacks and approve the reasons for the choice | `/forge:requirements` with your constraints and any `Stack:` hint |
 | Add a feature to an existing app without regressions | `/forge:feature` |
+| Migrate a backend language or replace an application framework | `/forge:migrate` |
 | Run a full QA engagement on an existing app (plan → RTM → verdict) | `/forge:test` |
 | Research a topic into a cited, source-anchored dossier | `/forge:research` |
 | Ship a built web app as an Android app (Play-ready TWA) | `/forge:android` |
@@ -756,7 +762,7 @@ cp -r autoforge/.opencode/skills/forge ~/.config/opencode/skills/forge
 cp autoforge/.opencode/commands/forge*.md ~/.config/opencode/commands/
 ```
 
-> All 23 commands available as `/forge_debug`, `/forge_fix`, `/forge_improve`, etc.
+> All 24 commands available as `/forge_debug`, `/forge_fix`, `/forge_improve`, etc.
 
 ### Codex Quick Start
 
@@ -781,7 +787,7 @@ $forge security --diff --fail-on high
 $forge build Spec: ./spec.yaml
 ```
 
-All 23 workflows use `$forge` followed by a subcommand. The plugin loads the selected command
+All 24 workflows use `$forge` followed by a subcommand. The plugin loads the selected command
 and its bundled references and verification scripts. Results are written into the target
 repository's `forge/` directory. The package includes skills and scripts; the nine Claude Code
 hooks are specific to Claude Code.
@@ -839,7 +845,7 @@ The local destination is `.cursor/skills/forge/` in the target project. Reload C
 /forge security --diff --fail-on high
 ```
 
-All 23 workflows use `/forge <subcommand> [flags]`; `/forge` is the single skill entry.
+All 24 workflows use `/forge <subcommand> [flags]`; `/forge` is the single skill entry.
 Git, Node.js and Bash remain required for workflow checks. Claude Code hooks are not installed
 in Cursor. Update by pulling the AutoForge checkout, rerunning the same installer and reloading
 Cursor. See [Cursor's skill documentation](https://cursor.com/docs/skills) and
@@ -954,6 +960,29 @@ table + principles are folded into the build command; companion references: `uiu
 `fullstack-hardening-checklist.md`.
 
 ---
+
+## /forge:migrate — Language and Framework Migration
+
+```text
+$forge migrate
+Target: services/backend
+From: Python / FastAPI
+To: Rust / Axum
+Iterations: 40
+```
+
+Inventories APIs, jobs, data, authentication, integrations, tests and operational configuration;
+freezes source expectations; then ports one verified slice at a time. Final acceptance runs on
+the clean target with the old runtime unavailable. Required missing or stale evidence prevents
+completion. `--plan-only` prepares the inventory and plan; `--resume <run>` continues saved work.
+
+Accuracy checks account for every source file in the declared scope and compare actual source
+and target status, data, errors and effects over a frozen corpus. Deliberately corrupted outputs
+must fail the comparator. A green build or test process alone cannot establish migration parity.
+
+`VERIFIED_SCOPE` means the declared code migration passed its required checks. Production cutover
+is separately reported as unverified until an authorized `ship` workflow executes and verifies it.
+See the [migration guide](guide/forge-migrate.md) for scope, evidence and rollback behavior.
 
 ## /forge:feature — Iterative Feature Addition (brownfield)
 
@@ -1918,7 +1947,7 @@ autoforge/
 │   │                                                security, personas, orchestrator routing, ux + hardening
 │   └── commands/
 │       ├── forge.md                        ← core loop (self-contained)
-│       └── forge/                          ← 22 subcommand files (23 commands total)
+│       └── forge/                          ← 23 subcommand files (24 commands total)
 ├── .claude-plugin/marketplace.json                ← marketplace manifest (marketplace name: autoforge)
 ├── claude-plugin/                                 ← Claude Code plugin package (skills + commands + hooks)
 ├── .opencode/                                     ← OpenCode port (via transform.sh)
@@ -1970,13 +1999,13 @@ A: Point it at any `*-results.tsv` file from a previous run. It reports trends, 
 A: Yes. Any language, framework, or domain. Install via plugin (Claude Code), installer script, or manual copy.
 
 **Q: Does this work with OpenCode?**
-A: Yes. Run `./scripts/install.sh --opencode --global` or manually copy `.opencode/` files. Commands use underscore naming (`/forge_debug`, `/forge_evals`, etc.). All 23 commands available.
+A: Yes. Run `./scripts/install.sh --opencode --global` or manually copy `.opencode/` files. Commands use underscore naming (`/forge_debug`, `/forge_evals`, etc.). All 24 commands available.
 
 **Q: Does this work with OpenAI Codex?**
 A: Yes. Run `codex plugin marketplace add Jss-on/autoforge`, then `codex plugin add forge@forge-local`. Start a new thread and invoke `$forge plan`, `$forge build`, or any other subcommand. See [Codex Quick Start](#codex-quick-start) for updates, Windows setup and the manual skill fallback.
 
 **Q: Does this work with Cursor?**
-A: Yes. From the authenticated clone, run `bash scripts/install.sh --cursor --global`, reload Cursor, and invoke `/forge plan` or another subcommand in Agent chat. All 23 workflows are included. See [Cursor Quick Start](#cursor-quick-start) for project-local installation and prerequisites.
+A: Yes. From the authenticated clone, run `bash scripts/install.sh --cursor --global`, reload Cursor, and invoke `/forge plan` or another subcommand in Agent chat. All 24 workflows are included. See [Cursor Quick Start](#cursor-quick-start) for project-local installation and prerequisites.
 
 **Q: How do I stop the loop?**
 A: `Ctrl+C` or add `Iterations: N` to your inline config. Claude commits before verifying, so your last successful state is always in git.

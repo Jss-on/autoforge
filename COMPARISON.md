@@ -14,7 +14,7 @@
 
 In March 2026, **[Andrej Karpathy](https://github.com/karpathy)** released [autoresearch](https://github.com/karpathy/autoresearch) — a 630-line Python script that let AI agents autonomously optimize a GPT language model overnight. In 2 days, a single agent ran **700 experiments**, discovered **20 optimizations**, and achieved an **11% speedup** on already-optimized code. The repo hit 26,000 GitHub stars in under a week.
 
-**[Claude AutoForge](https://github.com/Jss-on/autoforge)** — built on **[Udit Goenka](https://udit.co)**'s autoresearch engine — takes Karpathy's core principles — constraint, mechanical metric, autonomous iteration — and generalizes them into a **Claude Code skill system** with 14 commands that work on **any domain**: code, content, marketing, sales, security, DevOps, HR, or anything with a measurable number.
+**[Claude AutoForge](https://github.com/Jss-on/autoforge)** — built on **[Udit Goenka](https://udit.co)**'s autoresearch engine — takes Karpathy's core principles — constraint, mechanical metric, autonomous iteration — and generalizes them into a **Claude Code skill system** with 24 commands that work on **any domain**: code, content, marketing, sales, security, DevOps, HR, or anything with a measurable number.
 
 The philosophy is the same. The scope is radically different.
 
@@ -33,7 +33,7 @@ The philosophy is the same. The scope is radically different.
 | **Domain** | ML model training only | Any domain with a measurable metric |
 | **Metric** | val_bpb (validation bits per byte) | Any mechanical metric you define |
 | **Scope** | Single file (train.py) | Any glob pattern (e.g., `src/**/*.ts`) |
-| **Commands** | 1 (run the script) | 14 subcommands + flags |
+| **Commands** | 1 (run the script) | 23 subcommands + core loop + flags |
 | **Setup** | Manual (edit program.md) | Interactive wizard (`/forge:plan`) |
 | **Hardware** | Requires NVIDIA GPU (H100/A100/RTX) | No special hardware — runs wherever Claude Code runs |
 | **Cost** | GPU compute ($2-5/hour for H100) | Claude API tokens only |
@@ -465,7 +465,7 @@ The cost: it only works for ML training optimization on a single GPU.
 
 > *"Set the GOAL → Claude runs the LOOP → You wake up to results"*
 
-Claude AutoForge's design trades ML-specific depth for universal breadth. The same 7 principles apply, but scope, metric, and verify are user-defined — making it work for any domain. The 11 subcommands (including the core loop) add specialized workflows that don't exist in Karpathy's version:
+Claude AutoForge's design trades ML-specific depth for universal breadth. The same 7 principles apply, but scope, metric, and verify are user-defined — making it work for any domain. The 24 commands (including the core loop) add specialized workflows that don't exist in Karpathy's version:
 
 - **Debugging** and **fixing** are fundamentally different from optimization — they have different loop structures, different success criteria, and different strategies.
 - **Security auditing** is adversarial — it requires threat modeling, not metric improvement.
@@ -483,6 +483,7 @@ The cost: it doesn't directly train models or leverage GPU compute.
 | Optimizing neural network training | **Karpathy's** — purpose-built for this |
 | Improving test coverage in a TypeScript project | **Claude AutoForge** |
 | Reducing API response times | **Claude AutoForge** |
+| Migrating a language or framework while preserving behavior | **AutoForge** (`migrate`) |
 | Finding and fixing bugs | **Claude AutoForge** (`debug → fix`) |
 | Security audit before deployment | **Claude AutoForge** (`security`) |
 | Optimizing val_bpb on a GPT model | **Karpathy's** |
@@ -508,7 +509,7 @@ The cost: it doesn't directly train models or leverage GPU compute.
 
 ### Claude AutoForge Ecosystem
 - **Claude Code plugin marketplace** — one-command install
-- **11 subcommands** with comprehensive guides
+- **23 subcommands** with comprehensive guides
 - **50+ copy-paste examples** across 12+ domains
 - **CI/CD templates** for GitHub Actions and GitLab CI
 - **MCP server integrations** for databases, analytics, and APIs
@@ -520,7 +521,7 @@ The cost: it doesn't directly train models or leverage GPU compute.
 
 **Karpathy's autoresearch** proved that autonomous iteration works — a 630-line script, one metric, one file, and the discipline to let the agent run. It's a breakthrough demonstration focused on ML training.
 
-**Claude AutoForge** takes that proof and asks: *what if this worked for everything?* It generalizes the principles into a skill system with 12 specialized commands, interactive setup, guard safety nets, noise handling, crash recovery, and command chaining — all running inside Claude Code on any project, any language, any domain.
+**Claude AutoForge** takes that proof and asks: *what if this worked for everything?* It generalizes the principles into a skill system with 24 commands, interactive setup, guard safety nets, noise handling, crash recovery, and command chaining — all running inside Claude Code on any project, any language, any domain.
 
 Same philosophy. Same loop. Radically different scope.
 

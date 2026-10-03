@@ -23,7 +23,7 @@ AutoForge is the product; `forge` is the engine and plugin it ships — all comm
 /plugin install forge@autoforge
 ```
 
-Restart session after install. All 23 commands become available as `/forge` and `/forge:<subcommand>`. Update later with `/plugin marketplace update autoforge`.
+Restart session after install. All 24 commands become available as `/forge` and `/forge:<subcommand>`. Update later with `/plugin marketplace update autoforge`.
 
 ### Codex (plugin)
 
@@ -50,7 +50,7 @@ bash scripts/install.sh --cursor --global
 This installs `~/.cursor/skills/forge/`. For project-local installation, run
 `bash /path/to/autoforge/scripts/install.sh --cursor --local` from the target project's root;
 it writes `.cursor/skills/forge/` there. Reload/reopen Cursor and start an Agent chat with
-`/forge <subcommand> [flags]`, for example `/forge design`. All 23 workflows are included.
+`/forge <subcommand> [flags]`, for example `/forge design`. All 24 workflows are included.
 Git, Node.js and Bash are required; Claude Code hooks are not installed. See
 [Cursor skills](https://cursor.com/docs/skills).
 
@@ -95,6 +95,7 @@ cp -r autoforge/.agents/skills/forge ~/.agents/skills/forge
 | `forge:requirements` | Turn a client brief into a validated build spec — interview to saturation, mechanical validate gate |
 | `forge:build` | Build greenfield full-stack software via the full SDLC to passing acceptance (6 weighted dims, logic-gated) |
 | `forge:feature` | Add a feature to an existing app — delta acceptance + hard non-regression ratchet |
+| `forge:migrate` | Migrate languages/frameworks with a frozen inventory, behavior parity, target-only verification and explicit cutover handoff |
 | `forge:test` | Full QA engagement on existing software — risk-based plan, RTM, formal test design, execution + defect ledger, exit-criteria verdict (ISO 29119/ISTQB-aligned) |
 | `forge:design` | UI/UX designer + design QA — direction protocol → machine-readable `DESIGN.md`; independent design audit (anti-slop floor `SLOP_GATE`, heuristic critique, personas, defect ledger, `SHIP|FIX|REBUILD` verdict); bounded `--fix` remediation |
 | `forge:backlog` | Work an employer's or client's tracker backlog on GitLab or GitHub — one item, one branch, one merge request, their pipeline green, review handoff; never merges its own work |
@@ -122,6 +123,21 @@ Goal: Make the API respond faster
 ```
 
 The wizard walks you through scope, metric, direction, and verify — with dry-run validation.
+
+### Migrate a language or framework
+
+```text
+forge:migrate
+Target: services/backend
+From: Python / FastAPI
+To: Rust / Axum
+Iterations: 40
+```
+
+Preserves required behavior across APIs, workers, data, security and deployment configuration.
+Final checks run without the replaced runtime. `--plan-only` prepares the inventory and plan;
+`--resume <run>` continues it. Code completion and production cutover are reported separately.
+See [the migration guide](guide/forge-migrate.md).
 
 ### Investigate a stakeholder report
 

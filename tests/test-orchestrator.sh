@@ -84,6 +84,21 @@ assert_eq "decide-design"  "$C_OUT" "classify: should we → decide-design"
 run_classify "investigate the memory usage pattern"
 assert_eq "explore"        "$C_OUT" "classify: no keyword match → explore"
 
+run_classify "migrate the backend from Python to Rust"
+assert_eq "migrate-platform" "$C_OUT" "classify: language replacement → migrate-platform"
+run_classify "replace Django with FastAPI"
+assert_eq "migrate-platform" "$C_OUT" "classify: framework replacement → migrate-platform"
+run_classify "port framework1 to framework2"
+assert_eq "migrate-platform" "$C_OUT" "classify: generic framework replacement"
+run_classify "migrate the backend to Rust and deploy"
+assert_eq "migrate-platform" "$C_OUT" "classify: migration owns verification before deployment"
+run_classify "add schema migrations to the Python backend"
+assert_eq "build-feature" "$C_OUT" "classify: ordinary schema feature stays in feature workflow"
+run_classify "fix and migrate the database schema to v2 in Python"
+assert_eq "fix-broken" "$C_OUT" "classify: schema repair stays in fix workflow"
+run_classify "audit a migration from Python to Rust for security"
+assert_eq "harden" "$C_OUT" "classify: security audit keeps priority"
+
 # ============================================================================
 printf '\n--- classify: priority ordering (fix beats build when both present) ---\n'
 # ============================================================================
@@ -502,6 +517,8 @@ for choice in stop stop-at-verified proceed-to-ship; do
   node -e 'const f=require("fs");const j=JSON.parse(f.readFileSync(process.argv[1],"utf8"));j.terminal_choice=process.argv[3];f.writeFileSync(process.argv[2],JSON.stringify(j));' "$FIX/state-valid.json" "$_t_vs" "$choice"
   assert_eq "valid" "$(bash "$ORCH" validate-state "$_t_vs")" "validate-state: preserves terminal choice $choice"
 done
+node -e 'const f=require("fs");const j=JSON.parse(f.readFileSync(process.argv[1],"utf8"));j.archetype="migrate-platform";f.writeFileSync(process.argv[2],JSON.stringify(j));' "$FIX/state-valid.json" "$_t_vs"
+assert_eq "valid" "$(bash "$ORCH" validate-state "$_t_vs")" "validate-state: migration archetype is known"
 rm -f "$_t_vs"
 
 # ============================================================================

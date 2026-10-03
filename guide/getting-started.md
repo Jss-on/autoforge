@@ -23,7 +23,7 @@ Inside Claude Code:
 /plugin install forge@autoforge
 ```
 
-All 23 commands are available after restarting Claude Code. Update later with `/plugin marketplace update autoforge`.
+All 24 commands are available after restarting Claude Code. Update later with `/plugin marketplace update autoforge`.
 
 Local-clone alternative: `git clone https://github.com/Jss-on/autoforge && cd autoforge`, then `/plugin marketplace add .` and the same install command.
 
@@ -71,14 +71,15 @@ cd autoforge
 
 ---
 
-## The 18 Commands
+## Commands
 
 The root `/forge` command has two modes:
 
 - **Classic loop** — supply `Metric:` / `Verify:` inline and it iterates against that metric (25 iterations by default). This is the original behavior, unchanged.
 - **Autonomous orchestrator** — type a plain-language goal instead (e.g., `/forge help me fix the login bug`) and the system classifies your goal, derives a Success predicate, confirms it once, then loops across subcommands until done. No manual chaining required. See [/forge — Orchestrator](forge-orchestrator.md) for the full guide.
 
-The 18 subcommands below are unchanged. The orchestrator is a mode of the root command, not an additional subcommand.
+The table below introduces the main workflows. The [complete command reference](../README.md#commands)
+lists all 24 commands. The orchestrator is a mode of the root command, not an additional subcommand.
 
 | Command | Does | Default Iterations |
 |---------|------|--------------------|
@@ -87,6 +88,7 @@ The 18 subcommands below are unchanged. The orchestrator is a mode of the root c
 | `/forge:requirements` | Client brief → validated build spec (interview, no assumptions) | one-shot |
 | `/forge:build` | Greenfield full-stack build via the full SDLC (6 weighted dims, logic-gated) | 40 |
 | `/forge:feature` | Add a feature to an existing app — delta acceptance + non-regression ratchet | 25 |
+| `/forge:migrate` | Migrate a language/framework with pinned behavior, target-only acceptance and cutover handoff | 25 |
 | `/forge:test` | Full QA engagement on existing software — risk-based plan, RTM, formal test design, execution + defect ledger, exit-criteria verdict (ISO 29119/ISTQB-aligned) | 20 |
 | `/forge:design` | UI/UX designer + design QA — mode-aware direction protocol → machine-readable `DESIGN.md` (`system`); independent audit of a running app: valid captures, mechanical anti-slop floor (`SLOP_GATE`), heuristic critique, personas, defect ledger, `SHIP|FIX|REBUILD` verdict (`audit`); bounded remediation (`--fix`) | 12 (`--fix`) |
 | `/forge:debug` | Hunt bugs scientifically | 15 |

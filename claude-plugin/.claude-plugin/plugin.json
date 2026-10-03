@@ -1,7 +1,7 @@
 {
   "name": "forge",
   "commands": ["./commands/forge.md", "./commands/forge/"],
-  "description": "Autonomous improvement engine. 23 commands: iterate, plan, debug, investigate, fix, security, ship, scenario, predict, learn, reason, probe, improve, evals, regression, build, requirements, feature, test, design, research, android, backlog.",
+  "description": "Autonomous improvement engine. 24 commands: iterate, plan, debug, investigate, fix, security, ship, scenario, predict, learn, reason, probe, improve, evals, regression, build, requirements, feature, test, design, research, android, backlog, migrate.",
   "version": "3.6.0",
   "author": {
     "name": "Jss-on",

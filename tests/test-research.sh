@@ -346,14 +346,14 @@ grep -q 'score-research\.sh' "$REPO_ROOT/scripts/transform.sh" \
   && pass "transform.sh syncs score-research.sh" || fail "transform.sh missing score-research.sh in runtime set"
 
 # ============================================================================
-printf '\n--- distribution: manifests + routers at 23 commands ---\n'
+printf '\n--- distribution: manifests + routers at 24 commands ---\n'
 # ============================================================================
 
 for mf in "$REPO_ROOT/.claude-plugin/marketplace.json" \
           "$REPO_ROOT/claude-plugin/.claude-plugin/plugin.json" \
           "$REPO_ROOT/plugins/forge/.codex-plugin/plugin.json"; do
   name="${mf#$REPO_ROOT/}"
-  grep -q "23 commands" "$mf" && pass "manifest count 23: $name" || fail "manifest count 23: $name"
+  grep -q "24 commands" "$mf" && pass "manifest count 24: $name" || fail "manifest count 24: $name"
   grep -q "design, research" "$mf" && pass "manifest lists research: $name" || fail "manifest lists research: $name"
 done
 
