@@ -46,6 +46,7 @@ Print a banner on every invocation: `[forge] mode: classic | orchestrator | wiza
 | `/forge_build` | Build greenfield full-stack apps + harden (DevOps, monitoring, security) to passing acceptance | 40 |
 | `/forge_feature` | Add a feature to existing software — delta acceptance + hard non-regression ratchet, conforms to DESIGN.md | 25 |
 | `/forge_debug` | Hunt bugs: hypothesize → test → falsify → repeat | 15 |
+| `/forge_investigate` | Interview, show the plan and expected results, wait for approval, then investigate and research with captured evidence and plain-language findings; `--audit <run>` checks an existing case | 12 |
 | `/forge_fix` | Remediate defects to zero: root-cause first, evidence-anchored, defect-ledger driven | 20 |
 | `/forge_security` | STRIDE + OWASP audit with red-team personas | 15 |
 | `/forge_ship` | Ship through 8 phases: checklist → dry-run → deploy → verify | N/A |
