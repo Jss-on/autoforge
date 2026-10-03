@@ -187,6 +187,34 @@ PARSED="$(node -e '
       passValid = (build ? passValid : completed) && acceptanceValid;
     } catch { acceptanceValid = false; passValid = false; }
   }
+  let migrationValid = false;
+  if (s("source") === "migrate") {
+    const m = j.migration, a = j.acceptance;
+    const digest = v => text(v) && /^[a-f0-9]{64}$/.test(v);
+    const revision = v => text(v) && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(v);
+    const optional = (v, check) => v === undefined || check(v);
+    migrationValid = currentAcceptance && object(m) && m.cutover === "NOT_VERIFIED" &&
+      optional(m.inventory, text) && optional(m.inventory_sha256, digest) && optional(m.candidate_sha, revision) &&
+      (a === undefined || (object(a) && optional(a.plan, text) && optional(a.plan_sha256, digest))) &&
+      ["VERIFIED_SCOPE", "BLOCKED"].includes(s("verdict")) && text(j.results_tsv) &&
+      (completed === (s("verdict") === "VERIFIED_SCOPE")) &&
+      (!completed || (text(m.inventory) && digest(m.inventory_sha256) && revision(m.candidate_sha) &&
+        object(a) && text(a.plan) && digest(a.plan_sha256)));
+    if (completed || process.argv[2] === "--require-pass") {
+      try {
+        const path = require("path"), gate = require(path.join(process.argv[3], "migrate.cjs"));
+        const acceptance = require(path.join(process.argv[3], "acceptance.cjs"));
+        const run = fs.realpathSync(path.dirname(path.resolve(process.argv[1])));
+        const project = fs.realpathSync(process.env.FORGE_PROJECT_ROOT || process.cwd());
+        if (!migrationValid || !completed) throw Error("Verified migration scope required");
+        const checked = gate.complete(project, acceptance.local(run, m.inventory), acceptance.local(run, a.plan),
+          acceptance.local(run, j.results_tsv), a.plan_sha256, m.candidate_sha);
+        migrationValid = checked.verdict === "VERIFIED_SCOPE" && checked.inventory_sha256 === m.inventory_sha256 &&
+          checked.candidate_sha === m.candidate_sha && checked.cutover === "NOT_VERIFIED";
+        passValid = migrationValid;
+      } catch { migrationValid = false; passValid = false; }
+    }
+  }
   const h = (k) => {
     const v = j[k];
     let valid;
@@ -208,7 +236,7 @@ PARSED="$(node -e '
   console.log([s("version"), s("source"), s("status"), s("timestamp"), s("verdict"),
                h("results_tsv"), h("metric"), h("config"), h("coverage"),
                h("spec"), h("srs"), h("generated_spec"), h("errors_remaining"), h("design"),
-               h("report"), securityValid ? "1" : "0", shipValid ? "1" : "0", passValid ? "1" : "0", acceptanceValid ? "1" : "0"]
+               h("report"), securityValid ? "1" : "0", shipValid ? "1" : "0", passValid ? "1" : "0", acceptanceValid ? "1" : "0", migrationValid ? "1" : "0"]
               .join(String.fromCharCode(31)));
 ' "$FILE" "$REQUIRE_PASS" "$SCRIPT_DIR" 2>/dev/null)"
 
@@ -216,7 +244,7 @@ if [[ "$PARSED" == "__PARSE_ERROR__" || -z "$PARSED" ]]; then
   echo "INVALID"; echo "not valid JSON: $FILE" >&2; exit 1
 fi
 IFS=$'\x1f' read -r VERSION SOURCE STATUS TS VERDICT \
-  H_RESULTS H_METRIC H_CONFIG H_COVERAGE H_SPEC H_SRS H_GENSPEC H_ERRREM H_DESIGN H_REPORT H_SECURITY H_SHIP H_PASS H_ACCEPTANCE <<< "$PARSED"
+  H_RESULTS H_METRIC H_CONFIG H_COVERAGE H_SPEC H_SRS H_GENSPEC H_ERRREM H_DESIGN H_REPORT H_SECURITY H_SHIP H_PASS H_ACCEPTANCE H_MIGRATION <<< "$PARSED"
 
 has_field() { # reads the pre-parsed presence-and-type flags
   case "$1" in
@@ -246,7 +274,7 @@ fi
 
 # The core loop currently emits "loop"; retain it as the documented forge alias.
 case "$SOURCE" in
-  ""|forge|loop|build|feature|requirements|regression|fix|test|design|research|android|backlog|debug|security|ship|plan|scenario|predict|learn|reason|probe|improve|evals) ;;
+  ""|forge|loop|build|feature|migrate|requirements|regression|fix|test|design|research|android|backlog|debug|security|ship|plan|scenario|predict|learn|reason|probe|improve|evals) ;;
   *) err "source not in enum: $SOURCE" ;;
 esac
 
@@ -311,6 +339,9 @@ case "$SOURCE" in
       has_field design || err "missing: verdict (SHIP|FIX|REBUILD) or design (object) — required for design"
     fi
     ;;
+  migrate)
+    [[ "$H_MIGRATION" == "1" ]] || err "missing or invalid: migration inventory, candidate, acceptance, results or VERIFIED_SCOPE evidence (cutover remains NOT_VERIFIED)"
+    ;;
   research)
     case "$VERDICT" in
       DOSSIER_READY|DOSSIER_BLOCKED) ;;
@@ -333,7 +364,7 @@ case "$SOURCE" in
 esac
 
 if [[ "$REQUIRE_PASS" == "--require-pass" && "$H_PASS" != "1" ]]; then
-  err "passing security/ship/build/feature disposition with readable in-run evidence required"
+  err "passing security/ship/build/feature/migrate disposition with readable in-run evidence required"
 fi
 
 if [[ "$ERRORS" -gt 0 ]]; then

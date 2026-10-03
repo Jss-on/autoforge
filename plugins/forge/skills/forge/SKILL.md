@@ -55,6 +55,7 @@ Print a banner on every invocation: `[forge] mode: classic | orchestrator | wiza
 | `$forge requirements` | Turn client requirements into a validated SRS + a ready `build` spec (standard RE process) | N/A |
 | `$forge build` | Build greenfield full-stack apps + harden (DevOps, monitoring, security) to passing acceptance | 40 |
 | `$forge feature` | Add a feature to existing software — delta acceptance + hard non-regression ratchet, conforms to DESIGN.md | 25 |
+| `$forge migrate` | Migrate a language, framework or platform with a frozen behavior inventory, differential verification, data rehearsal and checked retirement; explicit readiness and cutover status | 25 |
 | `$forge debug` | Hunt bugs: hypothesize → test → falsify → repeat | 15 |
 | `$forge fix` | Remediate defects to zero: root-cause first, evidence-anchored, defect-ledger driven | 20 |
 | `$forge security` | STRIDE + OWASP audit with red-team personas | 15 |
@@ -88,7 +89,7 @@ Print a banner on every invocation: `[forge] mode: classic | orchestrator | wiza
 | `--classic` | Bare `$forge` | Force Classic metric-loop mode |
 | `--auto` | Bare `$forge` | Force Orchestrator mode |
 | `Tracker: github\|linear` | `build`, `feature`, `test`, `design`, `fix` | Tracker of record for projects/phases/defects (default `github` = the repo host's own issues, GitLab's on a GitLab remote; `linear` arms tracker sync) |
-| `Host: github\|gitlab` | `build`, `feature`, `fix`, `test`, `design`, `ship`, `backlog` (`android` is GitHub-only) | Git host (default: detected from the remote by `scripts/host.cjs detect`). The GitHub-worded contracts translate to `glab` / merge requests / pipelines per `references/host-protocol.md` |
+| `Host: github\|gitlab` | `build`, `feature`, `migrate`, `fix`, `test`, `design`, `ship`, `backlog` (`android` is GitHub-only) | Git host (default: detected from the remote by `scripts/host.cjs detect`). The GitHub-worded contracts translate to `glab` / merge requests / pipelines per `references/host-protocol.md` |
 | `Role: owner\|contributor` | every command that writes, commits or calls the host | Whose repository this is (default: detected — `owner` only for a non-fork repo in your own namespace; a Maintainer permission on someone else's project is not ownership). `contributor`: their conventions, no merge, nothing leaves their host. The user can pin it per clone with `git config forge.role owner` |
 | `Assets: N\|off` | `build`, `feature`, `design`, `requirements` | Generation-attempt budget (default 12 with suitable native/MCP tools; off preserves reuse, icons, motion and checks) |
 | `Ponytail: lite\|full\|ultra\|off` | `build` | Lazy-senior-dev discipline level — ladder (skip → reuse → stdlib → native → installed dep → one line → minimum), shortest working diff, `ponytail:` debt harvest (default `ultra`) |
@@ -119,7 +120,7 @@ Activated when a plain-language goal is given without `Metric:`/`Verify:`. Class
 
 **Two modes based on archetype:**
 - **Orchestration loop** — predicate-bearing archetypes (ship-ready, optimize-metric, fix-broken, harden, build-feature, explore, polish-ui). Goal has a mechanical Success predicate; the loop runs until that predicate is met (polish-ui: `score-design.sh verdict` → `SHIP`).
-- **Single-pass dispatch** — subjective/terminal archetypes (document, what-to-build, decide-design). Routes once to the fitting subcommand (learn / improve / reason), lets it self-terminate, then reports. No loop, no Plateau, no ship gate.
+- **Single-pass dispatch** — subjective or internally bounded archetypes (document, what-to-build, decide-design, package-android, clear-backlog, migrate-platform). Routes once to the fitting subcommand (learn / improve / reason / android / backlog / migrate), lets it self-terminate, then reports. No outer loop, no Plateau, no ship gate.
 
 ### Orchestration Loop Steps
 

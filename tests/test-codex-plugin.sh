@@ -39,7 +39,7 @@ for (const [source, destination] of [
 ]) {
   const files = fs.readdirSync(path.join(skill, destination)).filter(f => f !== 'SKILL.md' && f !== 'forge.md' && /\.(md|sh|cjs)$/.test(f));
   if (destination !== 'scripts') assert.deepEqual(files.sort(), fs.readdirSync(source).filter(f => f.endsWith('.md')).sort());
-  if (!destination) assert.equal(files.length, 21, 'all 21 subcommands must ship');
+  if (!destination) assert.equal(files.length, 22, 'all 22 subcommands must ship');
   assert.ok(files.length);
   for (const file of files) {
     const bundled = read(path.join(skill, destination, file));
@@ -50,7 +50,7 @@ for (const [source, destination] of [
 }
 assert.equal(read(path.join(skill, 'forge.md')), read('.claude/commands/forge.md'));
 for (const tree of ['.claude/skills/forge', 'claude-plugin/skills/forge', '.opencode/skills/forge', '.agents/skills/forge', 'plugins/forge/skills/forge']) {
-  for (const helper of ['acceptance', 'verification', 'ci-evidence', 'vercel-delivery', 'operational', 'delivery-metrics']) {
+  for (const helper of ['acceptance', 'verification', 'migrate', 'migration-parity', 'ci-evidence', 'vercel-delivery', 'operational', 'delivery-metrics']) {
     assert.equal(read(tree+'/scripts/'+helper+'.cjs'), read('scripts/'+helper+'.cjs'), tree+' runtime '+helper);
   }
   for (const [file, source] of [['vercel-pilot.yml','forge-pilot.yml'],['vercel-pilot-build.yml','forge-pilot-build.yml']]) {

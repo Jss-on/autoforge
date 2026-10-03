@@ -12,7 +12,7 @@ not finished until its handoff validates.
 | Field | Type | Rule |
 |---|---|---|
 | `version` | string | Numeric three-part schema version. Write `"3.3.0"`. Validator accepts `2.1.0`+ (legacy runs readable) but warns below `2.3.1`. |
-| `source` | string | The emitting subcommand, canonical short name: `build`, `feature`, `requirements`, `regression`, `fix`, `test`, `design`, `research`, `android`, `backlog`, `debug`, `security`, `ship`, `plan`, `scenario`, `predict`, `learn`, `reason`, `probe`, `improve`, `evals`, `forge`. `loop` is accepted as the existing core-loop alias. Unknown sources and colon forms are invalid. |
+| `source` | string | The emitting subcommand, canonical short name: `build`, `feature`, `migrate`, `requirements`, `regression`, `fix`, `test`, `design`, `research`, `android`, `backlog`, `debug`, `security`, `ship`, `plan`, `scenario`, `predict`, `learn`, `reason`, `probe`, `improve`, `evals`, `forge`. `loop` is accepted as the existing core-loop alias. Unknown sources and colon forms are invalid. |
 | `status` | enum | `COMPLETE` \| `CONVERGED` \| `BOUNDED` \| `PLATEAU` \| `BLOCKED` \| `USER_INTERRUPT` \| `ERROR`; `ship` additionally permits `DRY_RUN` and `ROLLBACK`. |
 | `timestamp` | string | A valid calendar date and time in ISO-8601 with `Z` or an explicit offset; relative dates and placeholder strings are invalid. |
 
@@ -21,6 +21,7 @@ not finished until its handoff validates.
 | Source | Additional required fields |
 |---|---|
 | `build`, `feature` | `results_tsv` (nonempty path), `metric` (`"fullstack_pass_rate"` or an object with that `name` and an optional finite `value` in [0,1]), `config` (non-null object, not an array). A `CONVERGED` status additionally requires `coverage` with numeric `requirements: 1` and `design: 1`; historical 2.x handoffs may omit `design`, preserving legacy reads. Current 3.x+ `COMPLETE` and `CONVERGED` also require the typed `security` record below with PASS, a high-or-stricter threshold, and readable evidence inside this run directory; this is enforced even without `--require-pass`. |
+| `migrate` | `verdict` (`VERIFIED_SCOPE` \| `BLOCKED`), `results_tsv` and `migration` with `cutover: "NOT_VERIFIED"`. COMPLETE/CONVERGED additionally require `acceptance` (`plan`, `plan_sha256`) and `migration` identities (`inventory`, `inventory_sha256`, `candidate_sha`), require VERIFIED_SCOPE and rerun the migration gate even without `--require-pass`; other statuses require BLOCKED and may omit unknown identities. See Migration readiness below. |
 | `requirements` | `spec` (path to the generated `*.spec.yaml`) or `srs` (path). |
 | `regression` | `verdict` (`STABLE` \| `UNSTABLE`). |
 | `fix` | `results_tsv` or `errors_remaining` (number). |
@@ -51,6 +52,35 @@ Required paths must be nonempty strings; required objects cannot be null or arra
 numbers in [0,1]; a converged build cannot claim incomplete coverage.
 
 ## Validation
+
+### Migration readiness
+
+`migrate` uses schema 3.3.0 or later. Paths in `migration.inventory`, `acceptance.plan` and
+`results_tsv` are relative to the handoff run directory. SHA-256 fields are lowercase 64-digit
+hex strings; `candidate_sha` is a full 40- or 64-digit Git revision. Before a pin exists,
+noncomplete BLOCKED records omit unknown inventory/plan/candidate fields and may omit
+`acceptance` entirely. Keep `migration: {"cutover":"NOT_VERIFIED"}` and the planned
+`results_tsv` path; do not fabricate hashes. Known paths may point to planned files that
+do not exist yet. Provided identity fields still require the documented types. These
+records cannot pass `--require-pass`.
+
+Before accepting COMPLETE/CONVERGED, `validate-handoff.sh` resolves those paths inside the
+run directory and invokes the same gate as:
+
+```bash
+node scripts/migrate.cjs complete <project> <inventory.json> <acceptance-plan.json> <results.tsv> <approved-plan-sha256> <candidate-sha>
+```
+
+The gate binds the frozen inventory to the acceptance inputs, covers every inventory item and
+applicable domain (`behavior`, `regression`, `jobs`, `data`, `security`, `operations`, `retirement`),
+and checks executor receipts against the current candidate. Inventory version 2 also requires
+exhaustive pinned source-scope accounting, a frozen source observation receipt/corpus, exact
+comparison against actual candidate observations and executed comparator negative controls.
+A generic passing test process cannot substitute for behavioral parity. The handoff's inventory digest must
+match the computed digest. Only `jobs` and `data` may be explicitly inapplicable with reasons.
+Set `FORGE_PROJECT_ROOT` when validating outside the migrated project. The checked result is
+`VERIFIED_SCOPE`; `cutover: "NOT_VERIFIED"` remains explicit. Source replacement readiness is
+not evidence of production deployment, data cutover or authorization to ship.
 
 ### Security, build and shipping readiness
 

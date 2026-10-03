@@ -264,6 +264,30 @@ test(make().source + ' gate rejects symlink escape', () => { const j = make(); j
 }
 for (const source of ['ship', 'security']) test('legacy ' + source + ' is readable but not readiness evidence', () => { const j = { ...core(source), version: '2.3.1' }; expect(j, 0); expect(j, 1, true); });
 for (const source of ['loop', 'forge', 'debug', 'plan']) test('existing ' + source + ' contract stays valid', () => expect(core(source), 0));
+const migration = () => ({ ...core('migrate'), version: '3.3.0', status: 'BLOCKED', verdict: 'BLOCKED',
+  results_tsv: 'migration-results.tsv', acceptance: { plan: 'acceptance-plan.json', plan_sha256: 'a'.repeat(64) },
+  migration: { inventory: 'inventory.json', inventory_sha256: 'b'.repeat(64), candidate_sha: 'c'.repeat(40), cutover: 'NOT_VERIFIED' } });
+test('blocked migration metadata remains readable before evidence exists', () => expect(migration(), 0));
+test('blocked migration cannot satisfy readiness', () => expect(migration(), 1, true));
+test('migration cannot claim verified scope without receipts', () => expect({ ...migration(), status: 'COMPLETE', verdict: 'VERIFIED_SCOPE' }, 1));
+test('completed migration cannot retain blocked verdict', () => expect({ ...migration(), status: 'COMPLETE' }, 1));
+test('bounded migration cannot claim verified scope', () => expect({ ...migration(), status: 'BOUNDED', verdict: 'VERIFIED_SCOPE' }, 1));
+for (const field of ['inventory', 'inventory_sha256', 'candidate_sha']) test('blocked migration may omit unknown ' + field, () => {
+  const j = migration(); delete j.migration[field]; expect(j, 0); expect(j, 1, true);
+});
+test('early blocked migration needs no invented plan or snapshot identity', () => {
+  const j = migration(); delete j.acceptance; j.migration = { cutover: 'NOT_VERIFIED' }; expect(j, 0); expect(j, 1, true);
+});
+test('migration requires explicit cutover status', () => { const j = migration(); delete j.migration.cutover; expect(j, 1); });
+test('migration handoff cannot imply production cutover', () => {
+  const j = migration(); j.migration.cutover = 'COMPLETE'; expect(j, 1);
+});
+test('completed migration requires its acceptance pin', () => {
+  const j = migration(); delete j.acceptance; j.status = 'COMPLETE'; j.verdict = 'VERIFIED_SCOPE'; expect(j, 1);
+});
+for (const field of ['inventory_sha256', 'candidate_sha']) test('migration rejects array ' + field, () => {
+  const j = migration(); j.migration[field] = [j.migration[field]]; expect(j, 1);
+});
 for (const tree of ['.claude', 'claude-plugin', '.agents', '.opencode', 'plugins/forge'])
   test('validator mirror ' + tree, () => assert.equal(fs.readFileSync(path.join(root, tree, 'skills/forge/scripts/validate-handoff.sh'), 'utf8').replace(/\r\n/g, '\n'), fs.readFileSync(validator, 'utf8').replace(/\r\n/g, '\n')));
 console.log(`=== ${count}/${count} passed (${skipped} skipped) ===`);
