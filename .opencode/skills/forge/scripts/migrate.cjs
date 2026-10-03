@@ -62,7 +62,7 @@ function complete(project, inventoryFile, planFile, resultsFile, expected, candi
     references(item.checks, item.id);
   }
   const top = git(p.root, ['rev-parse', '--show-toplevel']).trim();
-  a.need(fs.realpathSync(top) === p.root, 'Project must be the Git repository root');
+  a.need(fs.realpathSync.native(top) === fs.realpathSync.native(p.root), 'Project must be the Git repository root');
   a.need(git(p.root, ['rev-parse', '--verify', inventory.source.revision + '^{commit}']).trim() === inventory.source.revision, 'Source revision must be an exact commit');
   const sourceTree = tree(p.root, inventory.source.revision), candidateTree = tree(p.root, 'HEAD');
   const baseline = regularFiles(sourceTree), current = regularFiles(candidateTree), unresolved = [];
@@ -155,7 +155,7 @@ function complete(project, inventoryFile, planFile, resultsFile, expected, candi
         return verification.validate(p.root, planFile, ref.spec, ref.id, a.local(path.dirname(results), row.detail.slice('evidence:'.length)));
       };
       const observed = receipt(parity.check), negative = receipt(parity.negative_control);
-      a.need(fs.realpathSync(negative.context.executable.path) === fs.realpathSync(process.execPath) &&
+      a.need(fs.realpathSync.native(negative.context.executable.path) === fs.realpathSync.native(process.execPath) &&
         negative.context.executable.sha256 === a.sha(fs.readFileSync(process.execPath)), 'Negative control must execute the current trusted Node binary');
       const report = JSON.parse(negative.stdout);
       a.need(report.verdict === 'NEGATIVE_CONTROLS_PASS' && report.cases === corpus.cases.length && report.controls === 4 * corpus.cases.length &&

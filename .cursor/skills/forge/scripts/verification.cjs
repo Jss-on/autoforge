@@ -39,7 +39,7 @@ function context(p) {
   const git = args => cp.spawnSync('git', args, { cwd: p.root, encoding: 'utf8', timeout: 10000, maxBuffer: 16 * 1024 * 1024 });
   const top = git(['rev-parse', '--show-toplevel']);
   let candidate = { revision: null, dirty_sha256: null };
-  if (top.status === 0 && fs.realpathSync(top.stdout.trim()) === p.root) {
+  if (top.status === 0 && fs.realpathSync.native(top.stdout.trim()) === fs.realpathSync.native(p.root)) {
     const head = git(['rev-parse', 'HEAD']), diff = git(['diff', '--no-ext-diff', '--no-textconv', '--binary', 'HEAD', '--']);
     a.need(head.status === 0 && diff.status === 0, 'Candidate identity unavailable');
     candidate = { revision: head.stdout.trim(), dirty_sha256: a.sha(diff.stdout) };

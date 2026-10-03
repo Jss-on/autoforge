@@ -1,5 +1,5 @@
 const fs = require('node:fs'), path = require('node:path'), os = require('node:os'), assert = require('node:assert/strict'), cp = require('node:child_process');
-const repo = path.resolve(process.argv[2] || '.'), api = require(path.join(repo, 'scripts/migrate.cjs'));
+const repo = path.resolve(process.argv[2] || '.'), api = require(path.join(repo, 'scripts/migrate.cjs')), rootOnly = process.argv.includes('--root-identity-only');
 const acceptance = require(path.join(repo, 'scripts/acceptance.cjs')), verification = require(path.join(repo, 'scripts/verification.cjs'));
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'forge-migrate-'));
 let passed = 0, failed = 0, seq = 0;
@@ -70,11 +70,23 @@ console.log(JSON.stringify({version:1,revision:cp.execFileSync('git',['rev-parse
     check: (sha = candidate) => api.complete(root, 'run/inventory.json', 'run/plan.json', 'run/results.tsv', digest, sha) };
 }
 async function test(name, run) {
+  if (rootOnly && !name.startsWith('root identity:')) return;
   try { await run(); passed++; console.log('PASS: ' + name); }
   catch (e) { failed++; console.error('FAIL: ' + name + ': ' + e.stack); }
 }
 (async () => {
   try {
+    await test('root identity: a different existing Git top cannot satisfy the project root', async () => {
+      const f = await fixture(), spawn = cp.spawnSync;
+      cp.spawnSync = (command, args, options) => { const r = spawn(command, args, options); return command === 'git' && args[0] === 'rev-parse' && args[1] === '--show-toplevel' && r.status === 0 ? { ...r, stdout: path.dirname(f.root) + '\n' } : r; };
+      try { assert.throws(f.check, /Project must be the Git repository root/); } finally { cp.spawnSync = spawn; }
+    });
+    if (process.platform === 'win32') await test('root identity: Windows case aliases identify repository and trusted Node', async () => {
+      const f = await fixture(() => {}, checks => { checks[1].execution.argv[0] = process.execPath.toUpperCase(); }), spawn = cp.spawnSync, alias = f.root.toUpperCase();
+      assert.notEqual(alias, f.root); assert.equal(fs.realpathSync.native(alias), fs.realpathSync.native(f.root));
+      cp.spawnSync = (command, args, options) => { const r = spawn(command, args, options); return command === 'git' && args[0] === 'rev-parse' && args[1] === '--show-toplevel' && r.status === 0 ? { ...r, stdout: alias + '\n' } : r; };
+      try { assert.equal(f.check().verdict, 'VERIFIED_SCOPE'); } finally { cp.spawnSync = spawn; }
+    });
     await test('verified scope covers migrate, retain and remove without claiming cutover', async () => {
       const f = await fixture(), r = f.check(); assert.equal(r.verdict, 'VERIFIED_SCOPE'); assert.equal(r.completed, 3); assert.equal(r.total, 3); assert.equal(r.cutover, 'NOT_VERIFIED');
       assert.equal(r.inventory_sha256, acceptance.sha(fs.readFileSync(path.join(f.root, 'run/inventory.json'))));

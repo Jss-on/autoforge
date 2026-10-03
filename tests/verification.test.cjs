@@ -1,5 +1,5 @@
-const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
-const repo=path.resolve(process.argv[2]||'.'),metric=process.argv.includes('--metric'),target=path.join(repo,'scripts/verification.cjs');
+const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict'),cp=require('node:child_process');
+const repo=path.resolve(process.argv[2]||'.'),metric=process.argv.includes('--metric'),rootOnly=process.argv.includes('--root-identity-only'),target=path.join(repo,'scripts/verification.cjs');
 assert.equal(Buffer.from('probe').toString(),'probe');
 if(!fs.existsSync(target)){console.error('Execution receipt producer/validator absent');console.log('0');process.exit(metric?0:1);}
 const a=require(path.join(repo,'scripts/acceptance.cjs')),v=require(target),tmp=fs.mkdtempSync(path.join(os.tmpdir(),'forge-verification-'));
@@ -13,8 +13,23 @@ function fixture(code="const assert=require('node:assert/strict');assert.equal(r
  a.snapshot(root,'checks.json','plan.json',['requirements.md','assert.cjs']);
  return {root,put,run:()=>v.execute(root,'plan.json','app','FR-1','evidence/receipt.json'),read:()=>v.validate(root,'plan.json','app','FR-1','evidence/receipt.json')};
 }
-async function test(name,fn){try{await fn();passed++;console.error('PASS: '+name);}catch(e){failed++;console.error('FAIL: '+name+': '+e.message);}}
+async function test(name,fn){if(rootOnly&&!name.startsWith('root identity:'))return;try{await fn();passed++;console.error('PASS: '+name);}catch(e){failed++;console.error('FAIL: '+name+': '+e.message);}}
 (async()=>{
+ await test('root identity: actual nested project cannot inherit the outer Git revision',async()=>{
+  const f=fixture(),git=args=>{const r=cp.spawnSync('git',args,{cwd:f.root,encoding:'utf8',windowsHide:true});assert.equal(r.status,0,r.stderr);return r.stdout.trim();};
+  git(['init','-q']);git(['add','--all']);git(['-c','user.name=Verification Test','-c','user.email=verification-test@example.invalid','commit','--no-gpg-sign','-qm','fixture']);
+  const nested=path.join(f.root,'nested');fs.mkdirSync(nested);fs.mkdirSync(path.join(nested,'evidence'));
+  for(const file of ['requirements.md','app.cjs','assert.cjs','checks.json','plan.json'])fs.copyFileSync(path.join(f.root,file),path.join(nested,file));
+  const r=await v.execute(nested,'plan.json','app','FR-1','evidence/receipt.json');
+  assert.equal(r.status,'pass');assert.deepEqual(r.context.candidate,{revision:null,dirty_sha256:null});
+ });
+ if(process.platform==='win32')await test('root identity: Windows case alias preserves the actual Git revision',async()=>{
+  const f=fixture(),spawn=cp.spawnSync,git=args=>{const r=spawn('git',args,{cwd:f.root,encoding:'utf8',windowsHide:true});assert.equal(r.status,0,r.stderr);return r.stdout.trim();};
+  f.put('.gitignore','evidence/\n');git(['init','-q']);git(['add','--all']);git(['-c','user.name=Verification Test','-c','user.email=verification-test@example.invalid','commit','--no-gpg-sign','-qm','fixture']);
+  const head=git(['rev-parse','HEAD']),alias=f.root.toUpperCase();assert.notEqual(alias,f.root);assert.equal(fs.realpathSync.native(alias),fs.realpathSync.native(f.root));
+  cp.spawnSync=(command,args,options)=>{const r=spawn(command,args,options);return command==='git'&&args[0]==='rev-parse'&&args[1]==='--show-toplevel'&&r.status===0?{...r,stdout:alias+'\n'}:r;};
+  try{const r=await f.run();assert.equal(r.status,'pass');assert.equal(r.context.candidate.revision,head);assert.equal(f.read().context.candidate.revision,head);}finally{cp.spawnSync=spawn;}
+ });
  await test('real successful assertion yields a current passing receipt',async()=>{const f=fixture();assert.equal((await f.run()).status,'pass');assert.equal(f.read().status,'pass');});
  await test('nonzero execution cannot satisfy readiness',async()=>{const f=fixture('process.exit(7)');assert.equal((await f.run()).status,'fail');assert.throws(f.read);});
  await test('timeout stops the process tree',async()=>{const f=fixture("require('node:child_process').spawn(process.execPath,['-e',\"setTimeout(()=>require('node:fs').writeFileSync('late.txt','leak'),600)\"],{stdio:'ignore'});setTimeout(()=>{},5000);",{timeout_ms:150});assert.equal((await f.run()).status,'blocked');await new Promise(r=>setTimeout(r,850));assert.equal(fs.existsSync(path.join(f.root,'late.txt')),false);assert.throws(f.read);});
