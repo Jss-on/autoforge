@@ -1,0 +1,87 @@
+// Optional local exports. Uses installed tools only; never uploads report material.
+const fs = require('node:fs'), path = require('node:path'), { pathToFileURL } = require('node:url');
+const a = require('./acceptance.cjs'), v = require('./verification.cjs');
+const inside = (root, file) => { const rel = path.relative(root, file); return !path.isAbsolute(rel) && rel !== '..' && !rel.startsWith('..' + path.sep); };
+
+function executable(format) {
+  const override = process.env[format === 'pdf' ? 'FORGE_CHROME' : 'FORGE_PANDOC'];
+  const names = format === 'pdf' ? ['chrome', 'msedge', 'chromium', 'chromium-browser', 'google-chrome'] : ['pandoc'];
+  const candidates = override ? [override] : (process.env.PATH || '').split(path.delimiter).flatMap(dir => names.map(name => path.join(dir, name + (process.platform === 'win32' ? '.exe' : ''))));
+  if (!override && process.platform === 'win32') {
+    for (const base of [process.env.ProgramFiles, process.env['ProgramFiles(x86)'], process.env.LOCALAPPDATA].filter(Boolean))
+      for (const suffix of format === 'pdf' ? ['Google/Chrome/Application/chrome.exe', 'Microsoft/Edge/Application/msedge.exe'] : ['Pandoc/pandoc.exe']) candidates.push(path.join(base, suffix));
+  }
+  if (!override && process.platform === 'darwin' && format === 'pdf') candidates.push('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome');
+  for (const file of candidates) try {
+    if (!fs.statSync(file).isFile() || (process.platform === 'win32' && !/\.exe$/i.test(file))) continue;
+    if (process.platform !== 'win32') fs.accessSync(file, fs.constants.X_OK);
+    return fs.realpathSync(file);
+  } catch { /* Try the remaining installed executables. */ }
+  return null;
+}
+
+function outputFile(root, output, format) {
+  a.need(a.text(output) && output.toLowerCase().endsWith('.' + format) && !/[\\:]/.test(output) && !path.isAbsolute(output) && !output.split('/').some(part => ['', '.', '..'].includes(part)), 'Output must be a relative .' + format + ' path inside the run');
+  const file = path.resolve(root, output);
+  a.need(inside(root, file) && inside(root, fs.realpathSync(path.dirname(file))), 'Export output escapes run directory');
+  a.need(!fs.existsSync(file), 'Export output already exists; choose a new filename');
+  return file;
+}
+
+const images = html => [...html.matchAll(/\bsrc="data:image\/[a-z0-9.+-]+;base64,([A-Za-z0-9+/=\s]+)"/gi)].map(match => a.sha(Buffer.from(match[1], 'base64'))).sort();
+
+async function exportReport(format, runDirectory, output = 'report.' + format) {
+  a.need(['pdf', 'docx'].includes(format), 'Use pdf or docx');
+  const root = fs.realpathSync(runDirectory), destination = outputFile(root, output, format);
+  // Always render the checked case again; an existing HTML file may have been edited.
+  const source = require('./investigate-report.cjs').render(root, { interactive: false });
+  const tool = executable(format);
+  const unavailable = reason => ({ verdict: 'EXPORT_UNAVAILABLE', format, reason, fallback: 'Use the local editable HTML report. No software was installed and nothing was uploaded.' });
+  if (!tool) return unavailable(format === 'pdf' ? 'Chrome/Edge/Chromium was not found. FORGE_CHROME may name an installed executable.' : 'Pandoc was not found. FORGE_PANDOC may name an installed executable.');
+  if (format === 'docx') {
+    const probe = await v.run([tool, '--version'], { cwd: root, env: process.env, timeout_ms: 10000, output_limit: 65536 });
+    if (probe.error || probe.signal || probe.exit_code !== 0 || !/^pandoc\s+\d/i.test(probe.stdout)) return unavailable('The installed Pandoc executable did not pass its version check.');
+  }
+  const temporary = fs.mkdtempSync(path.join(root, '.investigate-export-'));
+  let result;
+  try {
+    const input = path.join(temporary, 'source.html'), converted = path.join(temporary, 'converted.' + format);
+    fs.writeFileSync(input, source, { flag: 'wx' });
+    const argv = format === 'pdf' ? [tool, '--headless', '--no-first-run', '--no-default-browser-check', '--disable-background-networking', '--disable-component-update', '--disable-sync', '--disable-extensions', '--user-data-dir=' + path.join(temporary, 'profile'), '--no-pdf-header-footer', '--print-to-pdf=' + converted, pathToFileURL(input).href] : [tool, '--from=html', '--to=docx', '--standalone', '--data-dir=' + temporary, '--output=' + converted, input];
+    const execution = await v.run(argv, { cwd: temporary, env: process.env, timeout_ms: 60000, output_limit: 1024 * 1024 });
+    a.need(!execution.error && !execution.signal && execution.exit_code === 0, format.toUpperCase() + ' converter failed: ' + (execution.error || execution.signal || 'exit ' + execution.exit_code));
+    a.need(fs.existsSync(converted) && fs.statSync(converted).size > 0 && fs.statSync(converted).size <= 64 * 1024 * 1024, 'Converter produced no bounded output file');
+    const bytes = fs.readFileSync(converted);
+    if (format === 'pdf') a.need(bytes.subarray(0, 5).toString() === '%PDF-' && bytes.subarray(-1024).includes(Buffer.from('%%EOF')), 'Converter output is not a PDF');
+    else {
+      a.need(bytes.subarray(0, 4).equals(Buffer.from([80, 75, 3, 4])), 'Converter output is not a DOCX archive');
+      // Read the generated DOCX back through its installed parser and check every embedded image.
+      const back = await v.run([tool, '--from=docx', '--to=html', '--standalone', '--embed-resources', '--data-dir=' + temporary, converted], { cwd: temporary, env: process.env, timeout_ms: 60000, output_limit: 64 * 1024 * 1024 });
+      a.need(!back.error && !back.signal && back.exit_code === 0, 'Generated DOCX could not be read back');
+      a.need(JSON.stringify(images(source)) === JSON.stringify(images(back.stdout)), 'Generated DOCX did not preserve all embedded image bytes');
+    }
+    // Recheck the parent, then exclusively create the final artifact; never overwrite a report.
+    outputFile(root, output, format);
+    fs.writeFileSync(destination, bytes, { flag: 'wx' });
+    result = { verdict: format.toUpperCase() + '_EXPORTED', format, file: output, sha256: a.sha(bytes), source_sha256: a.sha(source),
+      ...(format === 'pdf' ? { source_visuals: images(source).length } : { embedded_visuals: images(source).length }),
+      editable: format === 'docx', verification: format === 'pdf' ? 'PDF signature and completion marker checked; inspect rendered pages to verify images, layout and readability.' : 'DOCX parsed back with embedded image hashes preserved; inspect layout after import.', uploaded: false };
+    return result;
+  } finally {
+    // Remove only the exact temporary directory created above, after resolving confinement.
+    if (fs.existsSync(temporary)) {
+      a.need(fs.realpathSync(temporary) === temporary && inside(root, temporary) && path.basename(temporary).startsWith('.investigate-export-'), 'Refusing cleanup outside the owned export directory');
+      try { fs.rmSync(temporary, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }); }
+      catch { if (result) result.cleanup_warning = 'Temporary export files remain at ' + temporary; }
+    }
+  }
+}
+
+module.exports = { exportReport, executable };
+if (require.main === module) (async () => {
+  const [format, ...args] = process.argv.slice(2);
+  a.need(['pdf', 'docx'].includes(format) && args.length >= 1 && args.length <= 2, 'pdf|docx <run-dir> [output-relative.pdf|docx]');
+  const result = await exportReport(format, ...args);
+  console.log(JSON.stringify(result));
+  if (result.verdict === 'EXPORT_UNAVAILABLE') process.exitCode = 3;
+})().catch(error => { console.error(JSON.stringify({ verdict: 'EXPORT_FAILED', error: error.message })); process.exitCode = 2; });

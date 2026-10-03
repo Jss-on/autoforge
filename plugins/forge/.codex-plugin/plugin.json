@@ -1,7 +1,7 @@
 {
   "name": "forge",
   "version": "3.6.0-codex.0+codex.20260917151931",
-  "description": "Autonomous improvement engine for Codex. 22 commands: iterate, plan, debug, fix, security, ship, scenario, predict, learn, reason, probe, improve, evals, regression, build, requirements, feature, test, design, research, android, backlog.",
+  "description": "Autonomous improvement engine for Codex. 23 commands: iterate, plan, debug, investigate, fix, security, ship, scenario, predict, learn, reason, probe, improve, evals, regression, build, requirements, feature, test, design, research, android, backlog.",
   "author": {
     "name": "Jss-on",
     "url": "https://github.com/Jss-on"
@@ -22,7 +22,7 @@
   "interface": {
     "displayName": "AutoForge",
     "shortDescription": "Autonomous improvement workflows for Codex.",
-    "longDescription": "22 self-contained commands: core iterate loop, plan, debug, fix, security, ship, scenario, predict, learn, reason, probe, evals, improve, regression, build, requirements, feature, test, design, research, android, backlog. Thin routing SKILL.md + per-command instruction files.",
+    "longDescription": "23 self-contained commands: core iterate loop, plan, debug, investigate, fix, security, ship, scenario, predict, learn, reason, probe, evals, improve, regression, build, requirements, feature, test, design, research, android, backlog. Thin routing SKILL.md + per-command instruction files.",
     "developerName": "Jss-on",
     "category": "Productivity",
     "capabilities": [

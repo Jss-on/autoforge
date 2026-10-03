@@ -30,7 +30,7 @@ for (const [source, destination] of [
   const files = fs.readdirSync(path.join(skill, destination), { withFileTypes: true })
     .filter(f => f.isFile() && f.name !== 'SKILL.md' && f.name !== 'forge.md').map(f => f.name).sort();
   assert.deepEqual(files, fs.readdirSync(source).sort(), `complete ${destination || 'command'} coverage`);
-  if (!destination) assert.equal(files.length, 21, 'all 21 subcommands must ship');
+  if (!destination) assert.equal(files.length, 22, 'all 22 subcommands must ship');
   for (const file of files) {
     const bundled = read(path.join(skill, destination, file));
     assert.equal(bundled, read(path.join(source, file)), `canonical parity: ${destination}/${file}`);
@@ -101,6 +101,9 @@ try {
   assert.match(run(path.join(scripts, 'score-requirements.sh'), ['validate', 'spec.yaml'], project, 1), /VALIDATION: INVALID/);
   console.log('PASS: installed bundle classifies and accepts/rejects specs from another project');
 
+  require('./tests/investigate-installed.cjs')(scripts, project);
+  console.log('PASS: installed Cursor investigation approval, capture, visual report and unavailable-export fallback');
+
   const updater = read('scripts/release.sh').match(/node - "\$VERSION" <<'JS'\n([\s\S]*?)\nJS/);
   assert.ok(updater, 'release version updater must exist');
   const updated = spawnSync(process.execPath, ['-', '3.6.1'], { input: updater[1], cwd: generated, encoding: 'utf8' });
@@ -114,5 +117,5 @@ try {
   assert.ok(path.basename(scratch).startsWith('forge-cursor-'));
   fs.rmSync(scratch, { recursive: true, force: true });
 }
-console.log('6 passed, 0 failed (Cursor skill)');
+console.log('7 passed, 0 failed (Cursor skill)');
 NODE
