@@ -67,10 +67,26 @@ function redact(value, secrets) {
 async function run(argv, options) {
 let bytes = 0, failure = null;
 const chunks = { stdout: [], stderr: [] };
+const started = Date.now();
 const result = await new Promise(resolve => {
   const child = cp.spawn(argv[0], argv.slice(1), { cwd: options.cwd, env: options.env, shell: false, detached: process.platform !== 'win32', windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+  const diagnostic = (event, extra = {}) => console.error('LIFECYCLE ' + JSON.stringify({ event, elapsed_ms: Date.now() - started, pid: child.pid, executable: path.basename(argv[0]), exit_code: child.exitCode, signal: child.signalCode, ...extra }));
+  const processes = () => {
+    const listing = cp.spawnSync('ps', ['-axo', 'pid=,ppid=,pgid=,state=,etime=,comm='], { encoding: 'utf8', timeout: 5000, maxBuffer: 1024 * 1024 });
+    const rows = (listing.stdout || '').trim().split('\n').map(line => /^\s*(\d+)\s+(\d+)\s+(\d+)\s+(\S+)\s+(\S+)\s+(.*)$/.exec(line)).filter(Boolean)
+      .map(([, pid, ppid, pgid, state, elapsed, name]) => ({ pid: Number(pid), ppid: Number(ppid), pgid: Number(pgid), state, elapsed, executable: path.basename(name) }));
+    const selected = new Set([child.pid]);
+    let added;
+    do { added = false; for (const row of rows) if ((selected.has(row.ppid) || row.pgid === child.pid) && !selected.has(row.pid)) { selected.add(row.pid); added = true; } } while (added);
+    return rows.filter(row => selected.has(row.pid));
+  };
+  diagnostic('spawn');
+  child.on('exit', (code, signal) => diagnostic('parent-exit', { code, signal }));
+  child.stdout.on('end', () => diagnostic('stdout-end'));
+  child.stderr.on('end', () => diagnostic('stderr-end'));
   const stop = reason => {
     if (failure) return;
+    diagnostic('stop-before-kill', { reason, processes: processes(), stdout_bytes: chunks.stdout.reduce((n, b) => n + b.length, 0), stderr_bytes: chunks.stderr.reduce((n, b) => n + b.length, 0) });
     failure = reason;
     if (!child.pid) return;
     if (process.platform === 'win32') cp.spawnSync('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore', timeout: 10000 });
@@ -78,13 +94,14 @@ const result = await new Promise(resolve => {
   };
   const timer = setTimeout(() => stop('timeout'), options.timeout_ms);
   const collect = stream => data => {
+    if (!chunks[stream].length) diagnostic('first-output', { stream, bytes: data.length });
     const remaining = Math.max(0, options.output_limit - bytes); bytes += data.length;
     if (remaining) chunks[stream].push(Buffer.from(data.subarray(0, remaining)));
     if (bytes > options.output_limit) stop('output_limit');
   };
   child.stdout.on('data', collect('stdout')); child.stderr.on('data', collect('stderr'));
   child.on('error', error => { failure = error.code || 'spawn_error'; });
-  child.on('close', (code, signal) => { clearTimeout(timer); resolve({ exit_code: Number.isInteger(code) && code >= 0 ? code : null, signal: signal || null }); });
+  child.on('close', (code, signal) => { diagnostic('close', { code, signal }); clearTimeout(timer); resolve({ exit_code: Number.isInteger(code) && code >= 0 ? code : null, signal: signal || null }); });
 });
 const decode = stream => {
   try { return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(Buffer.concat(chunks[stream])); }

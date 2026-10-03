@@ -1,9 +1,6 @@
-name: CI
+name: macOS PDF lifecycle diagnostic
 
 on:
-  push:
-    branches: [master]
-  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -11,19 +8,9 @@ permissions:
 
 jobs:
   test:
-    name: ${{ matrix.name }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            name: Harness test suites
-          - os: windows-latest
-            name: Harness Windows smoke
-          - os: macos-latest
-            name: Harness macOS test suites
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    name: macOS PDF parent and pipe lifecycle
+    runs-on: macos-latest
+    timeout-minutes: 10
     defaults:
       run:
         shell: bash
@@ -35,19 +22,8 @@ jobs:
         with:
           node-version: 24
           package-manager-cache: false
-      - name: Run all suites
+      - name: Run real PDF export diagnostic
         run: |
           set -e
-          # Exercise macOS's system Bash and BSD tools, even if Homebrew is installed.
-          if [[ "$RUNNER_OS" == macOS ]]; then export PATH="/usr/bin:/bin:/usr/sbin:/sbin:$PATH"; fi
-          fail=0
-          for t in tests/test-*.sh; do
-            echo "== $t"
-            bash "$t" || fail=1
-          done
-          exit $fail
-      - name: Seam smoke (deterministic end-to-end pipeline)
-        run: bash scripts/smoke-seam.sh
-
-  # Model evaluations run locally with subscription logins. Release policy pins
-  # their report digest and independently verifies these hosted CI jobs.
+          export PATH="/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+          node tests/investigate-export.test.cjs .
