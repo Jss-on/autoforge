@@ -230,13 +230,17 @@ PARSED="$(node -e '
         (s("status") !== "CONVERGED" || (v.requirements === 1 &&
           ((legacy && !("design" in v)) || v.design === 1)));
     } else if (k === "errors_remaining") valid = Number.isSafeInteger(v) && v >= 0;
+    else if (k === "investigation") valid = text(s("case_file")) && text(s("report")) &&
+      ["demonstrated", "supported", "unresolved"].includes(s("conclusion")) &&
+      ["STRUCTURE_VALID", "STRUCTURE_INVALID"].includes(s("structure_verdict")) &&
+      (s("status") !== "COMPLETE" || s("structure_verdict") === "STRUCTURE_VALID");
     else valid = typeof v === "string" && v.trim().length > 0;
     return valid ? "1" : "0";
   };
   console.log([s("version"), s("source"), s("status"), s("timestamp"), s("verdict"),
                h("results_tsv"), h("metric"), h("config"), h("coverage"),
                h("spec"), h("srs"), h("generated_spec"), h("errors_remaining"), h("design"),
-               h("report"), securityValid ? "1" : "0", shipValid ? "1" : "0", passValid ? "1" : "0", acceptanceValid ? "1" : "0", migrationValid ? "1" : "0"]
+               h("report"), securityValid ? "1" : "0", shipValid ? "1" : "0", passValid ? "1" : "0", acceptanceValid ? "1" : "0", h("investigation"), migrationValid ? "1" : "0"]
               .join(String.fromCharCode(31)));
 ' "$FILE" "$REQUIRE_PASS" "$SCRIPT_DIR" 2>/dev/null)"
 
@@ -244,7 +248,7 @@ if [[ "$PARSED" == "__PARSE_ERROR__" || -z "$PARSED" ]]; then
   echo "INVALID"; echo "not valid JSON: $FILE" >&2; exit 1
 fi
 IFS=$'\x1f' read -r VERSION SOURCE STATUS TS VERDICT \
-  H_RESULTS H_METRIC H_CONFIG H_COVERAGE H_SPEC H_SRS H_GENSPEC H_ERRREM H_DESIGN H_REPORT H_SECURITY H_SHIP H_PASS H_ACCEPTANCE H_MIGRATION <<< "$PARSED"
+  H_RESULTS H_METRIC H_CONFIG H_COVERAGE H_SPEC H_SRS H_GENSPEC H_ERRREM H_DESIGN H_REPORT H_SECURITY H_SHIP H_PASS H_ACCEPTANCE H_INVESTIGATION H_MIGRATION <<< "$PARSED"
 
 has_field() { # reads the pre-parsed presence-and-type flags
   case "$1" in
@@ -274,7 +278,7 @@ fi
 
 # The core loop currently emits "loop"; retain it as the documented forge alias.
 case "$SOURCE" in
-  ""|forge|loop|build|feature|migrate|requirements|regression|fix|test|design|research|android|backlog|debug|security|ship|plan|scenario|predict|learn|reason|probe|improve|evals) ;;
+  ""|forge|loop|build|feature|migrate|requirements|regression|fix|test|design|research|android|backlog|debug|investigate|security|ship|plan|scenario|predict|learn|reason|probe|improve|evals) ;;
   *) err "source not in enum: $SOURCE" ;;
 esac
 
@@ -341,6 +345,9 @@ case "$SOURCE" in
     ;;
   migrate)
     [[ "$H_MIGRATION" == "1" ]] || err "missing or invalid: migration inventory, candidate, acceptance, results or VERIFIED_SCOPE evidence (cutover remains NOT_VERIFIED)"
+    ;;
+  investigate)
+    [[ "$H_INVESTIGATION" == "1" ]] || err "missing or invalid: case_file, report, conclusion (demonstrated|supported|unresolved) or structure_verdict (STRUCTURE_VALID|STRUCTURE_INVALID)"
     ;;
   research)
     case "$VERDICT" in

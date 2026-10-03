@@ -57,6 +57,7 @@ Print a banner on every invocation: `[forge] mode: classic | orchestrator | wiza
 | `/forge feature` | Add a feature to existing software — delta acceptance + hard non-regression ratchet, conforms to DESIGN.md | 25 |
 | `/forge migrate` | Migrate a language, framework or platform with a frozen behavior inventory, differential verification, data rehearsal and checked retirement; explicit readiness and cutover status | 25 |
 | `/forge debug` | Hunt bugs: hypothesize → test → falsify → repeat | 15 |
+| `/forge investigate` | Interview, show the plan and expected results, wait for approval, then investigate and research with captured evidence and plain-language findings; `--audit <run>` checks an existing case | 12 |
 | `/forge fix` | Remediate defects to zero: root-cause first, evidence-anchored, defect-ledger driven | 20 |
 | `/forge security` | STRIDE + OWASP audit with red-team personas | 15 |
 | `/forge ship` | Ship through 8 phases: checklist → dry-run → deploy → verify | N/A |

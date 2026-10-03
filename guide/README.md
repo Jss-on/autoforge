@@ -37,6 +37,7 @@ Requires access to the private repo [Jss-on/autoforge](https://github.com/Jss-on
 | [/forge](forge.md) | Core autonomous loop — modify, verify, keep/discard, repeat |
 | [/forge:plan](forge-plan.md) | One-shot wizard — Goal → Scope, Metric, Verify |
 | [/forge:debug](forge-debug.md) | Autonomous bug-hunting with scientific method |
+| [/forge:investigate](forge-investigate.md) | Investigate reported issues and research explanations with captured evidence, explicit uncertainty and plain-language reports |
 | [/forge:fix](forge-fix.md) | Error crusher — tests, types, lint, build |
 | [/forge:security](forge-security.md) | STRIDE + OWASP + red-team security audit |
 | [/forge:ship](forge-ship.md) | 8-phase shipping workflow |
@@ -54,7 +55,7 @@ Requires access to the private repo [Jss-on/autoforge](https://github.com/Jss-on
 | [/forge:android](forge-android.md) | Web app → Android app (Trusted Web Activity) — PWA-ify, Digital Asset Links trust, Bubblewrap-signed AAB/APK, emulator gate in CI, release workflow + store pack, `STORE_READY|BLOCKED` |
 | [/forge:backlog](forge-backlog.md) | Someone else's backlog on GitLab or GitHub — issue intake, triage, one merge request per item, their pipeline green, review handoff; contributor rules (no self-merge, their conventions, nothing leaves their host) |
 | [/forge:migrate](forge-migrate.md) | Replace a language/framework with a frozen behavior inventory, verified slices, target-only acceptance and explicit cutover handoff |
-| [Chains & Combinations](chains-and-combinations.md) | Multi-command pipelines with all 23 commands |
+| [Chains & Combinations](chains-and-combinations.md) | Multi-command pipelines with all 24 commands |
 | [Examples by Domain](examples-by-domain.md) | Real-world examples: software, sales, marketing, DevOps, ML, HR |
 | [Advanced Patterns](advanced-patterns.md) | Guards, MCP, CI/CD, evals checkpoints, transform.sh |
 | [Hooks Reference](hooks.md) | 9 auto-firing hooks: safety gates, context injection, notifications |

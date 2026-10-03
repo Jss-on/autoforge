@@ -39,7 +39,7 @@ for (const [source, destination] of [
 ]) {
   const files = fs.readdirSync(path.join(skill, destination)).filter(f => f !== 'SKILL.md' && f !== 'forge.md' && /\.(md|sh|cjs)$/.test(f));
   if (destination !== 'scripts') assert.deepEqual(files.sort(), fs.readdirSync(source).filter(f => f.endsWith('.md')).sort());
-  if (!destination) assert.equal(files.length, 22, 'all 22 subcommands must ship');
+  if (!destination) assert.equal(files.length, 23, 'all 23 subcommands must ship');
   assert.ok(files.length);
   for (const file of files) {
     const bundled = read(path.join(skill, destination, file));
@@ -50,7 +50,7 @@ for (const [source, destination] of [
 }
 assert.equal(read(path.join(skill, 'forge.md')), read('.claude/commands/forge.md'));
 for (const tree of ['.claude/skills/forge', 'claude-plugin/skills/forge', '.opencode/skills/forge', '.agents/skills/forge', 'plugins/forge/skills/forge']) {
-  for (const helper of ['acceptance', 'verification', 'migrate', 'migration-parity', 'ci-evidence', 'vercel-delivery', 'operational', 'delivery-metrics']) {
+  for (const helper of ['acceptance', 'verification', 'migrate', 'migration-parity', 'investigate', 'ci-evidence', 'vercel-delivery', 'operational', 'delivery-metrics']) {
     assert.equal(read(tree+'/scripts/'+helper+'.cjs'), read('scripts/'+helper+'.cjs'), tree+' runtime '+helper);
   }
   for (const [file, source] of [['vercel-pilot.yml','forge-pilot.yml'],['vercel-pilot-build.yml','forge-pilot-build.yml']]) {
@@ -100,6 +100,57 @@ try {
   assert.match(run(path.join(scripts, 'score-requirements.sh'), ['validate', 'spec.yaml'], project, 1), /VALIDATION: INVALID/);
   console.log('PASS: installed bundle routes and accepts/rejects specs from another project');
 
+  // Exercise the investigation approval boundary using only the installed bundle.
+  const investigate = (...args) => spawnSync(process.execPath,
+    [path.join(scripts, 'investigate.cjs'), ...args],
+    { cwd: project, encoding: 'utf8', timeout: 10000, windowsHide: true });
+  fs.writeFileSync(path.join(project, 'interview.md'), 'Synthetic package test; no external sources.\n');
+  fs.writeFileSync(path.join(project, 'investigation-plan.md'), 'Run the local fixture and retain its output.\n');
+  const request = { id: 'E1', argv: [process.execPath, '-e', "console.log('installed fixture')"],
+    cwd: project, source: 'synthetic package fixture', scope: 'local test only' };
+  fs.writeFileSync(path.join(project, 'request.json'), JSON.stringify(request));
+  assert.notEqual(investigate('capture', project, 'request.json').status, 0);
+  assert.equal(fs.existsSync(path.join(project, 'receipts/E1.json')), false);
+  const planned = investigate('plan', project); assert.equal(planned.status, 0, planned.stderr);
+  const plan = JSON.parse(planned.stdout);
+  fs.writeFileSync(path.join(project, 'approval-request.json'), JSON.stringify({
+    revision: plan.revision, plan_sha256: plan.plan_sha256, snapshot_sha256: plan.snapshot_sha256,
+    user_response: 'Approve this synthetic test plan.', message_ref: 'package-fixture:user-1',
+  }));
+  const approved = investigate('approve', project, 'approval-request.json');
+  assert.equal(approved.status, 0, approved.stderr);
+  const captured = investigate('capture', project, 'request.json');
+  assert.equal(captured.status, 0, captured.stderr);
+  assert.equal(json(path.join(project, 'receipts/E1.json')).plan_revision, plan.revision);
+  fs.appendFileSync(path.join(project, 'investigation-plan.md'), 'Changed scope needs another approval.\n');
+  fs.writeFileSync(path.join(project, 'request.json'), JSON.stringify({ ...request, id: 'E2' }));
+  assert.notEqual(investigate('capture', project, 'request.json').status, 0);
+  assert.equal(fs.existsSync(path.join(project, 'receipts/E2.json')), false);
+  console.log('PASS: installed investigation blocks unapproved and changed plans');
+
+  // Render with only the installed plugin: no checkout runtime or external service is needed.
+  const imageBytes = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII=', 'base64');
+  fs.mkdirSync(path.join(project, 'visuals'));
+  fs.writeFileSync(path.join(project, 'visuals/fixture.png'), imageBytes);
+  const digest = require('node:crypto').createHash('sha256').update(imageBytes).digest('hex');
+  fs.writeFileSync(path.join(project, 'case.json'), JSON.stringify({
+    version: 1, issue: 'Synthetic package rendering test', scope: 'Local fixture only',
+    questions: [{ id: 'Q1', text: 'What is visible?', answer: 'A fixture image.', claims: ['C1'] }],
+    claims: [{ id: 'C1', text: 'A one-pixel image is retained.', kind: 'observed', evidence: [{ visual: 'V1' }], limitations: 'Embedding test only.' }],
+    review: { mode: 'self', findings: 'Local fixture rendering only.' },
+    conclusion: { status: 'unresolved', text: 'No incident investigated.', claims: ['C1'], limitations: 'Synthetic data.' }, next_steps: [],
+    visuals: [{ id: 'V1', file: 'visuals/fixture.png', sha256: digest, kind: 'reproduction',
+      caption: 'One-pixel synthetic fixture, not incident evidence', source: 'Local package test', captured_at: 'unknown',
+      scope: 'Local test', limitations: 'Only validates embedding.', claims: ['C1'], acquisition: 'agent_saved' }],
+  }));
+  const rendered = spawnSync(process.execPath, [path.join(scripts, 'investigate-report.cjs'), 'html', project],
+    { cwd: project, encoding: 'utf8', timeout: 10000, windowsHide: true });
+  assert.equal(rendered.status, 0, rendered.stderr);
+  assert.equal(JSON.parse(rendered.stdout).embedded_visuals, 1);
+  assert.ok(read(path.join(project, 'report.html')).includes('data:image/png;base64,' + imageBytes.toString('base64')));
+  assert.equal(typeof require(path.join(scripts, 'investigate-export.cjs')), 'object');
+  console.log('PASS: installed investigation renders actual embedded image bytes and includes export runtime');
+
   const updater = read('scripts/release.sh').match(/node - "\$VERSION" <<'JS'\n([\s\S]*?)\nJS/);
   assert.ok(updater, 'release version updater must exist');
   const updated = spawnSync(process.execPath, ['-', '3.6.1'], { input: updater[1], cwd: generated, encoding: 'utf8' });
@@ -114,5 +165,5 @@ try {
   assert.equal(path.dirname(scratch), os.tmpdir());
   fs.rmSync(scratch, { recursive: true, force: true });
 }
-console.log('5 passed, 0 failed (Codex plugin)');
+console.log('7 passed, 0 failed (Codex plugin)');
 NODE

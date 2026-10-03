@@ -23,7 +23,7 @@ AutoForge is the product; `forge` is the engine and plugin it ships — all comm
 /plugin install forge@autoforge
 ```
 
-Restart session after install. All 23 commands become available as `/forge` and `/forge:<subcommand>`. Update later with `/plugin marketplace update autoforge`.
+Restart session after install. All 24 commands become available as `/forge` and `/forge:<subcommand>`. Update later with `/plugin marketplace update autoforge`.
 
 ### Codex (plugin)
 
@@ -50,7 +50,7 @@ bash scripts/install.sh --cursor --global
 This installs `~/.cursor/skills/forge/`. For project-local installation, run
 `bash /path/to/autoforge/scripts/install.sh --cursor --local` from the target project's root;
 it writes `.cursor/skills/forge/` there. Reload/reopen Cursor and start an Agent chat with
-`/forge <subcommand> [flags]`, for example `/forge design`. All 23 workflows are included.
+`/forge <subcommand> [flags]`, for example `/forge design`. All 24 workflows are included.
 Git, Node.js and Bash are required; Claude Code hooks are not installed. See
 [Cursor skills](https://cursor.com/docs/skills).
 
@@ -80,6 +80,7 @@ cp -r autoforge/.agents/skills/forge ~/.agents/skills/forge
 | `forge` | Autonomous iteration loop (25 iterations by default; explicit `Iterations: unlimited` opts out) |
 | `forge:plan` | Interactive wizard: Goal → Scope, Metric, Direction, Verify config |
 | `forge:debug` | Autonomous bug-hunting — scientific method + iterative investigation |
+| `forge:investigate` | Interview, show the plan and expected results, wait for approval, then investigate and research with captured evidence and plain-language findings; audit with `--audit <run>` |
 | `forge:fix` | Autonomous error repair — one fix per iteration until zero errors |
 | `forge:security` | STRIDE + OWASP + red-team security audit (read-only unless `--fix`) |
 | `forge:ship` | Universal shipping workflow — 8 phases, 9 shipment types |
@@ -137,6 +138,21 @@ Preserves required behavior across APIs, workers, data, security and deployment 
 Final checks run without the replaced runtime. `--plan-only` prepares the inventory and plan;
 `--resume <run>` continues it. Code completion and production cutover are reported separately.
 See [the migration guide](guide/forge-migrate.md).
+
+### Investigate a stakeholder report
+
+```
+forge:investigate
+Issue: Client reports that an uploaded file is missing. Start from the supplied Slack thread.
+Iterations: 12
+```
+
+Uses available, authorized sources, researches relevant primary documentation and known issues,
+and separates reported behavior, direct observations, explanations and unknowns. It interviews first,
+shows the plan, and waits for approval. The visual report defaults to Google Docs with actual evidence
+images plus available PDF, with editable local HTML as fallback. It explains the evidence and next
+useful check in plain language. `forge:investigate --audit <run>` reviews an existing case. See
+[the investigation guide](guide/forge-investigate.md).
 
 ### Hunt all bugs
 

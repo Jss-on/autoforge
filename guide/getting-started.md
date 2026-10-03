@@ -23,7 +23,7 @@ Inside Claude Code:
 /plugin install forge@autoforge
 ```
 
-All 23 commands are available after restarting Claude Code. Update later with `/plugin marketplace update autoforge`.
+All 24 commands are available after restarting Claude Code. Update later with `/plugin marketplace update autoforge`.
 
 Local-clone alternative: `git clone https://github.com/Jss-on/autoforge && cd autoforge`, then `/plugin marketplace add .` and the same install command.
 
@@ -79,7 +79,7 @@ The root `/forge` command has two modes:
 - **Autonomous orchestrator** — type a plain-language goal instead (e.g., `/forge help me fix the login bug`) and the system classifies your goal, derives a Success predicate, confirms it once, then loops across subcommands until done. No manual chaining required. See [/forge — Orchestrator](forge-orchestrator.md) for the full guide.
 
 The table below introduces the main workflows. The [complete command reference](../README.md#commands)
-lists all 23 commands. The orchestrator is a mode of the root command, not an additional subcommand.
+lists all 24 commands. The orchestrator is a mode of the root command, not an additional subcommand.
 
 | Command | Does | Default Iterations |
 |---------|------|--------------------|

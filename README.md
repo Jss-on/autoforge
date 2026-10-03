@@ -15,7 +15,7 @@ An autonomous iteration engine for Claude Code, OpenCode, OpenAI Codex, and Curs
 ![Version](https://img.shields.io/badge/version-3.6.0-blue.svg)
 [![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 
-**23 commands · 4 agent platforms · bounded iteration · evidence-backed gates**
+**24 commands · 4 agent platforms · bounded iteration · evidence-backed gates**
 
 [Capabilities](#capabilities) · [Scenarios](#practical-scenarios) · [Install](#quick-start) · [Commands](#commands) · [Build Software](#building-complex-software) · [Secure & Ship](#security-and-shipping-guide) · [Guides](guide/)
 
@@ -67,6 +67,7 @@ the packaged release; see the [project changelog](docs/project-changelog.md) for
 | Language and framework migration | Frozen source-to-target inventory, behavior parity, data compatibility, target-only operation and cutover handoff | `migrate` |
 | Visual design and assets | Design direction, `DESIGN.md`, purposeful imagery, asset provenance and budgets, responsive crops, accessible motion, browser design audits and remediation | `design` |
 | QA and debugging | Scenario exploration, risk-based plans, requirements traceability, domain-logic vectors, exploratory tests, defect ledgers, root-cause repairs and independent retesting | `scenario`, `test`, `debug`, `fix` |
+| Stakeholder investigations | Authorized source retrieval, research into explanations, captured observations, explicit uncertainty and plain-language reports | `investigate` |
 | Security | STRIDE, OWASP/ASVS-guided checks, authorization and tenant isolation, secrets/dependencies, deployment boundaries and optional Strix verification | `security` |
 | Stability and release | Baseline/candidate comparisons, performance regression checks, release checklists, dry runs, artifact-bound execution evidence, live verification and rollback | `regression`, `ship` |
 | Android delivery | PWA preparation, Trusted Web Activity packaging, Digital Asset Links, signed bundles, emulator verification and store materials | `android` |
@@ -74,7 +75,7 @@ the packaged release; see the [project changelog](docs/project-changelog.md) for
 | Documentation and memory | Codebase docs, navigable wikis, checked links, run history and scoped procedures retained from verified recoveries | `learn`, [procedural lessons](.claude/skills/forge/references/procedural-lessons.md) |
 | Integrations and runtime | Native image tools or media MCP, Figma import, GitHub/GitLab/Linear tracking, environment checks, safety hooks and validated command handoffs | [Integrations and assets](#integrations-assets-and-memory), [hooks](#hooks--safety) |
 
-The [command reference](#commands) lists all 23 commands. Required checks remain required when
+The [command reference](#commands) lists all 24 commands. Required checks remain required when
 a tool or integration is unavailable; the run reports what is blocked instead of assuming success.
 
 ---
@@ -189,6 +190,7 @@ See [guide/hooks.md](guide/hooks.md) for full reference.
 | `/forge:android` | Package a deployed web app as a verified, signed Android TWA with a store pack | 12 |
 | `/forge:backlog` | Work an employer's or client's tracker backlog on GitLab or GitHub: one item, one branch, one merge request, their pipeline green, review handoff — never merges its own work | 25 |
 | `/forge:debug` | Hunt bugs via hypothesis iteration | 15 |
+| `/forge:investigate` | Investigate reported issues and research explanations with captured evidence, explicit uncertainty and plain-language reports; `--audit <run>` reviews an existing case | 12 |
 | `/forge:fix` | Remediate defects to zero, root-cause first | 20 |
 | `/forge:security` | Audit security boundaries, optionally run Strix, and gate readiness on checks and unresolved findings | 15 |
 | `/forge:ship` | Check, preview, authorize, execute and verify a shipment; handle rollback | linear |
@@ -238,6 +240,8 @@ they are workflows, not a standalone `forge` shell executable.
 | Ship a PR / deployment / release | `/forge:ship` |
 | Optimize without breaking existing tests | Add `Guard: npm test` |
 | Hunt all bugs in a codebase | `/forge:debug` |
+| Understand a Slack/email issue and check what the evidence supports | `/forge:investigate` |
+| Audit the evidence and claims in a previous investigation | `/forge:investigate --audit <run>` |
 | Fix all errors (tests, types, lint) | `/forge:fix` |
 | Remediate a QA engagement's defect ledger | `/forge:fix --from-test` |
 | Run the full QA ↔ remediation loop unattended | `/forge:test Target: <app> --chain fix` |
@@ -758,7 +762,7 @@ cp -r autoforge/.opencode/skills/forge ~/.config/opencode/skills/forge
 cp autoforge/.opencode/commands/forge*.md ~/.config/opencode/commands/
 ```
 
-> All 23 commands available as `/forge_debug`, `/forge_fix`, `/forge_improve`, etc.
+> All 24 commands available as `/forge_debug`, `/forge_fix`, `/forge_improve`, etc.
 
 ### Codex Quick Start
 
@@ -783,7 +787,7 @@ $forge security --diff --fail-on high
 $forge build Spec: ./spec.yaml
 ```
 
-All 23 workflows use `$forge` followed by a subcommand. The plugin loads the selected command
+All 24 workflows use `$forge` followed by a subcommand. The plugin loads the selected command
 and its bundled references and verification scripts. Results are written into the target
 repository's `forge/` directory. The package includes skills and scripts; the nine Claude Code
 hooks are specific to Claude Code.
@@ -841,7 +845,7 @@ The local destination is `.cursor/skills/forge/` in the target project. Reload C
 /forge security --diff --fail-on high
 ```
 
-All 23 workflows use `/forge <subcommand> [flags]`; `/forge` is the single skill entry.
+All 24 workflows use `/forge <subcommand> [flags]`; `/forge` is the single skill entry.
 Git, Node.js and Bash remain required for workflow checks. Claude Code hooks are not installed
 in Cursor. Update by pulling the AutoForge checkout, rerunning the same installer and reloading
 Cursor. See [Cursor's skill documentation](https://cursor.com/docs/skills) and
@@ -1197,6 +1201,50 @@ service; an item is `done` only when the host says its merge request merged. No 
 request names Claude, Fable, Opus or any other model as co-author — there or in your own
 repositories. The same host layer makes `fix`, `feature`,
 `test`, `design` and `ship` work on GitLab. Contract: `references/host-protocol.md`.
+
+---
+
+## /forge:investigate — Stakeholder Investigation
+
+Investigate a stakeholder's issue across the codebase and available, authorized Slack, email,
+cloud and runtime sources. Research primary documentation and known issues to test explanations
+against the affected version and environment. Each conclusion links to captured evidence, with
+observations, reported behavior, explanations and unknowns clearly separated. Standalone
+literature and web research remains `/forge:research`.
+
+```text
+/forge:investigate
+Issue: Client reports that an uploaded file is missing. Start from the supplied Slack thread.
+Iterations: 12
+
+/forge:investigate --audit forge/investigate-<timestamp>
+```
+
+The command starts with a clarification interview, using questions about the issue, desired answer,
+audience, deadline and scope. It reuses known answers and accepts "I don't know". Before substantive
+investigation, it shows a detailed plan: steps and purpose, sources, expected evidence, research
+questions, deliverables, possible outcomes, limits and finish criteria. The plan remains visible
+as work progresses, with changes and gaps explained. It waits for explicit approval of that plan
+before investigation or research, and brings material scope or budget changes back for approval.
+The command recorder checks approval against the saved intake and plan revision before execution;
+changed drafts require a new approved revision. Direct connector calls still follow the command
+workflow, and locally recorded approval is not independent authentication of user consent.
+
+The default is read-only investigation with local evidence artifacts and an approved report destination. It tests competing
+explanations, records retrieval failures and missing coverage, and produces a brief that explains
+what happened, what remains uncertain and the next useful action in plain language. Questions
+focus on context and decisions the user can answer; technical uncertainty becomes a follow-up check.
+
+Reports default to Google Docs with actual evidence images, plus PDF when available. Each figure
+links to claims and identifies its source, time, environment and limits. The command retains editable
+offline HTML and can export PDF using Chrome/Edge or Word using installed Pandoc. Google Docs needs
+a connected private create/import capability; unavailable formats are reported honestly, with local
+outputs retained. Screenshots and reproductions are distinguished from explanatory diagrams.
+
+The audit checks evidence integrity and challenges whether observations support the claims.
+A passing structural check does not prove a conclusion true. An inconclusive case is a useful
+result when the available evidence cannot establish the cause. See the
+[investigation guide](guide/forge-investigate.md) for the workflow and evidence limits.
 
 ---
 
@@ -1899,7 +1947,7 @@ autoforge/
 │   │                                                security, personas, orchestrator routing, ux + hardening
 │   └── commands/
 │       ├── forge.md                        ← core loop (self-contained)
-│       └── forge/                          ← 22 subcommand files (23 commands total)
+│       └── forge/                          ← 23 subcommand files (24 commands total)
 ├── .claude-plugin/marketplace.json                ← marketplace manifest (marketplace name: autoforge)
 ├── claude-plugin/                                 ← Claude Code plugin package (skills + commands + hooks)
 ├── .opencode/                                     ← OpenCode port (via transform.sh)
@@ -1951,13 +1999,13 @@ A: Point it at any `*-results.tsv` file from a previous run. It reports trends, 
 A: Yes. Any language, framework, or domain. Install via plugin (Claude Code), installer script, or manual copy.
 
 **Q: Does this work with OpenCode?**
-A: Yes. Run `./scripts/install.sh --opencode --global` or manually copy `.opencode/` files. Commands use underscore naming (`/forge_debug`, `/forge_evals`, etc.). All 23 commands available.
+A: Yes. Run `./scripts/install.sh --opencode --global` or manually copy `.opencode/` files. Commands use underscore naming (`/forge_debug`, `/forge_evals`, etc.). All 24 commands available.
 
 **Q: Does this work with OpenAI Codex?**
 A: Yes. Run `codex plugin marketplace add Jss-on/autoforge`, then `codex plugin add forge@forge-local`. Start a new thread and invoke `$forge plan`, `$forge build`, or any other subcommand. See [Codex Quick Start](#codex-quick-start) for updates, Windows setup and the manual skill fallback.
 
 **Q: Does this work with Cursor?**
-A: Yes. From the authenticated clone, run `bash scripts/install.sh --cursor --global`, reload Cursor, and invoke `/forge plan` or another subcommand in Agent chat. All 23 workflows are included. See [Cursor Quick Start](#cursor-quick-start) for project-local installation and prerequisites.
+A: Yes. From the authenticated clone, run `bash scripts/install.sh --cursor --global`, reload Cursor, and invoke `/forge plan` or another subcommand in Agent chat. All 24 workflows are included. See [Cursor Quick Start](#cursor-quick-start) for project-local installation and prerequisites.
 
 **Q: How do I stop the loop?**
 A: `Ctrl+C` or add `Iterations: N` to your inline config. Claude commits before verifying, so your last successful state is always in git.

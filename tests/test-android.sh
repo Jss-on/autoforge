@@ -410,7 +410,7 @@ printf '\n--- doctor: android toolchain rows ---\n'
 D_OUT=$(bash "$DOC" 2>/dev/null)
 assert_contains "$D_OUT" "bubblewrap" "doctor: bubblewrap row"
 assert_contains "$D_OUT" "keytool" "doctor: keytool row"
-grep -q '23 commands' "$DOC" && pass "doctor: header counts 23 commands" || fail "doctor: header still not at 23 commands"
+grep -q '24 commands' "$DOC" && pass "doctor: header counts 24 commands" || fail "doctor: header still not at 24 commands"
 
 # ============================================================================
 printf '\n--- distribution: mirror parity (5 surfaces byte-identical) ---\n'
@@ -449,14 +449,14 @@ grep -q 'score-android\.sh' "$REPO_ROOT/scripts/transform.sh" \
   && pass "transform.sh syncs score-android.sh" || fail "transform.sh missing score-android.sh in runtime set"
 
 # ============================================================================
-printf '\n--- distribution: manifests + routers at 23 commands / current version ---\n'
+printf '\n--- distribution: manifests + routers at 24 commands / current version ---\n'
 # ============================================================================
 
 for mf in "$REPO_ROOT/.claude-plugin/marketplace.json" \
           "$REPO_ROOT/claude-plugin/.claude-plugin/plugin.json" \
           "$REPO_ROOT/plugins/forge/.codex-plugin/plugin.json"; do
   name="${mf#$REPO_ROOT/}"
-  grep -q "23 commands" "$mf" && pass "manifest count 23: $name" || fail "manifest count 23: $name"
+  grep -q "24 commands" "$mf" && pass "manifest count 24: $name" || fail "manifest count 24: $name"
   grep -q "research, android" "$mf" && pass "manifest lists android: $name" || fail "manifest lists android: $name"
 done
 PRODUCT_VERSION=$(node -p 'require(process.argv[1]).version' "$REPO_ROOT/.claude-plugin/marketplace.json")
@@ -493,12 +493,12 @@ printf '\n--- docs: README, guide, changelog, agents ---\n'
 # ============================================================================
 
 grep -q '`/forge:android`' "$REPO_ROOT/README.md" && pass "README command table row" || fail "README missing /forge:android row"
-grep -q 'All 23 commands' "$REPO_ROOT/README.md" && pass "README counts 23 commands" || fail "README still not at 23 commands"
-grep -q '22 subcommand files (23 commands total)' "$REPO_ROOT/README.md" && pass "README structure counts updated" || fail "README structure count stale"
+grep -q 'All 24 commands' "$REPO_ROOT/README.md" && pass "README counts 24 commands" || fail "README still not at 24 commands"
+grep -q '23 subcommand files (24 commands total)' "$REPO_ROOT/README.md" && pass "README structure counts updated" || fail "README structure count stale"
 [[ -f "$REPO_ROOT/guide/forge-android.md" ]] && pass "guide/forge-android.md exists" || fail "guide/forge-android.md missing"
 grep -q 'forge-android\.md' "$REPO_ROOT/guide/README.md" && pass "guide index links forge-android" || fail "guide index missing forge-android"
 grep -q '^## v3\.6\.0' "$REPO_ROOT/docs/project-changelog.md" && pass "changelog has v3.6.0 entry" || fail "changelog missing v3.6.0"
-grep -q '23 commands' "$REPO_ROOT/AGENTS.md" && pass "AGENTS.md counts 23 commands" || fail "AGENTS.md count stale"
+grep -q '24 commands' "$REPO_ROOT/AGENTS.md" && pass "AGENTS.md counts 24 commands" || fail "AGENTS.md count stale"
 
 rm -rf "$T"
 

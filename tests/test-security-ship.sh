@@ -288,6 +288,17 @@ test('completed migration requires its acceptance pin', () => {
 for (const field of ['inventory_sha256', 'candidate_sha']) test('migration rejects array ' + field, () => {
   const j = migration(); j.migration[field] = [j.migration[field]]; expect(j, 1);
 });
+const investigation = () => ({ ...core('investigate'), version: '3.3.0', case_file: 'case.json', report: 'report.md', conclusion: 'unresolved', structure_verdict: 'STRUCTURE_VALID' });
+test('completed investigation may remain unresolved', () => expect(investigation(), 0));
+test('completed investigation requires valid structure', () => expect({ ...investigation(), structure_verdict: 'STRUCTURE_INVALID' }, 1));
+test('investigation structure is not a readiness guarantee', () => expect(investigation(), 1, true));
+for (const conclusion of ['demonstrated', 'supported']) test('investigation accepts ' + conclusion, () => expect({ ...investigation(), conclusion }, 0));
+test('blocked investigation may report invalid structure', () => expect({ ...investigation(), status: 'BLOCKED', structure_verdict: 'STRUCTURE_INVALID' }, 0));
+for (const field of ['case_file', 'report', 'conclusion', 'structure_verdict']) {
+  test('investigation requires ' + field, () => { const j = investigation(); delete j[field]; expect(j, 1); });
+  test('investigation rejects wrong type for ' + field, () => expect({ ...investigation(), [field]: {} }, 1));
+}
+for (const field of ['conclusion', 'structure_verdict']) test('investigation rejects unknown ' + field, () => expect({ ...investigation(), [field]: 'FACT_PROVEN' }, 1));
 for (const tree of ['.claude', 'claude-plugin', '.agents', '.opencode', 'plugins/forge'])
   test('validator mirror ' + tree, () => assert.equal(fs.readFileSync(path.join(root, tree, 'skills/forge/scripts/validate-handoff.sh'), 'utf8').replace(/\r\n/g, '\n'), fs.readFileSync(validator, 'utf8').replace(/\r\n/g, '\n')));
 console.log(`=== ${count}/${count} passed (${skipped} skipped) ===`);
