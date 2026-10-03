@@ -18,6 +18,30 @@ async function env(name, value, action) { const old = process.env[name]; process
 async function runner(fake, action) { const original = v.run; v.run = fake; try { return await action(); } finally { v.run = original; } }
 const ok = stdout => ({ exit_code: 0, error: null, signal: null, stdout, stderr: '' });
 (async () => {
+  await test('browser discovery prefers installed Chrome and Edge launchers over Chromium snapshots', async () => {
+    const bin = path.join(temporary, 'browser-path'); fs.mkdirSync(bin);
+    const suffix = process.platform === 'win32' ? '.exe' : '';
+    const launcher = name => path.join(bin, name + suffix);
+    for (const name of ['google-chrome', 'msedge', 'chromium']) fs.writeFileSync(launcher(name), 'discovery fixture only', { mode: 0o755 });
+    await env('FORGE_CHROME', '', async () => env('CHROME_BIN', '', async () => env('PATH', bin, async () => {
+      assert.equal(e.executable('pdf'), launcher('google-chrome'));
+      fs.unlinkSync(launcher('google-chrome'));
+      assert.equal(e.executable('pdf'), launcher('msedge'));
+      fs.unlinkSync(launcher('msedge'));
+      assert.equal(e.executable('pdf'), launcher('chromium'));
+    })));
+  });
+  await test('FORGE_CHROME overrides CHROME_BIN and a missing explicit override never falls back', async () => {
+    const bin = path.join(temporary, 'browser-overrides'); fs.mkdirSync(bin);
+    const suffix = process.platform === 'win32' ? '.exe' : '';
+    const preferred = path.join(bin, 'preferred' + suffix), configured = path.join(bin, 'configured' + suffix);
+    for (const file of [preferred, configured]) fs.writeFileSync(file, 'discovery fixture only', { mode: 0o755 });
+    await env('PATH', bin, async () => env('CHROME_BIN', configured, async () => {
+      await env('FORGE_CHROME', '', async () => assert.equal(e.executable('pdf'), configured));
+      await env('FORGE_CHROME', preferred, async () => assert.equal(e.executable('pdf'), preferred));
+      await env('FORGE_CHROME', path.join(bin, 'missing' + suffix), async () => assert.equal(e.executable('pdf'), null));
+    }));
+  });
   await test('missing optional tooling returns honest unavailable without output', async () => {
     const f = fixture();
     for (const format of ['pdf', 'docx']) await env(format === 'pdf' ? 'FORGE_CHROME' : 'FORGE_PANDOC', path.join(temporary, 'missing.exe'), async () => {
@@ -45,6 +69,21 @@ const ok = stdout => ({ exit_code: 0, error: null, signal: null, stdout, stderr:
     await env('FORGE_CHROME', process.execPath, async () => assert.rejects(() => e.exportReport('pdf', f.root), /converter failed/));
     assert.equal(fs.existsSync(path.join(f.root, 'report.pdf')), false);
     assert.equal(fs.readdirSync(f.root).some(name => name.startsWith('.investigate-export-')), false);
+  });
+  await test('converter errors retain bounded redacted diagnostic output', async () => {
+    const f = fixture();
+    await env('FORGE_CHROME', process.execPath, async () => runner(async () => ({
+      exit_code: null, signal: 'SIGABRT', error: null, stdout: '',
+      stderr: 'No usable sandbox! password=fixture-secret\n' + 'diagnostic line\n'.repeat(3000),
+    }), async () => assert.rejects(() => e.exportReport('pdf', f.root), error => {
+      assert.match(error.message, /SIGABRT/);
+      assert.match(error.message, /No usable sandbox!/);
+      assert.match(error.message, /\[REDACTED\]/);
+      assert.doesNotMatch(error.message, /fixture-secret/);
+      assert(error.message.length <= 16384, 'Converter diagnostics must stay bounded');
+      return true;
+    })));
+    assert.equal(fs.existsSync(path.join(f.root, 'report.pdf')), false);
   });
   await test('PDF export uses checked static HTML, bounded isolated browser, and validates bytes', async () => {
     const f = fixture();

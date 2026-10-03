@@ -279,7 +279,8 @@ node <AR_ROOT>/scripts/investigate-export.cjs docx <run>
 The HTML contains the images, questions, claims and evidence excerpts in one offline file. Its
 editing controls let you revise narrative and save a copy clearly marked as an unverified draft;
 the original evidence remains intact. The case JSON is also editable. PDFs use installed Chrome
-or Edge; editable Word documents use a working Pandoc installation. Missing tools produce an
+or Edge; `FORGE_CHROME` selects an explicit browser, followed by a configured `CHROME_BIN` or
+installed browser discovery. Editable Word documents use a working Pandoc installation. Missing tools produce an
 explicit unavailable result. No tool is installed automatically, and existing exports are preserved.
 Generated exports use the checked case; HTML edits must be reconciled into it before regeneration.
 

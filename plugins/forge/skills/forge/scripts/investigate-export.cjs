@@ -5,8 +5,9 @@ const inside = (root, file) => { const rel = path.relative(root, file); return !
 
 function executable(format) {
   const override = process.env[format === 'pdf' ? 'FORGE_CHROME' : 'FORGE_PANDOC'];
-  const names = format === 'pdf' ? ['chrome', 'msedge', 'chromium', 'chromium-browser', 'google-chrome'] : ['pandoc'];
-  const candidates = override ? [override] : (process.env.PATH || '').split(path.delimiter).flatMap(dir => names.map(name => path.join(dir, name + (process.platform === 'win32' ? '.exe' : ''))));
+  const names = format === 'pdf' ? ['google-chrome', 'chrome', 'msedge', 'chromium', 'chromium-browser'] : ['pandoc'];
+  const configured = format === 'pdf' && process.env.CHROME_BIN ? [process.env.CHROME_BIN] : [];
+  const candidates = override ? [override] : [...configured, ...(process.env.PATH || '').split(path.delimiter).flatMap(dir => names.map(name => path.join(dir, name + (process.platform === 'win32' ? '.exe' : ''))))];
   if (!override && process.platform === 'win32') {
     for (const base of [process.env.ProgramFiles, process.env['ProgramFiles(x86)'], process.env.LOCALAPPDATA].filter(Boolean))
       for (const suffix of format === 'pdf' ? ['Google/Chrome/Application/chrome.exe', 'Microsoft/Edge/Application/msedge.exe'] : ['Pandoc/pandoc.exe']) candidates.push(path.join(base, suffix));
@@ -15,7 +16,8 @@ function executable(format) {
   for (const file of candidates) try {
     if (!fs.statSync(file).isFile() || (process.platform === 'win32' && !/\.exe$/i.test(file))) continue;
     if (process.platform !== 'win32') fs.accessSync(file, fs.constants.X_OK);
-    return fs.realpathSync(file);
+    // Preserve launcher/symlink semantics; an installed wrapper may configure the browser.
+    return path.resolve(file);
   } catch { /* Try the remaining installed executables. */ }
   return null;
 }
@@ -49,7 +51,11 @@ async function exportReport(format, runDirectory, output = 'report.' + format) {
     fs.writeFileSync(input, source, { flag: 'wx' });
     const argv = format === 'pdf' ? [tool, '--headless', '--no-first-run', '--no-default-browser-check', '--disable-background-networking', '--disable-component-update', '--disable-sync', '--disable-extensions', '--user-data-dir=' + path.join(temporary, 'profile'), '--no-pdf-header-footer', '--print-to-pdf=' + converted, pathToFileURL(input).href] : [tool, '--from=html', '--to=docx', '--standalone', '--data-dir=' + temporary, '--output=' + converted, input];
     const execution = await v.run(argv, { cwd: temporary, env: process.env, timeout_ms: 60000, output_limit: 1024 * 1024 });
-    a.need(!execution.error && !execution.signal && execution.exit_code === 0, format.toUpperCase() + ' converter failed: ' + (execution.error || execution.signal || 'exit ' + execution.exit_code));
+    if (execution.error || execution.signal || execution.exit_code !== 0) {
+      const hidden = Object.entries(process.env).filter(([key, value]) => value && /(?:^|_)(?:TOKEN|PASSWORD|PASSWD|SECRET|API_KEY|PRIVATE_KEY|CREDENTIALS|AUTHORIZATION|ACCESS_KEY|COOKIE|KEY)(?:_|$)/i.test(key)).map(([, value]) => value);
+      const detail = v.redact([tool, execution.error || execution.signal || 'exit ' + execution.exit_code, execution.stderr].filter(Boolean).join('\n'), hidden).slice(0, 4096);
+      throw Error(format.toUpperCase() + ' converter failed: ' + detail);
+    }
     a.need(fs.existsSync(converted) && fs.statSync(converted).size > 0 && fs.statSync(converted).size <= 64 * 1024 * 1024, 'Converter produced no bounded output file');
     const bytes = fs.readFileSync(converted);
     if (format === 'pdf') a.need(bytes.subarray(0, 5).toString() === '%PDF-' && bytes.subarray(-1024).includes(Buffer.from('%%EOF')), 'Converter output is not a PDF');
