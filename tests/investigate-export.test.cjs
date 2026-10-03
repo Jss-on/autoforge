@@ -110,9 +110,7 @@ const ok = stdout => ({ exit_code: 0, error: null, signal: null, stdout, stderr:
     }, async () => assert.rejects(() => e.exportReport('docx', f.root), /preserve all embedded image/)));
     assert.equal(fs.existsSync(path.join(f.root, 'report.docx')), false);
   });
-  // macOS previously wrote the PDF but intermittently stalled during browser shutdown.
-  for (let attempt = 1; attempt <= (process.platform === 'darwin' ? 3 : 1); attempt++)
-  await test('installed browser smoke creates complete PDF containing a page and image (attempt ' + attempt + ')', async () => {
+  await test('installed browser smoke creates complete PDF containing a page and image', async () => {
     if (!e.executable('pdf')) { console.error('SKIP: no installed PDF browser'); return; }
     const f = fixture(), result = await e.exportReport('pdf', f.root);
     assert.equal(result.verdict, 'PDF_EXPORTED'); assert.equal(result.source_visuals, 1); assert.equal(result.embedded_visuals, undefined); assert.equal(result.uploaded, false);

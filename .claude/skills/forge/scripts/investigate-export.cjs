@@ -49,8 +49,7 @@ async function exportReport(format, runDirectory, output = 'report.' + format) {
   try {
     const input = path.join(temporary, 'source.html'), converted = path.join(temporary, 'converted.' + format);
     fs.writeFileSync(input, source, { flag: 'wx' });
-    // Avoid hardware GPU initialization for headless PDF exports on macOS.
-    const argv = format === 'pdf' ? [tool, '--headless', ...(process.platform === 'darwin' ? ['--disable-gpu'] : []), '--no-first-run', '--no-default-browser-check', '--disable-background-networking', '--disable-component-update', '--disable-sync', '--disable-extensions', '--user-data-dir=' + path.join(temporary, 'profile'), '--no-pdf-header-footer', '--print-to-pdf=' + converted, pathToFileURL(input).href] : [tool, '--from=html', '--to=docx', '--standalone', '--data-dir=' + temporary, '--output=' + converted, input];
+    const argv = format === 'pdf' ? [tool, '--headless', '--no-first-run', '--no-default-browser-check', '--disable-background-networking', '--disable-component-update', '--disable-sync', '--disable-extensions', '--user-data-dir=' + path.join(temporary, 'profile'), '--no-pdf-header-footer', '--print-to-pdf=' + converted, pathToFileURL(input).href] : [tool, '--from=html', '--to=docx', '--standalone', '--data-dir=' + temporary, '--output=' + converted, input];
     const execution = await v.run(argv, { cwd: temporary, env: process.env, timeout_ms: 60000, output_limit: 1024 * 1024 });
     if (execution.error || execution.signal || execution.exit_code !== 0) {
       const hidden = Object.entries(process.env).filter(([key, value]) => value && /(?:^|_)(?:TOKEN|PASSWORD|PASSWD|SECRET|API_KEY|PRIVATE_KEY|CREDENTIALS|AUTHORIZATION|ACCESS_KEY|COOKIE|KEY)(?:_|$)/i.test(key)).map(([, value]) => value);
