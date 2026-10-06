@@ -173,7 +173,8 @@ test('capture: the change\'s code sees an allow-listed environment; output and a
       const thrown = await review.capture(run, request(run, { id: 'E5', label: 'spawn throws', cwd: work.head, argv: [process.execPath, '-v'] }));
       assert.deepEqual([thrown.exit_code, thrown.error, JSON.parse(fs.readFileSync(path.join(run, 'receipts/E5.json'), 'utf8')).error], [null, 'EINVAL', 'EINVAL'], 'a spawn that throws still fills its reserved receipt');
     } finally { v.run = spawn; }
-    assert.ok(path.relative(run, work.root).startsWith('..') && path.relative(repo, work.root).startsWith('..'), 'the checkouts live outside the run and the repository');
+    const outside = (root, p) => { const rel = path.relative(root, p); return rel.startsWith('..') || path.isAbsolute(rel); }; // another drive is outside too
+    assert.ok(outside(run, work.root) && outside(repo, work.root), 'the checkouts live outside the run and the repository');
     assert.deepEqual(review.workspace(run), work, 'one workspace per run');
   } finally { for (const k of ['REVIEW_TEST_TOKEN', 'DATABASE_URL', 'PGPASSWORD', 'CLAUDE_CODE_FAKE_SESSION']) delete process.env[k]; }
 });

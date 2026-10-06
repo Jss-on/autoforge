@@ -40,8 +40,7 @@ async function snap(root, out, { html, url, width = WIDTH, height = 800, wait = 
   try {
     if (html) fs.writeFileSync(path.join(tmp, 'page.html'), html);
     const shot = path.join(tmp, 'shot.png');
-    const argv = [chrome, '--headless', '--no-first-run', '--no-default-browser-check', '--disable-background-networking', '--disable-component-update', '--disable-sync', '--disable-extensions',
-      '--hide-scrollbars', '--user-data-dir=' + path.join(tmp, 'profile'), `--window-size=${width},${Math.min(Math.max(height, 100), 16000)}`, `--force-device-scale-factor=${scale}`,
+    const argv = [chrome, ...ex.CHROME_ARGS, '--hide-scrollbars', '--user-data-dir=' + path.join(tmp, 'profile'), `--window-size=${width},${Math.min(Math.max(height, 100), 16000)}`, `--force-device-scale-factor=${scale}`,
       '--screenshot=' + shot, ...(wait ? ['--virtual-time-budget=' + wait] : []), url || pathToFileURL(path.join(tmp, 'page.html')).href];
     const r = await v.run(argv, { cwd: tmp, env: process.env, timeout_ms: 120000, output_limit: 1 << 20 });
     a.need(!r.error && !r.signal && r.exit_code === 0 && fs.existsSync(shot), 'Chrome screenshot failed: ' + (r.error || r.signal || 'exit ' + r.exit_code) + ' ' + v.redact(r.stderr, []).slice(0, 300));
