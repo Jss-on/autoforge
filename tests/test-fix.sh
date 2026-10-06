@@ -15,6 +15,7 @@ SPEC="$REPO_ROOT/claude-plugin/commands/forge/fix.md"
 PASS=0; FAIL=0; TOTAL=0
 pass() { printf '  PASS: %s\n' "$1"; PASS=$((PASS + 1)); TOTAL=$((TOTAL + 1)); }
 fail() { printf '  FAIL: %s\n' "$1"; FAIL=$((FAIL + 1)); TOTAL=$((TOTAL + 1)); }
+assert_eq() { if [[ "$1" == "$2" ]]; then pass "$3"; else fail "$3 (expected '$1', got '$2')"; fi; }
 
 # ============================================================================
 printf '\n--- spec: intake modes + seam alignment ---\n'
@@ -139,13 +140,69 @@ echo "$OUT2" | grep -q "blocking=0" && pass "verified (tester's stamp) lifts the
 # handoff: fix source accepts results_tsv OR errors_remaining; rejects neither
 VH="$REPO_ROOT/claude-plugin/skills/forge/scripts/validate-handoff.sh"
 cat > "$TMP/handoff-good.json" <<'EOF'
-{"version":"3.0.0","source":"fix","timestamp":"2026-08-14T00:00:00+08:00","status":"COMPLETE","results_tsv":"iterations.tsv","errors_remaining":0}
+{"version":"3.0.0","source":"fix","timestamp":"2026-08-14T00:00:00+08:00","status":"ERROR","results_tsv":"iterations.tsv","errors_remaining":0}
 EOF
 bash "$VH" "$TMP/handoff-good.json" fix >/dev/null 2>&1 && pass "handoff: fix with results_tsv → VALID" || fail "handoff: fix with results_tsv → VALID"
 cat > "$TMP/handoff-bad.json" <<'EOF'
-{"version":"3.0.0","source":"fix","timestamp":"2026-08-14T00:00:00+08:00","status":"COMPLETE"}
+{"version":"3.0.0","source":"fix","timestamp":"2026-08-14T00:00:00+08:00","status":"ERROR"}
 EOF
 bash "$VH" "$TMP/handoff-bad.json" fix >/dev/null 2>&1 && fail "handoff: fix without results → INVALID" || pass "handoff: fix without results → INVALID"
+
+# ============================================================================
+printf '\n--- tests that guard every fix: proved, angled, swept, pinned ---\n'
+# ============================================================================
+spec_has "score-fix\.cjs"                          "spec: fix-evidence seam"
+spec_has "FIX_EVIDENCE: VALID"                     "spec: check gates the PR and COMPLETE"
+spec_has "PROVE: DETECTS"                          "spec: the test is proved to detect the defect"
+spec_has "in the fix commit"                       "spec: the test travels in the fix commit"
+spec_has "fail .{0,4}on an assertion"              "spec: a load error proves nothing"
+spec_has "angles\.tsv"                             "spec: angle table"
+spec_has "twelve dimensions"                       "spec: scenario's dimensions"
+spec_has "qa-testing-protocol"                     "spec: techniques from the QA protocol"
+spec_has "critical and high .{1,3} all twelve"     "spec: depth by severity"
+spec_has "no crash.{0,3} is not an outcome"        "spec: negative tests assert the refusal"
+spec_has "sweep\.tsv"                              "spec: sweep for the same pattern"
+spec_has "callers of the fixed function"           "spec: callers swept"
+spec_has "score-fix\.cjs mutate"                   "spec: planted defects for critical/high"
+spec_has "no-runner"                               "spec: no-runner exemption"
+spec_has "new-behaviour"                           "spec: new-behaviour exemption"
+spec_has "never a .type./.lint./.build. exemption" "spec: a real defect is not excused as a type error"
+spec_has "tests_tsv"                               "spec: handoff carries tests_tsv"
+spec_has "test_gaps"                               "spec: handoff carries the gaps for the re-engagement"
+spec_has "check --rerun"                           "spec: the proofs are executed again before COMPLETE"
+spec_has "\-\-repo <target>"                       "spec: a run outside its repository names it"
+spec_has "\-\-defects <source ledger>"             "spec: severities pinned to the tester's ledger"
+spec_has "git-ignored files"                       "spec: copy takes only git-ignored files"
+spec_has "never in a test"                         "spec: mutants go in the fixed source lines"
+spec_has "evidence/<item>-red\.txt"                "spec: error-mode evidence files named"
+if node "$REPO_ROOT/tests/score-fix.test.cjs" "$REPO_ROOT" > "$TMP/score-fix.txt" 2>&1; then
+  pass "score-fix: $(tail -n 1 "$TMP/score-fix.txt")"
+else
+  fail "score-fix: $(tail -n 1 "$TMP/score-fix.txt")"; grep '^FAIL' "$TMP/score-fix.txt" | sed 's/^/    /'
+fi
+for d in .claude/skills/forge claude-plugin/skills/forge .agents/skills/forge plugins/forge/skills/forge .opencode/skills/forge .cursor/skills/forge; do
+  if diff -q "$REPO_ROOT/scripts/score-fix.cjs" "$REPO_ROOT/$d/scripts/score-fix.cjs" >/dev/null 2>&1; then pass "seam parity: $d/scripts/score-fix.cjs"; else fail "seam parity: $d/scripts/score-fix.cjs (missing or diverged)"; fi
+done
+# A COMPLETE fix handoff is recomputed from its run: a real proved run passes, a bare claim does not.
+FIX_RUN="$(node -e 'const os=require("os"),fs=require("fs"),path=require("path");const s=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),"forge-fix-handoff-")));require(process.argv[1])(process.argv[2],s).valid().then(r=>process.stdout.write(r.replace(/\\/g,"/"))).catch(e=>{console.error(e);process.exit(1)})' "$REPO_ROOT/tests/score-fix-fixture.cjs" "$REPO_ROOT")"
+if [[ -d "$FIX_RUN" ]]; then
+  printf '{"version":"3.3.0","source":"fix","timestamp":"2026-10-07T00:00:00+08:00","status":"COMPLETE","results_tsv":"iterations.tsv","tests_tsv":"tests.tsv"}' > "$FIX_RUN/handoff.json"
+  bash "$VH" "$FIX_RUN/handoff.json" fix >/dev/null 2>&1; assert_eq 0 "$?" "handoff: COMPLETE fix with a proved run → VALID"
+  printf '{"version":"3.3.0","source":"fix","timestamp":"2026-10-07T00:00:00+08:00","status":"COMPLETE","results_tsv":"iterations.tsv"}' > "$FIX_RUN/handoff.json"
+  bash "$VH" "$FIX_RUN/handoff.json" fix >/dev/null 2>&1; assert_eq 1 "$?" "handoff: COMPLETE fix without tests_tsv → INVALID"
+  printf '{"version":"3.3.0","source":"fix","timestamp":"2026-10-07T00:00:00+08:00","status":"BOUNDED","results_tsv":"iterations.tsv","tests_tsv":"tests.tsv","config":{"target":"%s","defects_source":"%s"}}' "$(dirname "$(dirname "$FIX_RUN")")" "$FIX_RUN/defects.tsv" > "$FIX_RUN/handoff.json"
+  bash "$VH" "$FIX_RUN/handoff.json" fix >/dev/null 2>&1; assert_eq 0 "$?" "handoff: BOUNDED fix is checked too, with the repository and ledger its config names"
+  printf '{"version":"3.3.0","source":"fix","timestamp":"2026-10-07T00:00:00+08:00","status":"BOUNDED","results_tsv":"iterations.tsv","tests_tsv":"tests.tsv","config":{"target":"%s"}}' "$TMP" > "$FIX_RUN/handoff.json"
+  bash "$VH" "$FIX_RUN/handoff.json" fix >/dev/null 2>&1; assert_eq 1 "$?" "handoff: a config.target that is not the proved repository → INVALID"
+  rm -f "$FIX_RUN/tests.tsv"
+  printf '{"version":"3.3.0","source":"fix","timestamp":"2026-10-07T00:00:00+08:00","status":"COMPLETE","results_tsv":"iterations.tsv","tests_tsv":"tests.tsv"}' > "$FIX_RUN/handoff.json"
+  bash "$VH" "$FIX_RUN/handoff.json" fix >/dev/null 2>&1; assert_eq 1 "$?" "handoff: COMPLETE fix whose run fails the check → INVALID"
+  node -e 'require("fs").rmSync(require("path").dirname(require("path").dirname(require("path").dirname(process.argv[1]))),{recursive:true,force:true})' "$FIX_RUN"
+else
+  fail "handoff: the proved fix run could not be built"
+fi
+printf '{"version":"3.3.0","source":"fix","timestamp":"2026-10-07T00:00:00+08:00","status":"COMPLETE","results_tsv":"iterations.tsv","tests_tsv":"tests.tsv"}' > "$TMP/handoff-claim.json"
+bash "$VH" "$TMP/handoff-claim.json" fix >/dev/null 2>&1; assert_eq 1 "$?" "handoff: COMPLETE fix with no run behind it → INVALID"
 
 # ============================================================================
 printf '\n--- v3.5.0 fast path: root-cause clustering, guard cadence, batched tracker rounds ---\n'

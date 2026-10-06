@@ -26,7 +26,7 @@ const ENV_ALLOW = /^(PATH|PATHEXT|SYSTEMROOT|SYSTEMDRIVE|WINDIR|COMSPEC|TEMP|TMP
 const SECRET_NAME = /(?:TOKEN|SECRET|PASSW(?:OR)?D|PWD$|(?:^|_)PAT$|API_?KEY|PRIVATE_?KEY|ACCESS_?KEY|MASTER_?KEY|(?:^|_)KEY$|CREDENTIAL|AUTH|COOKIE|DSN$)/i;
 const WRAPPERS = ['env', 'timeout', 'gtimeout', 'nice', 'nohup', 'xargs', 'command', 'exec', 'stdbuf', 'time', 'sudo', 'doas', 'runas', 'start', 'setsid', 'chroot', 'script', 'cmd', 'powershell', 'pwsh', 'zsh', 'dash', 'fish', 'ksh'];
 // A base failure from a missing symbol or a broken import proves nothing about the change's tests.
-const NOT_AN_ASSERTION = /ModuleNotFoundError|ImportError|No module named|Cannot find module|Module not found|SyntaxError|error TS\d{4}|cannot find symbol|unresolved import|undefined reference|failed to compile|compilation failed|could not compile|NameError|is not defined/i;
+const NOT_AN_ASSERTION = /ModuleNotFoundError|ImportError|No module named|Cannot find module|Module not found|SyntaxError|error TS\d{4}|cannot find symbol|unresolved import|undefined reference|failed to compile|compilation failed|could not compile|NameError|is not defined|undefined: \w|\[build failed\]|error CS\d{4}|Build FAILED|AttributeError: module/i;
 const IMAGE = [[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], [0xff, 0xd8, 0xff]];
 const norm = p => String(p).replace(/\\/g, '/');
 const json = file => { const t = fs.readFileSync(file, 'utf8'); return JSON.parse(t.charCodeAt(0) === 0xfeff ? t.slice(1) : t); };
@@ -237,6 +237,13 @@ function snapshot(root, skip) {
 // Run one command for the review and keep what it printed. Untrusted code gets a minimal environment
 // and is never wrapped; a shell script must pass the forge screen; forge's own seams run as they are.
 // The run directory is fingerprinted around the command: a change it makes to the evidence is recorded.
+// The forge command screen (orchestrate.sh screen-cmd): a shell script runs only after it passes.
+const BASH = process.env.FORGE_BASH || (process.platform === 'win32' ? 'C:/Program Files/Git/bin/bash.exe' : '/bin/bash');
+function screen(text) {
+  const s = cp.spawnSync(BASH, [path.join(__dirname, 'orchestrate.sh').replace(/\\/g, '/'), 'screen-cmd', text], { encoding: 'utf8', timeout: 10000, windowsHide: true });
+  a.need(s.status === 0 && s.stdout.trim() === 'ok', 'The command failed the forge command screen');
+}
+
 async function capture(runDir, requestFile) {
   const root = fs.realpathSync(runDir), req = json(a.argument(root, requestFile)), work = workspace(root);
   a.need(a.object(req) && /^[A-Za-z][\w.-]{0,63}$/.test(req.id || ''), 'Request id must be a short name such as E1');
@@ -248,11 +255,6 @@ async function capture(runDir, requestFile) {
   a.need(Number.isSafeInteger(timeout) && timeout > 0 && timeout <= 7200000 && Number.isSafeInteger(limit) && limit > 0 && limit <= 32 * 1024 * 1024, 'Bound the run: timeout_ms <= 2 h, output_limit <= 32 MiB');
   const extra = req.env ?? {};
   a.need(a.object(extra) && Object.entries(extra).every(([k, val]) => /^[A-Za-z_]\w*$/.test(k) && !SECRET_NAME.test(k) && !/^(?:REG_|FORGE_|AR_)/.test(k) && typeof val === 'string' && !/[\u0000-\u001f\u007f]/.test(val)), 'env adds plain, non-secret variables only (no REG_/FORGE_/AR_ overrides)');
-  const bash = process.env.FORGE_BASH || (process.platform === 'win32' ? 'C:/Program Files/Git/bin/bash.exe' : '/bin/bash');
-  const screen = text => {
-    const s = cp.spawnSync(bash, [path.join(__dirname, 'orchestrate.sh').replace(/\\/g, '/'), 'screen-cmd', text], { encoding: 'utf8', timeout: 10000, windowsHide: true });
-    a.need(s.status === 0 && s.stdout.trim() === 'ok', 'The command failed the forge command screen');
-  };
   for (const [k, val] of Object.entries(extra)) screen(`${k}=${val} true`);
   const seam = (p, ext) => { try { const f = fs.realpathSync(path.resolve(req.cwd, p)); return path.dirname(f) === fs.realpathSync(__dirname) && f.endsWith(ext); } catch { return false; } };
   const exe = path.basename(req.argv[0]).toLowerCase().replace(/\.exe$/, '');
@@ -446,7 +448,7 @@ function verdict(runDir) {
     open_findings: findings.filter(f => f.status === 'open').length, still_human: 'approval under their rules, other reviewers\' open threads, and the merge itself' };
 }
 
-module.exports = { GATES, WAIVABLE, workspace, lines, prescreen, report, coverage, scrub, capture, check, verdict, gitPath };
+module.exports = { GATES, WAIVABLE, WRAPPERS, NOT_AN_ASSERTION, SECRET_NAME, screen, workspace, lines, prescreen, report, coverage, scrub, capture, check, verdict, gitPath };
 
 if (require.main === module) (async () => {
   const [cmd, ...args] = process.argv.slice(2), flag = name => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };

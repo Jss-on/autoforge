@@ -189,7 +189,13 @@ Interleave, per the plan:
   serves).
 - **Fix verification** when fixes land mid-engagement: retest the exact defect scenario (fixed →
   verified/reopened), then targeted **regression** around the change; a retried-flaky pass is
-  recorded as flaky, not green.
+  recorded as flaky, not green. A `fix` handoff that carries `tests_tsv` is checked first with
+  `scripts/score-fix.cjs check <fix-run> --rerun` (`--repo` / `--defects` from the handoff's
+  `config.target` and `config.defects_source`): the proofs are executed again here, and `INVALID`
+  means the fixes are not verifiable as claimed — reopen them. Then, per kept fix: run its committed regression test; test every angle its
+  `angles.tsv` left `n/a` or never listed (the twelve dimensions, §2 techniques) and every `GAP:`
+  the check printed; and read each negative test for what it asserts — a test that only shows
+  "no error" verifies nothing, so write the refusal case yourself and file what it finds.
 Repeat until every planned case is executed (pass or fail — execution completeness, not greenness,
 ends the loop) or the `Iterations` bound hits (`scripts/score-build.sh bound iterations.tsv <N>`;
 `BOUND: EXCEEDED` blocks a COMPLETE status without a recorded user-approved extension).

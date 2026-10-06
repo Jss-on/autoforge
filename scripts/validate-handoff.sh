@@ -237,10 +237,11 @@ PARSED="$(node -e '
     else valid = typeof v === "string" && v.trim().length > 0;
     return valid ? "1" : "0";
   };
+  const c = (k) => { const v = j.config && j.config[k]; return typeof v === "string" && !/[\u0000-\u001f\u007f]/.test(v) ? v : ""; };
   console.log([s("version"), s("source"), s("status"), s("timestamp"), s("verdict"),
                h("results_tsv"), h("metric"), h("config"), h("coverage"),
                h("spec"), h("srs"), h("generated_spec"), h("errors_remaining"), h("design"),
-               h("report"), securityValid ? "1" : "0", shipValid ? "1" : "0", passValid ? "1" : "0", acceptanceValid ? "1" : "0", h("investigation"), migrationValid ? "1" : "0"]
+               h("report"), securityValid ? "1" : "0", shipValid ? "1" : "0", passValid ? "1" : "0", acceptanceValid ? "1" : "0", h("investigation"), migrationValid ? "1" : "0", h("tests_tsv"), c("target"), c("defects_source")]
               .join(String.fromCharCode(31)));
 ' "$FILE" "$REQUIRE_PASS" "$SCRIPT_DIR" 2>/dev/null)"
 
@@ -248,7 +249,7 @@ if [[ "$PARSED" == "__PARSE_ERROR__" || -z "$PARSED" ]]; then
   echo "INVALID"; echo "not valid JSON: $FILE" >&2; exit 1
 fi
 IFS=$'\x1f' read -r VERSION SOURCE STATUS TS VERDICT \
-  H_RESULTS H_METRIC H_CONFIG H_COVERAGE H_SPEC H_SRS H_GENSPEC H_ERRREM H_DESIGN H_REPORT H_SECURITY H_SHIP H_PASS H_ACCEPTANCE H_INVESTIGATION H_MIGRATION <<< "$PARSED"
+  H_RESULTS H_METRIC H_CONFIG H_COVERAGE H_SPEC H_SRS H_GENSPEC H_ERRREM H_DESIGN H_REPORT H_SECURITY H_SHIP H_PASS H_ACCEPTANCE H_INVESTIGATION H_MIGRATION H_TESTS CFG_TARGET CFG_DEFECTS <<< "$PARSED"
 
 has_field() { # reads the pre-parsed presence-and-type flags
   case "$1" in
@@ -262,6 +263,7 @@ has_field() { # reads the pre-parsed presence-and-type flags
     errors_remaining) [[ "$H_ERRREM"   == "1" ]] ;;
     design)           [[ "$H_DESIGN"   == "1" ]] ;;
     report)           [[ "$H_REPORT"   == "1" ]] ;;
+    tests_tsv)        [[ "$H_TESTS"    == "1" ]] ;;
     *) return 1 ;;
   esac
 }
@@ -328,6 +330,21 @@ case "$SOURCE" in
   fix)
     has_field results_tsv || has_field errors_remaining \
       || err "missing: results_tsv or errors_remaining (required for fix)"
+    # A finished fix run (COMPLETE, or BOUNDED with its fixes kept) shows a test behind every kept
+    # fix: recomputed from the run and its repository, never taken from the handoff. config.target and
+    # config.defects_source are absolute, or relative to the workspace that holds forge/.
+    if [[ "$STATUS" == "COMPLETE" || "$STATUS" == "BOUNDED" ]]; then
+      has_field tests_tsv || err "missing: tests_tsv (tests.tsv — required for a COMPLETE or BOUNDED fix)"
+      FIX_RUN="$(dirname "$FILE")"; FIX_WS="$(dirname "$(dirname "$FIX_RUN")")"; FIX_ARGS=()
+      if [[ -n "$CFG_TARGET" ]]; then
+        case "$CFG_TARGET" in /*|?:*) FIX_ARGS+=(--repo "$CFG_TARGET") ;; *) FIX_ARGS+=(--repo "$FIX_WS/$CFG_TARGET") ;; esac
+      fi
+      if [[ -n "$CFG_DEFECTS" ]]; then
+        case "$CFG_DEFECTS" in /*|?:*) FIX_ARGS+=(--defects "$CFG_DEFECTS") ;; *) FIX_ARGS+=(--defects "$FIX_WS/$CFG_DEFECTS") ;; esac
+      fi
+      FIX_EVIDENCE="$(node "$SCRIPT_DIR/score-fix.cjs" check "$FIX_RUN" ${FIX_ARGS[@]+"${FIX_ARGS[@]}"} 2>/dev/null | head -n 1)"
+      [[ "$FIX_EVIDENCE" == "FIX_EVIDENCE: VALID"* ]] || err "score-fix.cjs check is not VALID for this run (${FIX_EVIDENCE:-unreadable}): every kept fix needs a proved test, a sweep and an angle table"
+    fi
     ;;
   test)
     has_field results_tsv || err "missing: results_tsv (required for test)"

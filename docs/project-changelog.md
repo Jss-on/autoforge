@@ -2,6 +2,45 @@
 
 All notable changes to the forge project are documented here.
 
+## Unreleased — /forge:fix: every fix leaves tests behind (2026-10-07)
+
+**Theme:** four real `fix` runs kept twenty fixes; twelve of them changed no test file, among them
+two race conditions, a token replay and a malformed-token crash, and no new test was ever shown to
+catch its bug. The contract asked for "a test or probe", once, and nothing checked it.
+
+**Added:**
+
+- `scripts/score-fix.cjs` — `prove` (the item's tests run in two throwaway checkouts: they must
+  fail on an assertion at the parent commit and pass at the fix; the checkouts borrow dependency
+  folders and never touch the working tree), `sweep` (every place the root cause's pattern occurs
+  at the fix commit, as git grep finds it), `mutate` (small defects planted in the fixed lines, each
+  run against the item's tests: killed, survived or invalid), `angles` (the failure-angle table
+  checked row by row) and `check` (what a COMPLETE run must show, recomputed from the receipts and
+  the repository: a proved test or a recorded exemption per kept fix, a sweep with every hit
+  dispositioned, the angle rows the severity demands, three or more killed mutants for critical and
+  high — `FIX_EVIDENCE: VALID | INVALID` with reasons, plus `GAP:` lines for the re-engagement).
+- `commands/forge/fix.md` — "Tests that guard every fix": a committed test in the fix commit,
+  proved; the angle table over `scenario`'s twelve dimensions with the QA protocol's techniques,
+  depth by severity; negative tests assert the refusal ("no crash" is not an outcome); the sweep
+  with dispositions; planted defects for critical and high; exemptions (`type`, `lint`, `build`,
+  `design-scan`, `no-runner`, `new-behaviour`) with reasons, never for a critical, high or medium
+  defect. The iron law gains its second half: no kept fix without a committed test that fails
+  without it. `check` gates the PR and COMPLETE; the summary and handoff carry the gaps.
+- `validate-handoff.sh` — a COMPLETE `fix` handoff needs `tests_tsv` and the validator recomputes
+  `score-fix.cjs check` on the run; `test`'s re-engagement runs the same check first, tests the
+  angles the table left open and reads each negative test for what it asserts.
+- `tests/score-fix.test.cjs` + `tests/score-fix-fixture.cjs` (a git repository with a bug, a fix
+  commit carrying its test, and the receipts), seam parity and handoff rows in `tests/test-fix.sh`.
+- `review.cjs` exports its command screen and the wrapper / not-an-assertion rules; `score-fix.cjs`
+  reuses them. The not-an-assertion rule now also knows Go (`undefined: x`, `[build failed]`), C#
+  (`error CS1234`, `Build FAILED`) and Python attribute-load failures.
+- After an independent review of the first version: `check` anchors every receipt to the repository
+  the run lives in (or `--repo`), pins severities to the tester's ledger (`--defects`) and refuses
+  unknown iteration statuses, `fixed` ledger rows no kept fix names, mutants outside the source lines
+  the fix changed, `new-defect` dispositions that are not another open defect, and evidence files
+  borrowed from a longer item id; `check --rerun` executes the proofs again; `copy` takes only
+  git-ignored files; sweep hits are redacted; the handoff validator checks BOUNDED runs too.
+
 ## Unreleased — /forge:review: is this merge request safe to merge? (2026-10-06)
 
 **Theme:** forge could write a merge request (`backlog`) but not review one. Code review in a
