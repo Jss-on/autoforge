@@ -556,6 +556,32 @@ assert_exit 0 "simplify-gate: missing prompt field fails open"
 AR_DISABLE_SIMPLIFY_GATE=1 run_hook "simplify-gate.cjs" '{"prompt":"ship"}'
 assert_exit 0 "simplify-gate: disabled via env var"
 
+# A large uncommitted diff — 1,800 changed lines, with git warning about line endings on stderr.
+# The gate informs Claude; it never throws away the prompt, and git's warnings never reach the user.
+git config core.autocrlf true
+node -e 'require("fs").writeFileSync("big.txt", "x\n".repeat(900))'
+git add big.txt 2>/dev/null
+git -c user.name=test -c user.email=test@example.com commit -qm big >/dev/null 2>&1
+node -e 'require("fs").writeFileSync("big.txt", "y\n".repeat(900))'
+
+run_hook "simplify-gate.cjs" '{"prompt":"merge this PR"}'
+assert_exit 0 "simplify-gate: a shipping request over a large diff is never blocked"
+assert_contains "1800" "simplify-gate: the size of the uncommitted diff is passed to Claude"
+
+run_hook "simplify-gate.cjs" '{"prompt":"lets create a forge command that does code review on MRs, but make sure it is very safe to merge"}'
+assert_exit 0 "simplify-gate: a request that only mentions merging goes through"
+
+TOTAL=$((TOTAL + 1))
+GATE_ERR=$(printf '%s' '{"prompt":"ship it"}' | node "$HOOKS_DIR/simplify-gate.cjs" 2>&1 >/dev/null) || true
+if [[ -z "$GATE_ERR" ]]; then
+  printf '  PASS: %s\n' "simplify-gate: git's warnings never become the hook's message"
+  PASS=$((PASS + 1))
+else
+  printf '  FAIL: %s (stderr: %s)\n' "simplify-gate: git's warnings never become the hook's message" "$(printf '%s' "$GATE_ERR" | head -c 160)"
+  FAIL=$((FAIL + 1))
+fi
+git config --unset core.autocrlf
+
 # ============================================================================
 # Test: session-init.cjs
 # ============================================================================

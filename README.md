@@ -146,7 +146,7 @@ v2.1.1 ships a 9-hook safety system that protects your sessions automatically. H
 | **iteration-context** | Injects recent TSV iteration data after context compaction | UserPromptSubmit |
 | **subagent-context** | Gives subagents awareness of active loop state | SubagentStart |
 | **dev-rules-reminder** | Re-injects plan path and code standards after compaction | UserPromptSubmit |
-| **simplify-gate** | Warns at 400 LOC, blocks at 800 LOC before shipping | UserPromptSubmit |
+| **simplify-gate** | When you ask to ship with 400+ uncommitted changed lines, tells Claude to consider simplifying — never blocks your prompt | UserPromptSubmit |
 | **session-init** | Sets up project context at session start | SessionStart |
 | **stop-notify** | Terminal notification + optional webhook on session end | SessionEnd |
 
