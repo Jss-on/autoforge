@@ -143,16 +143,18 @@ Re-injects plan path and code standards path after compaction.
 
 ### simplify-gate
 
-Warns or blocks when you try to ship too many changed lines.
+Tells Claude when you ask to ship while the working tree carries a large uncommitted diff, so it can
+suggest simplifying first. It never blocks your prompt: a shipping word does not prove the request
+ships anything ("make sure it is safe to merge"), and the uncommitted diff is not what a merge or a
+release would carry. You decide.
 
 **Verbs detected:** `ship`, `merge`, `deploy`, `pr`, `publish`, `release`
 
 **Negation aware:** Ignores "don't ship", "never deploy", "not ready to merge", etc.
 
-**Thresholds:**
-- Under 400 LOC → pass silently
-- 400–800 LOC → warning injected as context
-- Over 800 LOC → blocked (exit 2) with override hint
+**Threshold:** 400 or more changed lines (`git diff --stat`, insertions plus deletions) → a note
+with the count is added to Claude's context; below that, nothing. Git's own warnings (line endings)
+are discarded, never shown as the hook's message.
 
 **Disable:** `export AR_DISABLE_SIMPLIFY_GATE=1`
 

@@ -1,10 +1,13 @@
 'use strict';
 
-// UserPromptSubmit hook: warns or blocks shipping verbs when too many LOC changed.
-// Fails open on any error — never blocks legitimate work due to hook malfunction.
+// UserPromptSubmit hook: when a prompt mentions shipping and the working tree carries a large
+// uncommitted diff, it tells Claude so — it never blocks. A shipping word in a prompt does not
+// prove the request ships anything ("make sure it is safe to merge"), and the uncommitted diff
+// is not what a merge or a release would carry; the person typing decides.
+// Fails open on any error.
 
 const { execSync } = require('child_process');
-const { isEnabled, safeParseStdin, log, block, inject } = require('./lib/ar-hook-utils.cjs');
+const { isEnabled, safeParseStdin, log, inject } = require('./lib/ar-hook-utils.cjs');
 
 const HOOK_NAME = 'simplify-gate';
 
@@ -17,7 +20,6 @@ const NEGATION_PHRASES = [
 ];
 
 const WARN_THRESHOLD = 400;
-const BLOCK_THRESHOLD = 800;
 
 function hasShippingVerb(prompt) {
   const lower = prompt.toLowerCase();
@@ -64,7 +66,9 @@ try {
 
   let loc = 0;
   try {
-    const diffOutput = execSync('git diff --stat', { encoding: 'utf8', timeout: 5000 });
+    // stderr ignored: git's line-ending warnings would otherwise become this hook's message.
+    const diffOutput = execSync('git diff --stat',
+      { encoding: 'utf8', timeout: 5000, stdio: ['ignore', 'pipe', 'ignore'] });
     if (!diffOutput || !diffOutput.trim()) process.exit(0);
     loc = parseDiffStat(diffOutput);
   } catch {
@@ -76,18 +80,11 @@ try {
     process.exit(0);
   }
 
-  log(HOOK_NAME, { loc, action: loc > BLOCK_THRESHOLD ? 'block' : 'warn' });
+  log(HOOK_NAME, { loc, action: 'warn' });
 
-  if (loc > BLOCK_THRESHOLD) {
-    block(
-      `BLOCKED: ${loc} lines changed exceeds ${BLOCK_THRESHOLD} LOC shipping threshold. ` +
-      `Simplify before shipping. Use AR_DISABLE_SIMPLIFY_GATE=1 to override.`
-    );
-  }
-
-  // 400–800 range: warn but allow
   inject(
-    `WARNING: ${loc} lines changed. Consider simplifying before shipping.`
+    `simplify-gate: ${loc} lines are changed and uncommitted in this working tree. If this ` +
+    `request ships them, consider simplifying first and tell the user; if it does not, ignore this note.`
   );
 } catch {
   process.exit(0);

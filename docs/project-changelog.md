@@ -2,6 +2,23 @@
 
 All notable changes to the forge project are documented here.
 
+## Unreleased — simplify-gate stops blocking prompts (2026-10-06)
+
+**Fixed:** `simplify-gate` (UserPromptSubmit) threw away the user's prompt whenever it contained a
+shipping word (`ship`, `merge`, `deploy`, `pr`, `publish`, `release`) and `git diff --stat` counted
+more than 800 changed lines. A request to *build* something that mentioned merging ("make sure it is
+very safe to merge") was refused twice in a row because another session had left 1,300 uncommitted
+lines in the checkout, and the refusal arrived buried under forty lines of git's "LF will be replaced
+by CRLF" warnings, which the hook passed through as its own message.
+
+- The gate never blocks. At 400 or more changed lines it adds a note with the count to Claude's
+  context; the person typing decides whether to simplify before shipping. A word in a prompt does
+  not prove the request ships anything, and the uncommitted diff is not what a merge carries.
+- git's stderr is discarded, so its warnings can no longer become the hook's message.
+- `tests/test-hooks.sh` +4 rows: a shipping request over an 1,800-line diff goes through with the
+  count passed to Claude, the original refused prompt goes through, and the hook's stderr stays
+  empty while git warns about line endings.
+
 ## Unreleased — /forge:backlog and GitLab: work in a repository that is not yours (2026-09-30)
 
 **Theme:** every command that pushed, opened a PR or filed an issue assumed two things — the host is
