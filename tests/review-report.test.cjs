@@ -7,6 +7,15 @@ const ex = require(path.join(repo, 'scripts/investigate-export.cjs'));
 const chrome = ex.executable("pdf");
 let n = 0, total = 0;
 const queue = [], test = (name, f, skip) => queue.push([name, f, skip]);
+// A macOS machine without a display may give headless Chrome nothing to paint with: there the
+// screenshot checks are skipped with the reason. Anywhere else a failed probe is left to fail them.
+let painting;
+const paints = () => painting ??= (async () => {
+  if (!chrome) return 'no Chrome/Edge installed';
+  if (process.platform !== 'darwin') return false;
+  const r = await report.snap(fs.mkdtempSync(path.join(scratch, 'probe-')), 'probe.png', { html: '<p>probe</p>', height: 100, timeout: 30000 }).catch(e => ({ reason: e.message }));
+  return r.status === 'ok' ? false : 'headless Chrome cannot paint on this machine: ' + String(r.reason).slice(0, 160);
+})();
 const scratch = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'forge-review-report-')));
 const base = require('./review-fixture.cjs')(repo, scratch), { receipt, sha, put } = base;
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
@@ -97,7 +106,7 @@ test('visuals: every gate receipt, the coverage of each file and each finding be
   else { assert.equal(docx.verdict, 'DOCX_EXPORTED'); assert.equal(docx.embedded_visuals, 2 + idx.rendered.length); }
   const pdf = await ex.convert('pdf', run, 'report.pdf', html);
   assert.equal(pdf.verdict, 'PDF_EXPORTED');
-}, !chrome && 'no Chrome/Edge installed');
+}, paints);
 test('shot: captures the app under review from a local URL', async () => {
   const server = http.createServer((q, s) => { s.writeHead(200, { 'Content-Type': 'text/html' }); s.end('<h1 style="color:#0a0">Totals: 10</h1>'); });
   await new Promise(r => server.listen(0, '127.0.0.1', r));
@@ -109,7 +118,7 @@ test('shot: captures the app under review from a local URL', async () => {
     await assert.rejects(report.snap(run, 'visuals/after.png', { url: 'http://127.0.0.1:1/' }), /new \.png inside the run/, 'never overwrites a capture');
     await assert.rejects(report.snap(run, '../out.png', { html: '<p>x</p>' }), /inside the run/);
   } finally { server.close(); }
-}, !chrome && 'no Chrome/Edge installed');
+}, paints);
 
 // ---------------------------------------------------------------- Google Docs
 const FOLDER = '1AbCdEfGhIjKlMnOpQrStUv', SESSION = 'https://www.googleapis.com/upload/drive/v3/files?upload_id=xyz';
@@ -179,8 +188,9 @@ test('gdoc upload: checks the folder, converts the DOCX into it, reads it back a
 });
 
 (async () => {
-  for (const [name, f, skip] of queue) {
+  for (const [name, f, when] of queue) {
     total++;
+    const skip = typeof when === 'function' ? await when() : when;
     if (skip) { n++; console.error(`SKIP: ${name} (${skip})`); continue; }
     try { await f(); n++; console.error('PASS: ' + name); } catch (e) { console.error('FAIL: ' + name + ': ' + (e.stack || e.message)); }
   }

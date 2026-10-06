@@ -31,7 +31,7 @@ body{margin:0;background:#fff;color:#1f2328;font:14px/20px Consolas,"DejaVu Sans
 }
 
 // Screenshot a page (a rendered panel, or the app under review) with an installed Chrome/Edge.
-async function snap(root, out, { html, url, width = WIDTH, height = 800, wait = 0, scale = 1.5 }) {
+async function snap(root, out, { html, url, width = WIDTH, height = 800, wait = 0, scale = 1.5, timeout = 120000 }) {
   const chrome = ex.executable('pdf');
   if (!chrome) return { status: 'unavailable', reason: 'Chrome/Edge/Chromium not found; FORGE_CHROME may name an installed executable' };
   const target = path.resolve(root, out);
@@ -40,9 +40,10 @@ async function snap(root, out, { html, url, width = WIDTH, height = 800, wait = 
   try {
     if (html) fs.writeFileSync(path.join(tmp, 'page.html'), html);
     const shot = path.join(tmp, 'shot.png');
-    const argv = [chrome, ...ex.CHROME_ARGS, '--hide-scrollbars', '--user-data-dir=' + path.join(tmp, 'profile'), `--window-size=${width},${Math.min(Math.max(height, 100), 16000)}`, `--force-device-scale-factor=${scale}`,
+    // A screenshot waits for a painted frame; without a display (a macOS VM) there is no vsync to wait for.
+    const argv = [chrome, ...ex.CHROME_ARGS, '--disable-gpu-vsync', '--hide-scrollbars', '--user-data-dir=' + path.join(tmp, 'profile'), `--window-size=${width},${Math.min(Math.max(height, 100), 16000)}`, `--force-device-scale-factor=${scale}`,
       '--screenshot=' + shot, ...(wait ? ['--virtual-time-budget=' + wait] : []), url || pathToFileURL(path.join(tmp, 'page.html')).href];
-    const r = await v.run(argv, { cwd: tmp, env: process.env, timeout_ms: 120000, output_limit: 1 << 20 });
+    const r = await v.run(argv, { cwd: tmp, env: process.env, timeout_ms: timeout, output_limit: 1 << 20 });
     a.need(!r.error && !r.signal && r.exit_code === 0 && fs.existsSync(shot), 'Chrome screenshot failed: ' + (r.error || r.signal || 'exit ' + r.exit_code) + ' ' + v.redact(r.stderr, []).slice(0, 300));
     const bytes = fs.readFileSync(shot);
     a.need(bytes.subarray(0, 8).equals(PNG), 'Screenshot is not a PNG');
