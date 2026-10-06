@@ -62,6 +62,33 @@ If a fix cannot be made cleanly, the iteration reverts and logs to `blocked.md` 
 
 ---
 
+## Every Fix Leaves Tests Behind
+
+A fix nobody can see regress is not finished. For every kept fix the run records five things, and
+`scripts/score-fix.cjs check <run>` recomputes them from the receipts and the repository before the
+PR opens; `check --rerun` executes every proof again before the run may call itself COMPLETE, and
+the `test` re-engagement runs it once more. The handoff validator runs the plain check on COMPLETE
+and BOUNDED runs, with the repository and source ledger the handoff names:
+
+| Record | What it shows | How it is proved |
+|---|---|---|
+| `tests.tsv` | the regression test, committed in the fix commit | `score-fix.cjs prove` runs it in two throwaway checkouts: it must **fail on an assertion** at the parent commit and pass at the fix (`PROVE: DETECTS`) |
+| `angles.tsv` | the ways the fixed code can still fail — the twelve dimensions `scenario` uses, each tested (technique, test id, **expected outcome**) or n/a with a reason | critical/high: all twelve; medium: inputs and boundaries; low: the regression test alone |
+| `sweep.tsv` | where else the root cause's pattern occurs, and what was done about each hit | `score-fix.cjs sweep` records the hits with git grep; every hit gets a disposition |
+| `evidence/<item>-mutants.json` | three or more small defects planted in the fixed lines, all caught by the new tests (critical/high) | `score-fix.cjs mutate` runs the tests against each mutant; a survivor means the tests do not pin the fix |
+| the negative tests | they assert the refusal — status and reason — never only that nothing threw | the angle table's `expected` column refuses "no crash" |
+
+Exemptions exist, each with its reason in `tests.tsv`: `type`, `lint`, `build` (the checker is the
+test), `design-scan`, `no-runner` (the project has no test framework), `new-behaviour` (nothing
+existed to fail against). A critical, high or medium defect is never a type/lint/build exemption.
+What the seam cannot prove stays a `GAP:` line, carried in the handoff for the `test` re-engagement.
+
+Throwaway checkouts live under the temp folder and borrow `node_modules`/`.venv`/`vendor` from the
+repository; `copy` in a request brings untracked files such as `.env.test` along. Nothing runs in
+your working tree.
+
+---
+
 ## Examples
 
 ### Auto-detect and fix everything
@@ -174,8 +201,14 @@ Blocked: 1 (circular dependency — see blocked.md)
 ## Output Structure
 
 ```
-fix/{YYMMDD}-{HHMM}-{slug}/
-├── fix-results.tsv     Iteration log: fix, delta, status (KEEP/DISCARD)
+forge/fix-{YYMMDD}-{HHMM}/
+├── iterations.tsv      Iteration log: item, root cause, commit, metric, delta, status
+├── defects.tsv         The ledger copy this run updates (defect mode)
+├── tests.tsv           Per kept fix: proved | exemption, the test files, mutation, reason
+├── angles.tsv          Per kept fix: the twelve failure angles, tested or n/a
+├── sweep.tsv           Per sweep hit: file, line, disposition
+├── requests/           The prove / sweep / mutate requests given to score-fix.cjs
+├── evidence/           def-<id>-red/green.txt, <item>-tests-red/green.json, <item>-sweep.json, <item>-mutants.json
 ├── summary.md          Baseline vs final error counts, stats
 └── blocked.md          Fixes that couldn't be made cleanly — manual review
 ```

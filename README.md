@@ -1350,6 +1350,14 @@ self-rejected.
 critical still blocks release until the chained `test` re-engagement confirms it. A fix run cannot
 self-certify.
 
+**Every fix leaves tests behind:** the regression test is committed with the fix and
+`scripts/score-fix.cjs prove` shows it failing without the fix and passing with it; an angle table
+lists the twelve ways the fixed code can still fail (all tested or excused for critical/high, inputs
+and boundaries for medium); the root cause's pattern is swept across the repository and every hit
+dispositioned; critical/high fixes are pinned by three or more planted defects the new tests kill;
+negative tests assert the refusal, never only "no crash". `score-fix.cjs check` recomputes all of it
+and gates the PR, COMPLETE and the handoff.
+
 **GitHub flow, hands-off to the end:** work on `fix/<stamp>`, PR with a per-defect root-cause table
 and `Fixes #<issue>` lines, a comment on each `qa` issue as its fix lands — then the PR **merges
 itself** (`--squash --delete-branch`) once every CI check is green, the branch is `MERGEABLE`, and the

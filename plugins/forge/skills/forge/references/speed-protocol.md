@@ -90,8 +90,10 @@ kept in a COMPLETE run that the full Guard has not covered. ↺ `--thorough`: fu
   root cause (same failing function, same missing guard, same token) and fix at the **shared
   caller** — the ladder's rule (one guard where every caller routes through). Each DEF row still
   gets its own red → green repro evidence and its own status change.
-- **The repro becomes the regression test once** — on first reproduction, script it as an added
-  test or probe; every later verification runs that, never the manual steps again.
+- **The repro becomes the regression test once** — on first reproduction, script it as a test in
+  the project's own framework, committed with the fix (a probe only where the project has no test
+  runner, recorded as `no-runner`); every later verification runs that, never the manual steps
+  again. `scripts/score-fix.cjs prove` shows it failing without the fix and passing with it.
 - **Root cause from the evidence first.** Grep the callers and read the touched code before
   reaching for `debug`'s hypothesis loop; the loop is for causes the red evidence does not show.
 - **Tracker rounds are batched.** A push per kept fix stays (cheap, recoverable); issue comments

@@ -81,7 +81,7 @@ cp -r autoforge/.agents/skills/forge ~/.agents/skills/forge
 | `forge:plan` | Interactive wizard: Goal → Scope, Metric, Direction, Verify config |
 | `forge:debug` | Autonomous bug-hunting — scientific method + iterative investigation |
 | `forge:investigate` | Interview, show the plan and expected results, wait for approval, then investigate and research with captured evidence and plain-language findings; audit with `--audit <run>` |
-| `forge:fix` | Autonomous error repair — one fix per iteration until zero errors |
+| `forge:fix` | Autonomous error repair — one fix per iteration until zero errors; every kept fix proved by a committed test, swept for the same pattern, angled and (critical/high) pinned by planted defects |
 | `forge:security` | STRIDE + OWASP + red-team security audit (read-only unless `--fix`) |
 | `forge:ship` | Universal shipping workflow — 8 phases, 9 shipment types |
 | `forge:scenario` | Scenario exploration — 12 dimensions, edge cases, derivative scenarios |
