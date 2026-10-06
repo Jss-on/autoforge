@@ -26,6 +26,7 @@ printf '\n--- seams: review.cjs, review-report.cjs, gdoc.cjs ---\n'
 for t in review review-report; do
   if node "$REPO_ROOT/tests/$t.test.cjs" "$REPO_ROOT" > "$T/$t.txt" 2>&1; then
     pass "$t: $(tail -n 1 "$T/$t.txt")"
+    grep -E '^(SKIP|NOTE)' "$T/$t.txt" | sed 's/^/    /'
   else
     fail "$t: $(tail -n 1 "$T/$t.txt")"
     grep '^FAIL' "$T/$t.txt" | sed 's/^/    /'

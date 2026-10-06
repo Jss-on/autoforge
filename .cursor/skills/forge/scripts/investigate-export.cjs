@@ -3,10 +3,11 @@ const fs = require('node:fs'), path = require('node:path'), { pathToFileURL } = 
 const a = require('./acceptance.cjs'), v = require('./verification.cjs');
 const inside = (root, file) => { const rel = path.relative(root, file); return !path.isAbsolute(rel) && rel !== '..' && !rel.startsWith('..' + path.sep); };
 // Headless Chrome on a machine nobody sits at, as Puppeteer and Playwright launch it: a mock keychain
-// and basic password store (a fresh profile never waits on the OS keychain), and no background
-// throttling of a window no one can see.
+// and basic password store (a fresh profile never waits on the OS keychain), no background
+// throttling of a window no one can see, and no waiting on a display refresh (a macOS VM has no
+// display: screenshots and PDFs hung there until the deadline).
 const CHROME_ARGS = ['--headless', '--no-first-run', '--no-default-browser-check', '--disable-background-networking', '--disable-component-update', '--disable-sync', '--disable-extensions',
-  '--use-mock-keychain', '--password-store=basic', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'];
+  '--use-mock-keychain', '--password-store=basic', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding', '--disable-background-timer-throttling', '--disable-gpu-vsync'];
 
 function executable(format) {
   const override = process.env[format === 'pdf' ? 'FORGE_CHROME' : 'FORGE_PANDOC'];
