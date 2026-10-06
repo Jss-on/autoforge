@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # doctor.sh — environment preflight for the AutoForge build pipeline.
 #
-# Verifies every external tool the 24 commands actually invoke, split by tier:
+# Verifies every external tool the 25 commands actually invoke, split by tier:
 #   CORE      — required for any command to work (bash/node/git/POSIX utilities)
 #   BUILD     — required for the build/feature pipeline's verification gates
 #               (Playwright drives the ux dimension; docker the devops one)
@@ -85,6 +85,13 @@ check opt autocannon autocannon "perf SLO load tests (alternative)"
 check opt gh gh               "GitHub remotes: PRs, issues, Actions (scripts/host.cjs) + release tooling / private marketplace auth"
 check opt glab glab           "GitLab remotes: merge requests, issues, pipelines (scripts/host.cjs); needs 'glab auth login --hostname <host>'"
 check opt strix strix         "optional dynamic security checks (--strix; also needs Docker + a configured model)"
+# Run it: a package-manager shim whose target was removed still answers `command -v`.
+if pandoc --version 2>/dev/null | head -n 1 | grep -qE '^pandoc [0-9]'; then
+  row "pandoc" "ok" "review/investigate: DOCX export, the file a Google Doc is imported from"
+else
+  row "pandoc" "MISSING" "review/investigate: DOCX export for Google Docs — install or repair Pandoc (a shim alone is not enough)"
+fi
+check opt gcloud gcloud       "review/investigate: Google Docs delivery (scripts/gdoc.cjs); needs 'gcloud auth login <account> --enable-gdrive-access'"
 
 printf '\nANDROID (/forge:android — local TWA build + certificate fingerprints; CI builds the bundle either way)\n'
 check opt keytool keytool     "android: upload keystore + SHA-256 certificate fingerprints (any JDK)"

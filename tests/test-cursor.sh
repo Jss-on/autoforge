@@ -30,7 +30,7 @@ for (const [source, destination] of [
   const files = fs.readdirSync(path.join(skill, destination), { withFileTypes: true })
     .filter(f => f.isFile() && f.name !== 'SKILL.md' && f.name !== 'forge.md').map(f => f.name).sort();
   assert.deepEqual(files, fs.readdirSync(source).sort(), `complete ${destination || 'command'} coverage`);
-  if (!destination) assert.equal(files.length, 23, 'all 23 subcommands must ship');
+  if (!destination) assert.equal(files.length, 24, 'all 24 subcommands must ship');
   for (const file of files) {
     const bundled = read(path.join(skill, destination, file));
     assert.equal(bundled, read(path.join(source, file)), `canonical parity: ${destination}/${file}`);

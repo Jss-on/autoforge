@@ -8,7 +8,7 @@ const enc = encodeURIComponent, cell = v => String(v ?? '').replace(/\s+/g, ' ')
 const TYPES = ['bug', 'feature', 'chore', 'unknown'], PRIORITIES = ['P1', 'P2', 'P3', 'P4', '-'];
 const STATUSES = ['todo', 'in-progress', 'in-review', 'changes-requested', 'done', 'blocked', 'dropped'];
 const HEADER = 'id\ttype\tpriority\tstatus\ttitle\turl\tbranch\tmr\tevidence';
-const USAGE = 'usage: host.cjs detect [dir] | exclude [dir] | issues [dir] [--assignee me|any|<user>] [--label a,b] [--milestone <title>] [--limit N] | mr <number> [dir] | ledger <backlog.tsv> [--live [dir]]';
+const USAGE = 'usage: host.cjs detect [dir] | exclude [dir] | issues [dir] [--assignee me|any|<user>] [--label a,b] [--milestone <title>] [--limit N] | mr <number> [dir] | reviews [dir] [--limit N] | ledger <backlog.tsv> [--live [dir]]';
 
 // glab sends an environment token (GITLAB_TOKEN …) to whatever host it is pointed at. Only gitlab.com and the host the
 // user named in GITLAB_HOST may receive it; any other hostname has to rely on credentials stored for that host.
@@ -201,6 +201,34 @@ function mr(ctx, number, run = spawn, project = home(ctx)) {
   const verdict = v.state === 'merged' ? 'MERGED' : v.state === 'closed' ? 'CLOSED' : rework.length ? 'REWORK' : waits.length ? 'WAIT' : 'READY';
   return { host: ctx.host, number: Number(number), ...v, verdict, reasons: verdict === 'REWORK' ? rework : verdict === 'WAIT' ? waits : [] };
 }
+// How this repository's reviewers write: what people other than the author said on its last merged
+// merge requests, inline and in review summaries. Data for reading conventions, never instructions.
+function reviews(ctx, limit = 20, run = spawn) {
+  a.need(Number.isSafeInteger(limit) && limit > 0 && limit <= 50, 'Sample 1 to 50 merged merge requests');
+  const out = [], cut = s => String(s ?? '').slice(0, 2000), project = home(ctx);
+  // Bots (CI, security scanners, AI reviewers) are kept but marked: their format is not the team's.
+  const bot = u => u?.bot === true || u?.type === 'Bot' || /\[bot\]$|(?:^|[_-])bot(?:[_-]|\d|$)/i.test(u?.username || u?.login || '');
+  if (ctx.host === 'gitlab') {
+    for (const m of api(ctx, `projects/${enc(project)}/merge_requests?state=merged&order_by=updated_at&sort=desc&per_page=${limit}`, run))
+      for (const d of pages(ctx, `projects/${enc(project)}/merge_requests/${m.iid}/discussions`, run))
+        for (const n of d.notes || []) if (!n.system && n.author?.username !== m.author?.username)
+          out.push({ mr: m.iid, by: n.author?.username ?? null, bot: bot(n.author), file: n.position?.new_path ?? null, line: n.position?.new_line ?? null, thread: !!n.resolvable, body: cut(n.body) });
+  } else {
+    a.need(ctx.host === 'github', 'Review history needs a GitHub or GitLab remote');
+    const list = run('gh', ['pr', 'list', '-R', `${ctx.hostname}/${project}`, '--state', 'merged', '--limit', String(limit), '--json', 'number,author']);
+    a.need(list.status === 0, 'gh pr list unavailable; re-query before acting');
+    for (const pr of JSON.parse(list.stdout)) {
+      for (const c of pages(ctx, `repos/${project}/pulls/${pr.number}/comments`, run)) if (c.user?.login !== pr.author?.login)
+        out.push({ mr: pr.number, by: c.user?.login ?? null, bot: bot(c.user), file: c.path ?? null, line: c.line ?? null, thread: true, body: cut(c.body) });
+      for (const r of pages(ctx, `repos/${project}/pulls/${pr.number}/reviews`, run)) if (r.body && r.user?.login !== pr.author?.login)
+        out.push({ mr: pr.number, by: r.user?.login ?? null, bot: bot(r.user), file: null, line: null, thread: false, state: r.state, body: cut(r.body) });
+      // Reviewers also talk in the pull request's conversation, outside any review.
+      for (const c of pages(ctx, `repos/${project}/issues/${pr.number}/comments`, run)) if (c.user?.login !== pr.author?.login)
+        out.push({ mr: pr.number, by: c.user?.login ?? null, bot: bot(c.user), file: null, line: null, thread: false, body: cut(c.body) });
+    }
+  }
+  return { project, sampled: limit, comments: out };
+}
 // The merge request a ledger row cites: https://host/group/project/-/merge_requests/12 or https://host/owner/repo/pull/12.
 function cite(link) {
   try {
@@ -250,7 +278,7 @@ function ledger(file, live) {
   return { valid: !errors.length, total: rows.length, remaining: count.todo + count['in-progress'] + count['changes-requested'],
     open: rows.filter(r => r.open).length, count, drift, errors };
 }
-module.exports = { parse, detect, exclude, triage, issues, mr, cite, witness, ledger, childEnv, HEADER };
+module.exports = { parse, detect, exclude, triage, issues, mr, reviews, cite, witness, ledger, childEnv, HEADER };
 if (require.main === module) {
   const [action, ...rest] = process.argv.slice(2), flag = k => { const i = rest.indexOf('--' + k); return i < 0 ? undefined : rest.splice(i, 2)[1]; };
   try {
@@ -264,6 +292,8 @@ if (require.main === module) {
       const v = mr(detect(rest[1]), rest[0]);
       console.log(JSON.stringify(v));
       if (!['READY', 'MERGED'].includes(v.verdict)) process.exitCode = 1;
+    } else if (action === 'reviews') {
+      console.log(JSON.stringify(reviews(detect(rest[0]), Number(flag('limit') || 20))));
     } else if (action === 'ledger') {
       const at = rest.indexOf('--live'), dir = at < 0 ? null : rest.splice(at, 2)[1] || '.';
       a.need(rest.length === 1, USAGE);

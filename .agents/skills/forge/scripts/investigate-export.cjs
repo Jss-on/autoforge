@@ -7,7 +7,8 @@ function executable(format) {
   const override = process.env[format === 'pdf' ? 'FORGE_CHROME' : 'FORGE_PANDOC'];
   const names = format === 'pdf' ? ['google-chrome', 'chrome', 'msedge', 'chromium', 'chromium-browser'] : ['pandoc'];
   const configured = format === 'pdf' && process.env.CHROME_BIN ? [process.env.CHROME_BIN] : [];
-  const candidates = override ? [override] : [...configured, ...(process.env.PATH || '').split(path.delimiter).flatMap(dir => names.map(name => path.join(dir, name + (process.platform === 'win32' ? '.exe' : ''))))];
+  // Relative PATH entries (".") would resolve against the working directory — someone else's checkout.
+  const candidates = override ? [override] : [...configured, ...(process.env.PATH || '').split(path.delimiter).filter(dir => dir && path.isAbsolute(dir)).flatMap(dir => names.map(name => path.join(dir, name + (process.platform === 'win32' ? '.exe' : ''))))];
   if (!override && process.platform === 'win32') {
     for (const base of [process.env.ProgramFiles, process.env['ProgramFiles(x86)'], process.env.LOCALAPPDATA].filter(Boolean))
       for (const suffix of format === 'pdf' ? ['Google/Chrome/Application/chrome.exe', 'Microsoft/Edge/Application/msedge.exe'] : ['Pandoc/pandoc.exe']) candidates.push(path.join(base, suffix));
@@ -34,9 +35,16 @@ const images = html => [...html.matchAll(/\bsrc="data:image\/[a-z0-9.+-]+;base64
 
 async function exportReport(format, runDirectory, output = 'report.' + format) {
   a.need(['pdf', 'docx'].includes(format), 'Use pdf or docx');
-  const root = fs.realpathSync(runDirectory), destination = outputFile(root, output, format);
+  const root = fs.realpathSync(runDirectory);
+  outputFile(root, output, format);
   // Always render the checked case again; an existing HTML file may have been edited.
-  const source = require('./investigate-report.cjs').render(root, { interactive: false });
+  return convert(format, root, output, require('./investigate-report.cjs').render(root, { interactive: false }));
+}
+
+// Convert checked report HTML (images embedded as data URIs) into a PDF or DOCX inside the run.
+async function convert(format, runDirectory, output, source) {
+  a.need(['pdf', 'docx'].includes(format) && typeof source === 'string', 'Use pdf or docx with rendered HTML');
+  const root = fs.realpathSync(runDirectory), destination = outputFile(root, output, format);
   const tool = executable(format);
   const unavailable = reason => ({ verdict: 'EXPORT_UNAVAILABLE', format, reason, fallback: 'Use the local editable HTML report. No software was installed and nothing was uploaded.' });
   if (!tool) return unavailable(format === 'pdf' ? 'Chrome/Edge/Chromium was not found. FORGE_CHROME may name an installed executable.' : 'Pandoc was not found. FORGE_PANDOC may name an installed executable.');
@@ -83,7 +91,7 @@ async function exportReport(format, runDirectory, output = 'report.' + format) {
   }
 }
 
-module.exports = { exportReport, executable };
+module.exports = { exportReport, convert, executable };
 if (require.main === module) (async () => {
   const [format, ...args] = process.argv.slice(2);
   a.need(['pdf', 'docx'].includes(format) && args.length >= 1 && args.length <= 2, 'pdf|docx <run-dir> [output-relative.pdf|docx]');

@@ -15,7 +15,7 @@ An autonomous iteration engine for Claude Code, OpenCode, OpenAI Codex, and Curs
 ![Version](https://img.shields.io/badge/version-3.6.0-blue.svg)
 [![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 
-**24 commands · 4 agent platforms · bounded iteration · evidence-backed gates**
+**25 commands · 4 agent platforms · bounded iteration · evidence-backed gates**
 
 [Capabilities](#capabilities) · [Scenarios](#practical-scenarios) · [Install](#quick-start) · [Commands](#commands) · [Build Software](#building-complex-software) · [Secure & Ship](#security-and-shipping-guide) · [Guides](guide/)
 
@@ -49,6 +49,11 @@ the packaged release; see the [project changelog](docs/project-changelog.md) for
 - **Language and framework migrations:** `migrate` inventories existing behavior, ports verified
   slices, checks target-only operation and reports production cutover separately.
   [Migration guide](guide/forge-migrate.md).
+- **Code review that proves what it says:** `/forge:review` reviews a merge request in the
+  repository's own format, validates it (their pipeline on the head, a regression run, tests that
+  fail on the target, changed-line coverage, the app before and after, security) and puts the
+  evidence in a Google Doc with images. It posts only on your word and never merges.
+  [Review guide](guide/forge-review.md).
 - **GitLab, and work in a repository that is not yours:** `/forge:backlog` works an employer's or
   client's issue backlog — one item, one branch, one merge request, their pipeline green, handed to
   their reviewers. Forge now detects the git host and whose repository it is; on GitLab the
@@ -75,7 +80,7 @@ the packaged release; see the [project changelog](docs/project-changelog.md) for
 | Documentation and memory | Codebase docs, navigable wikis, checked links, run history and scoped procedures retained from verified recoveries | `learn`, [procedural lessons](.claude/skills/forge/references/procedural-lessons.md) |
 | Integrations and runtime | Native image tools or media MCP, Figma import, GitHub/GitLab/Linear tracking, environment checks, safety hooks and validated command handoffs | [Integrations and assets](#integrations-assets-and-memory), [hooks](#hooks--safety) |
 
-The [command reference](#commands) lists all 24 commands. Required checks remain required when
+The [command reference](#commands) lists all 25 commands. Required checks remain required when
 a tool or integration is unavailable; the run reports what is blocked instead of assuming success.
 
 ---
@@ -189,6 +194,7 @@ See [guide/hooks.md](guide/hooks.md) for full reference.
 | `/forge:research` | Produce a cited dossier with checked claims; optionally generate arXiv/IEEE papers | 15 |
 | `/forge:android` | Package a deployed web app as a verified, signed Android TWA with a store pack | 12 |
 | `/forge:backlog` | Work an employer's or client's tracker backlog on GitLab or GitHub: one item, one branch, one merge request, their pipeline green, review handoff — never merges its own work | 25 |
+| `/forge:review` | Review a merge request or pull request in the repository's own format and validate it before anyone merges; `SAFE_TO_MERGE \| NEEDS_CHANGES \| CANNOT_VERIFY` with the evidence in a Google Doc with images; posts only on your word, never approves or merges | N/A |
 | `/forge:debug` | Hunt bugs via hypothesis iteration | 15 |
 | `/forge:investigate` | Investigate reported issues and research explanations with captured evidence, explicit uncertainty and plain-language reports; `--audit <run>` reviews an existing case | 12 |
 | `/forge:fix` | Remediate defects to zero, root-cause first | 20 |
@@ -230,6 +236,8 @@ they are workflows, not a standalone `forge` shell executable.
 | Clear a backlog of bugs and unfinished work in a company's GitLab or GitHub repo | `/forge:backlog` |
 | See what a backlog run would pick up, without changing anything | `/forge:backlog --dry-run` |
 | Work one ticket in someone else's repo and hand it to their reviewers | `/forge:backlog Item: <id>` |
+| Review a merge request and prove it is safe to merge, with a Google Doc of evidence | `/forge:review <number>` |
+| Review everything waiting on you, posting nothing | `/forge:review --mine --no-post` |
 | Give a plain-language goal, let it self-orchestrate | `/forge <goal>` (bare, no Metric/Verify) |
 | Improve test coverage / reduce bundle size / any metric | `/forge` |
 | Run bounded iterations | Add `Iterations: N` to any command |
@@ -762,7 +770,7 @@ cp -r autoforge/.opencode/skills/forge ~/.config/opencode/skills/forge
 cp autoforge/.opencode/commands/forge*.md ~/.config/opencode/commands/
 ```
 
-> All 24 commands available as `/forge_debug`, `/forge_fix`, `/forge_improve`, etc.
+> All 25 commands available as `/forge_debug`, `/forge_fix`, `/forge_improve`, etc.
 
 ### Codex Quick Start
 
@@ -787,7 +795,7 @@ $forge security --diff --fail-on high
 $forge build Spec: ./spec.yaml
 ```
 
-All 24 workflows use `$forge` followed by a subcommand. The plugin loads the selected command
+All 25 workflows use `$forge` followed by a subcommand. The plugin loads the selected command
 and its bundled references and verification scripts. Results are written into the target
 repository's `forge/` directory. The package includes skills and scripts; the nine Claude Code
 hooks are specific to Claude Code.
@@ -845,7 +853,7 @@ The local destination is `.cursor/skills/forge/` in the target project. Reload C
 /forge security --diff --fail-on high
 ```
 
-All 24 workflows use `/forge <subcommand> [flags]`; `/forge` is the single skill entry.
+All 25 workflows use `/forge <subcommand> [flags]`; `/forge` is the single skill entry.
 Git, Node.js and Bash remain required for workflow checks. Claude Code hooks are not installed
 in Cursor. Update by pulling the AutoForge checkout, rerunning the same installer and reloading
 Cursor. See [Cursor's skill documentation](https://cursor.com/docs/skills) and
@@ -1158,6 +1166,55 @@ ANDROID_VERDICT: STORE_READY
 and `verdict`; eleven required gates, each `pass` only with an evidence file that exists, decide
 `STORE_READY | BLOCKED`. Secrets never leave the machine in the clear (`gh secret set` from files);
 tags, Play uploads and track promotions stay human-gated. Contract: `references/android-protocol.md`.
+
+---
+
+## /forge:review — Is This Merge Request Safe to Merge?
+
+The **reviewer** of the pipeline. Point it at a merge request (GitLab) or pull request (GitHub) —
+a colleague's, a client's, your own — and it answers one question with evidence: **is this change
+safe to merge?** It reviews in the repository's own voice and proves its verdict by running the
+change, then puts the proof in a Google Doc with images.
+
+```
+/forge:review 231                                  # one merge request, by number or URL
+/forge:review --mine                               # the merge requests waiting for your review
+/forge:review 231 --no-post                        # everything, but post nothing
+/forge:review --resume forge/review-261006-0930-231  # again, after the author pushed fixes
+```
+
+**How it works:** learn how this repository reviews (the review comments on its last merged merge
+requests, its templates, CODEOWNERS, approval rules) → read the change and its issue → pre-screen
+the diff before running anything (the change's code is untrusted until read; it runs in checkouts
+outside your repository, with an allow-listed environment, and a run that rewrites the evidence is
+marked `TAMPERED`) → seven gates, each with receipts → findings written in *their* format → an
+independent challenge pass → a verdict from the seam → the evidence document (into a private folder
+you approved) → show you, and post only on your word, only scrubbed text.
+
+| Gate | Passes when |
+|---|---|
+| `pipeline` | their pipeline is green **for the reviewed head** |
+| `regression` | no test went green→red against the merge base (the `regression` protocol) |
+| `tests-detect` | the change's own tests fail on the base code and pass on the head |
+| `coverage` | the changed lines the tests actually run reach the threshold |
+| `app` | the same screens, before and after, show the intended change and nothing else broken |
+| `security` | no secret, no risky new dependency, nothing from the security checklist |
+| `mergeable` | open, no conflict, no rebase needed, the reviewed head |
+
+```
+CHANGED_COVERAGE: 87.5% covered=14 uncovered=2
+VERDICT: NEEDS_CHANGES
+  - F2 blocking: issue (blocking)
+```
+
+The verdict is `SAFE_TO_MERGE` only when every gate that applies passed and nothing blocking is open;
+missing evidence is `CANNOT_VERIFY`, never a pass, and only you can waive a missing gate. The
+evidence document carries the pipeline's jobs, every check's output, each finding on its code,
+changed-line coverage drawn over the diff, and the app before and after — exported to HTML, PDF and
+DOCX and created as a Google Doc in the folder you approved for that repository (a company's own
+Workspace for company code). It **never approves, never submits a request-changes review, and never
+merges**; approval and the merge stay people's clicks. Seams: `scripts/review.cjs`,
+`scripts/review-report.cjs`, `scripts/gdoc.cjs`, `host.cjs reviews`. [Review guide](guide/forge-review.md).
 
 ---
 
@@ -1947,7 +2004,7 @@ autoforge/
 │   │                                                security, personas, orchestrator routing, ux + hardening
 │   └── commands/
 │       ├── forge.md                        ← core loop (self-contained)
-│       └── forge/                          ← 23 subcommand files (24 commands total)
+│       └── forge/                          ← 24 subcommand files (25 commands total)
 ├── .claude-plugin/marketplace.json                ← marketplace manifest (marketplace name: autoforge)
 ├── claude-plugin/                                 ← Claude Code plugin package (skills + commands + hooks)
 ├── .opencode/                                     ← OpenCode port (via transform.sh)
@@ -1999,13 +2056,13 @@ A: Point it at any `*-results.tsv` file from a previous run. It reports trends, 
 A: Yes. Any language, framework, or domain. Install via plugin (Claude Code), installer script, or manual copy.
 
 **Q: Does this work with OpenCode?**
-A: Yes. Run `./scripts/install.sh --opencode --global` or manually copy `.opencode/` files. Commands use underscore naming (`/forge_debug`, `/forge_evals`, etc.). All 24 commands available.
+A: Yes. Run `./scripts/install.sh --opencode --global` or manually copy `.opencode/` files. Commands use underscore naming (`/forge_debug`, `/forge_evals`, etc.). All 25 commands available.
 
 **Q: Does this work with OpenAI Codex?**
 A: Yes. Run `codex plugin marketplace add Jss-on/autoforge`, then `codex plugin add forge@forge-local`. Start a new thread and invoke `$forge plan`, `$forge build`, or any other subcommand. See [Codex Quick Start](#codex-quick-start) for updates, Windows setup and the manual skill fallback.
 
 **Q: Does this work with Cursor?**
-A: Yes. From the authenticated clone, run `bash scripts/install.sh --cursor --global`, reload Cursor, and invoke `/forge plan` or another subcommand in Agent chat. All 24 workflows are included. See [Cursor Quick Start](#cursor-quick-start) for project-local installation and prerequisites.
+A: Yes. From the authenticated clone, run `bash scripts/install.sh --cursor --global`, reload Cursor, and invoke `/forge plan` or another subcommand in Agent chat. All 25 workflows are included. See [Cursor Quick Start](#cursor-quick-start) for project-local installation and prerequisites.
 
 **Q: How do I stop the loop?**
 A: `Ctrl+C` or add `Iterations: N` to your inline config. Claude commits before verifying, so your last successful state is always in git.

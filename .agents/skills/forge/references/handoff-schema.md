@@ -12,7 +12,7 @@ not finished until its handoff validates.
 | Field | Type | Rule |
 |---|---|---|
 | `version` | string | Numeric three-part schema version. Write `"3.3.0"`. Validator accepts `2.1.0`+ (legacy runs readable) but warns below `2.3.1`. |
-| `source` | string | The emitting subcommand, canonical short name: `build`, `feature`, `migrate`, `requirements`, `regression`, `fix`, `test`, `design`, `research`, `android`, `backlog`, `debug`, `investigate`, `security`, `ship`, `plan`, `scenario`, `predict`, `learn`, `reason`, `probe`, `improve`, `evals`, `forge`. `loop` is accepted as the existing core-loop alias. Unknown sources and colon forms are invalid. |
+| `source` | string | The emitting subcommand, canonical short name: `build`, `feature`, `migrate`, `requirements`, `regression`, `fix`, `test`, `design`, `research`, `android`, `backlog`, `review`, `debug`, `investigate`, `security`, `ship`, `plan`, `scenario`, `predict`, `learn`, `reason`, `probe`, `improve`, `evals`, `forge`. `loop` is accepted as the existing core-loop alias. Unknown sources and colon forms are invalid. |
 | `status` | enum | `COMPLETE` \| `CONVERGED` \| `BOUNDED` \| `PLATEAU` \| `BLOCKED` \| `USER_INTERRUPT` \| `ERROR`; `ship` additionally permits `DRY_RUN` and `ROLLBACK`. |
 | `timestamp` | string | A valid calendar date and time in ISO-8601 with `Z` or an explicit offset; relative dates and placeholder strings are invalid. |
 
@@ -31,6 +31,7 @@ not finished until its handoff validates.
 | `investigate` | `case_file` (path to `case.json`), `report` (path to `report.md`), `conclusion` (`demonstrated` \| `supported` \| `unresolved`) and `structure_verdict` (`STRUCTURE_VALID` \| `STRUCTURE_INVALID`). COMPLETE requires STRUCTURE_VALID and means the report is ready; its conclusion may remain unresolved. BLOCKED/ERROR may carry STRUCTURE_INVALID. Work status never proves a root cause. The handoff validates these fields only; consumers must inspect the case and rerun its evidence check. Structural validity does not establish factual truth. |
 | `android` | `verdict` (`STORE_READY` \| `BLOCKED`) **and** `results_tsv` (`android-results.tsv`). SHOULD also carry `package_id`, `host`, `artifacts` (apk/aab paths or release-asset URLs), `repo`, `pr`, `workflow_run` (device-gate run URL), and `native_needs` (the native-only list) when blocked. |
 | `backlog` | `results_tsv` (the `backlog.tsv` ledger — schema in `host-protocol.md` §5). SHOULD also carry `remaining` (number of items still to start or rework), `host`, `role`, and `findings` (blocked items with the question each waits on). COMPLETE means nothing is left to start, never that anything merged. |
+| `review` | `verdict` (`SAFE_TO_MERGE` \| `NEEDS_CHANGES` \| `CANNOT_VERIFY`, as printed by `review.cjs verdict`) **and** `report` (`report.html`). SHOULD also carry `review_file` (`review.json`), `document` (the Google Doc URL or null), `host`, `role`, and `findings` (open blocking findings). A verdict is never a merge: approval and the merge itself remain people's steps. |
 | `security` | Current 3.x+ writers require the typed `security` record below. COMPLETE describes report completion, not a passing security disposition. |
 | `ship` | Current 3.x+ writers require the typed `ship` record below; COMPLETE/ROLLBACK require bound execution and passing readiness/verification. |
 

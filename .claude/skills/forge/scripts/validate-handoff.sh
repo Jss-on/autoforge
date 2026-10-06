@@ -278,7 +278,7 @@ fi
 
 # The core loop currently emits "loop"; retain it as the documented forge alias.
 case "$SOURCE" in
-  ""|forge|loop|build|feature|migrate|requirements|regression|fix|test|design|research|android|backlog|debug|investigate|security|ship|plan|scenario|predict|learn|reason|probe|improve|evals) ;;
+  ""|forge|loop|build|feature|migrate|requirements|regression|fix|test|design|research|android|backlog|review|debug|investigate|security|ship|plan|scenario|predict|learn|reason|probe|improve|evals) ;;
   *) err "source not in enum: $SOURCE" ;;
 esac
 
@@ -367,6 +367,22 @@ case "$SOURCE" in
     ;;
   backlog)
     has_field results_tsv || err "missing: results_tsv (backlog.tsv — required for backlog)"
+    ;;
+  review)
+    case "$VERDICT" in
+      SAFE_TO_MERGE|NEEDS_CHANGES|CANNOT_VERIFY) ;;
+      "") err "missing: verdict (SAFE_TO_MERGE|NEEDS_CHANGES|CANNOT_VERIFY) — required for review" ;;
+      *)  err "verdict not in enum for review: $VERDICT (SAFE_TO_MERGE|NEEDS_CHANGES|CANNOT_VERIFY)" ;;
+    esac
+    has_field report || err "missing: report (report.html — required for review)"
+    # The verdict is recomputed from the run's ledger and evidence, never taken from the handoff.
+    REVIEW_RUN="$(dirname "$FILE")"
+    if [[ -f "$REVIEW_RUN/review.json" ]]; then
+      ACTUAL="$(node "$SCRIPT_DIR/review.cjs" verdict "$REVIEW_RUN" 2>/dev/null | head -n 1 | sed 's/^VERDICT: //')"
+      [[ "$ACTUAL" == "$VERDICT" ]] || err "verdict $VERDICT is not what review.cjs verdict says for this run (${ACTUAL:-unreadable})"
+    else
+      err "missing: review.json beside the handoff (the review verdict is recomputed from it)"
+    fi
     ;;
 esac
 

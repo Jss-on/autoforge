@@ -8,7 +8,7 @@ version: 3.6.0
 
 ## Safety Invariants (all subcommands)
 - Never deploy to production, publish packages/publicly, or change repo visibility without explicit user approval. `build`/`feature` push to the project's **own private output repo** as part of the standard loop (that is how its CI runs); everything beyond that repo is human-gated.
-- Every subcommand runs `node scripts/host.cjs detect` before its first write, commit or host call. In a repository the user does not own (**contributor role** — an employer's, a client's or a community's; doubt means contributor) `references/host-protocol.md` §3 overrides every sentence of the command file: never merge, never commit on or push to a default or protected branch, never change its CI, settings, secrets or tracker, never copy its code or tracker content off its host, and keep forge run artifacts out of its history.
+- Every subcommand runs `node scripts/host.cjs detect` before its first write, commit or host call. In a repository the user does not own (**contributor role** — an employer's, a client's or a community's; doubt means contributor) `references/host-protocol.md` §3 overrides every sentence of the command file: never merge, never commit on or push to a default or protected branch, never change its CI, settings, secrets or tracker, never copy its code or tracker content off its host (the one exception: an evidence document the user asked for, into the private folder they approved for that repository), and keep forge run artifacts out of its history.
 - **A model is never an author.** Commits, tags, pull/merge requests, release notes, issues and comments go out under the git identity the clone already has and nothing else: never set `user.name`, `user.email` or `--author` (a clone with no identity is a question for the user), no `Co-Authored-By` (or any other) trailer naming Claude, Fable, Opus or any other model, assistant or agent, no "Generated with …" footer, no session link — in either role, whatever the harness default says. A disclosure of AI use is written only when the user dictates it, in their words. Under Claude Code the `dangerous-cmd-block` hook refuses authorship credit mechanically.
 - Bounded by default. Override with `Iterations: unlimited`.
 - All results logged to `forge/{subcommand}-{YYMMDD}-{HHMM}/` directory.
@@ -64,6 +64,7 @@ Print a banner on every invocation: `[forge] mode: classic | orchestrator | wiza
 | `/forge:research` | Deep research engagement: decompose questions → multi-modal scholarly + web sweep → deep reading of primary literature → source-anchored claims ledger with graded confidence → cited dossier gated by `DOSSIER_READY|DOSSIER_BLOCKED` verdict | 15 |
 | `/forge:android` | Web app → Android app (Trusted Web Activity): native-needs gate → PWA-ify the deployed app → Digital Asset Links trust → Bubblewrap-signed AAB/APK → live trust + real-emulator gate in CI → release workflow + store pack; `STORE_READY|BLOCKED` verdict, native-only needs reported honestly | 12 |
 | `/forge:backlog` | Work a tracker backlog on a repository you contribute to (GitLab or GitHub — an employer's or client's): intake → triage → one item, one branch, one merge request → their pipeline green → review handoff; ledger checked against the host, never merges its own work | 25 |
+| `/forge:review` | Review a merge request or pull request the way the repository's own reviewers do and validate it before anyone merges: their pipeline on the current head, baseline-vs-head regression, the new tests failing on the target, changed-line coverage, the app before and after, security; `SAFE_TO_MERGE|NEEDS_CHANGES|CANNOT_VERIFY` from evidence only; evidence as a Google Doc with images; posts comments only on your word, never approves or merges | N/A |
 
 ## Universal Flags
 
@@ -80,7 +81,7 @@ Print a banner on every invocation: `[forge] mode: classic | orchestrator | wiza
 | `--classic` | Bare `/forge` | Force Classic metric-loop mode |
 | `--auto` | Bare `/forge` | Force Orchestrator mode |
 | `Tracker: github\|linear` | `build`, `feature`, `test`, `design`, `fix` | Tracker of record for projects/phases/defects (default `github` = the repo host's own issues, GitLab's on a GitLab remote; `linear` arms tracker sync) |
-| `Host: github\|gitlab` | `build`, `feature`, `migrate`, `fix`, `test`, `design`, `ship`, `backlog` (`android` is GitHub-only) | Git host (default: detected from the remote by `scripts/host.cjs detect`). The GitHub-worded contracts translate to `glab` / merge requests / pipelines per `references/host-protocol.md` |
+| `Host: github\|gitlab` | `build`, `feature`, `migrate`, `fix`, `test`, `design`, `ship`, `backlog`, `review` (`android` is GitHub-only) | Git host (default: detected from the remote by `scripts/host.cjs detect`). The GitHub-worded contracts translate to `glab` / merge requests / pipelines per `references/host-protocol.md` |
 | `Role: owner\|contributor` | every command that writes, commits or calls the host | Whose repository this is (default: detected — `owner` only for a non-fork repo in your own namespace; a Maintainer permission on someone else's project is not ownership). `contributor`: their conventions, no merge, nothing leaves their host. The user can pin it per clone with `git config forge.role owner` |
 | `Assets: N\|off` | `build`, `feature`, `design`, `requirements` | Generation-attempt budget (default 12 with suitable native/MCP tools; off preserves reuse, icons, motion and checks) |
 | `Ponytail: lite\|full\|ultra\|off` | `build` | Lazy-senior-dev discipline level — ladder (skip → reuse → stdlib → native → installed dep → one line → minimum), shortest working diff, `ponytail:` debt harvest (default `ultra`) |
@@ -111,7 +112,7 @@ Activated when a plain-language goal is given without `Metric:`/`Verify:`. Class
 
 **Two modes based on archetype:**
 - **Orchestration loop** — predicate-bearing archetypes (ship-ready, optimize-metric, fix-broken, harden, build-feature, explore, polish-ui). Goal has a mechanical Success predicate; the loop runs until that predicate is met (polish-ui: `score-design.sh verdict` → `SHIP`).
-- **Single-pass dispatch** — subjective or internally bounded archetypes (document, what-to-build, decide-design, package-android, clear-backlog, migrate-platform). Routes once to the fitting subcommand (learn / improve / reason / android / backlog / migrate), lets it self-terminate, then reports. No outer loop, no Plateau, no ship gate.
+- **Single-pass dispatch** — subjective or internally bounded archetypes (document, what-to-build, decide-design, package-android, clear-backlog, migrate-platform, review-change). Routes once to the fitting subcommand (learn / improve / reason / android / backlog / migrate / review), lets it self-terminate, then reports. No outer loop, no Plateau, no ship gate.
 
 ### Orchestration Loop Steps
 

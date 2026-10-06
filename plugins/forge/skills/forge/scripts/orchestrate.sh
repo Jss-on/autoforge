@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # orchestrate.sh — deterministic seam for the forge orchestrator loop.
 #
-#   classify   <goal-string>   → Goal archetype label (keyword heuristics; 13 archetypes)
+#   classify   <goal-string>   → Goal archetype label (keyword heuristics; 14 archetypes)
 #   next-hop   <state.json>    → Next subcommand from router decision table
 #   units      <results.json>  → Units-remaining scalar (lower_is_better)
 #   plateau    <history.txt>   → Exit 0 if last N computed values are flat-or-worse
@@ -12,7 +12,7 @@
 set -uo pipefail
 
 # ---------------------------------------------------------------------------
-# classify: map a goal string to one of the 13 Goal archetype labels.
+# classify: map a goal string to one of the 14 Goal archetype labels.
 # Priority order matters: higher-stakes archetypes checked first so that
 # "fix and add the broken feature" → fix-broken, not build-feature.
 # ---------------------------------------------------------------------------
@@ -41,6 +41,14 @@ classify() {
   # Bare "issues"/"tickets" are NOT enough: "fix the issues" is fix-broken, "build a ticket app" is a build.
   if printf '%s' "$g" | grep -qE '(backlog|assigned to me|my (open )?(issues|tickets)|(gitlab|github|jira) (issues|tickets))'; then
     echo "clear-backlog"; return 0
+  fi
+
+  # Reviewing someone's merge request — after harden ("security review of the PR" is an audit) and
+  # backlog, before ship/fix: "review MR !231", "code review", "review the pull requests waiting on
+  # me" belong to the review command, which validates and reports and never merges (single-pass).
+  # "review comments on my MR" (answering a review) is not this: "review" must name the request.
+  if printf '%s' "$g" | grep -qE '(code review|review (the |this |that |my |our |their |a |an |open |pending )?(mrs?|merge requests?|prs?|pull requests?)([^[:alnum:]_]|$)|review [!#]?[0-9]+)'; then
+    echo "review-change"; return 0
   fi
 
   # Language/framework replacement owns a differential acceptance loop. Require
@@ -512,7 +520,7 @@ validate-state() {
       for (const f of ["goal", "archetype", "predicate", "terminal_choice"])
         if (typeof j[f] !== "string" || !j[f].trim()) process.exit(2);
       if (!["ship-ready", "optimize-metric", "fix-broken", "harden", "build-feature", "explore",
-            "polish-ui", "document", "what-to-build", "decide-design", "package-android", "clear-backlog", "migrate-platform"].includes(j.archetype))
+            "polish-ui", "document", "what-to-build", "decide-design", "package-android", "clear-backlog", "migrate-platform", "review-change"].includes(j.archetype))
         process.exit(2);
       // "stop" is the existing short form in persisted state fixtures.
       if (!["stop-at-verified", "proceed-to-ship", "stop"].includes(j.terminal_choice)) process.exit(2);
