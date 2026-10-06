@@ -361,7 +361,7 @@ for mf in "$REPO_ROOT/.claude-plugin/marketplace.json" \
           "$REPO_ROOT/claude-plugin/.claude-plugin/plugin.json" \
           "$REPO_ROOT/plugins/forge/.codex-plugin/plugin.json"; do
   name="${mf#$REPO_ROOT/}"
-  grep -q "24 commands" "$mf" && pass "manifest count 24: $name" || fail "manifest count 24: $name"
+  grep -q "25 commands" "$mf" && pass "manifest count 25: $name" || fail "manifest count 25: $name"
   grep -q "android, backlog" "$mf" && pass "manifest lists backlog: $name" || fail "manifest lists backlog: $name"
 done
 grep -q '/forge:backlog' "$REPO_ROOT/.claude/skills/forge/SKILL.md" \

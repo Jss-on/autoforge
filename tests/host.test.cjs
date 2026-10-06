@@ -331,6 +331,34 @@ test('a host outage or a junk number blocks instead of guessing', () => {
   for (const junk of ['abc', '0', '7; rm -rf /', '']) assert.throws(() => host.mr(gitlab, junk, () => no), /number required/);
   assert.throws(() => host.mr({ host: 'unknown' }, 7, () => no), /GitHub or GitLab/);
 });
+test('reviews: GitLab keeps what reviewers wrote, not system notes or the author\'s own replies', () => {
+  const m = machine({ api: {
+    'merge_requests/7/discussions': [{ notes: [{ system: true, body: 'added 1 commit', author: { username: 'bot' } },
+      { body: 'nit: name this total', author: { username: 'ana' }, resolvable: true, position: { new_path: 'src/a.ts', new_line: 12 } }, { body: 'done', author: { username: 'bob' } }] }],
+    'merge_requests/8/discussions': [{ notes: [{ body: 'x'.repeat(3000), author: { username: 'cy' } }] }],
+    'merge_requests?state=merged': [{ iid: 7, author: { username: 'bob' } }, { iid: 8, author: { username: 'dee' } }] } });
+  const r = host.reviews(gitlab, 2, m.run);
+  assert.deepEqual(r.comments[0], { mr: 7, by: 'ana', bot: false, file: 'src/a.ts', line: 12, thread: true, body: 'nit: name this total' });
+  const names = ['rob', 'abbot', 'robot', 'botanist', 'talbot', 'project_42_bot_7f3a', 'group_9_bot', 'renovate-bot', 'ci-bot-2'];
+  const roster = machine({ api: { 'merge_requests/1/discussions': [{ notes: names.map(n => ({ body: 'x', author: { username: n } })) }], 'merge_requests?state=merged': [{ iid: 1, author: { username: 'author' } }] } });
+  assert.deepEqual(host.reviews(gitlab, 1, roster.run).comments.map(c => c.bot), [false, false, false, false, false, true, true, true, true], 'GitLab bot users by name; people whose names contain "bot" are people');
+  assert.deepEqual([r.comments.length, r.comments[1].by, r.comments[1].body.length], [2, 'cy', 2000], 'one note per reviewer comment, long bodies cut');
+  assert.ok(m.calls.some(c => c.includes('state=merged') && c.includes('per_page=2')), 'samples the newest merged merge requests');
+});
+test('reviews: GitHub reads inline comments and review summaries, skipping the author', () => {
+  const m = machine({ api: { pr: [{ number: 9, author: { login: 'bob' } }],
+    'pulls/9/comments': [{ user: { login: 'ana' }, path: 'app.py', line: 3, body: 'suggestion: use a set' }, { user: { login: 'bob' }, path: 'app.py', line: 3, body: 'ok' }],
+    'pulls/9/reviews': [{ user: { login: 'ana' }, state: 'APPROVED', body: 'Fine once the set lands' }, { user: { login: 'cy' }, state: 'COMMENTED', body: '' },
+      { user: { login: 'copilot-pull-request-reviewer[bot]', type: 'Bot' }, state: 'COMMENTED', body: '## Review overview' }],
+    'issues/9/comments': [{ user: { login: 'dee' }, body: 'Could we keep the old flag for one release?' }, { user: { login: 'bob' }, body: 'sure' }] } });
+  const r = host.reviews(github, 5, m.run);
+  assert.deepEqual(r.comments.map(c => [c.by, c.bot, c.file, c.state ?? null, c.body]), [['ana', false, 'app.py', null, 'suggestion: use a set'],
+    ['ana', false, null, 'APPROVED', 'Fine once the set lands'], ['copilot-pull-request-reviewer[bot]', true, null, 'COMMENTED', '## Review overview'],
+    ['dee', false, null, null, 'Could we keep the old flag for one release?']], 'bots are kept but marked; conversation comments count, the author\'s do not');
+  assert.ok(m.calls[0].startsWith('gh pr list -R github.com/acme/app --state merged --limit 5'));
+  for (const bad of [0, 51, 2.5]) assert.throws(() => host.reviews(github, bad, m.run), /Sample 1 to 50/);
+  assert.throws(() => host.reviews({ host: 'unknown' }, 5, m.run), /GitHub or GitLab/);
+});
 test('a fork reads issues and merge requests from its upstream project', () => {
   const fork = { ...gitlab, project: 'jdoe/api', upstream: 'acme/api' };
   const m = machine({ api: { '/issues?': [issue(8, ['bug'])], 'merge_requests/7/discussions': [], 'merge_requests/7': merge() } });

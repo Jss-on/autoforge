@@ -2,12 +2,18 @@
 const fs = require('node:fs'), path = require('node:path'), { pathToFileURL } = require('node:url');
 const a = require('./acceptance.cjs'), v = require('./verification.cjs');
 const inside = (root, file) => { const rel = path.relative(root, file); return !path.isAbsolute(rel) && rel !== '..' && !rel.startsWith('..' + path.sep); };
+// Headless Chrome on a machine nobody sits at, as Puppeteer and Playwright launch it: a mock keychain
+// and basic password store (a fresh profile never waits on the OS keychain), and no background
+// throttling of a window no one can see.
+const CHROME_ARGS = ['--headless', '--no-first-run', '--no-default-browser-check', '--disable-background-networking', '--disable-component-update', '--disable-sync', '--disable-extensions',
+  '--use-mock-keychain', '--password-store=basic', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'];
 
 function executable(format) {
   const override = process.env[format === 'pdf' ? 'FORGE_CHROME' : 'FORGE_PANDOC'];
   const names = format === 'pdf' ? ['google-chrome', 'chrome', 'msedge', 'chromium', 'chromium-browser'] : ['pandoc'];
   const configured = format === 'pdf' && process.env.CHROME_BIN ? [process.env.CHROME_BIN] : [];
-  const candidates = override ? [override] : [...configured, ...(process.env.PATH || '').split(path.delimiter).flatMap(dir => names.map(name => path.join(dir, name + (process.platform === 'win32' ? '.exe' : ''))))];
+  // Relative PATH entries (".") would resolve against the working directory — someone else's checkout.
+  const candidates = override ? [override] : [...configured, ...(process.env.PATH || '').split(path.delimiter).filter(dir => dir && path.isAbsolute(dir)).flatMap(dir => names.map(name => path.join(dir, name + (process.platform === 'win32' ? '.exe' : ''))))];
   if (!override && process.platform === 'win32') {
     for (const base of [process.env.ProgramFiles, process.env['ProgramFiles(x86)'], process.env.LOCALAPPDATA].filter(Boolean))
       for (const suffix of format === 'pdf' ? ['Google/Chrome/Application/chrome.exe', 'Microsoft/Edge/Application/msedge.exe'] : ['Pandoc/pandoc.exe']) candidates.push(path.join(base, suffix));
@@ -34,9 +40,16 @@ const images = html => [...html.matchAll(/\bsrc="data:image\/[a-z0-9.+-]+;base64
 
 async function exportReport(format, runDirectory, output = 'report.' + format) {
   a.need(['pdf', 'docx'].includes(format), 'Use pdf or docx');
-  const root = fs.realpathSync(runDirectory), destination = outputFile(root, output, format);
+  const root = fs.realpathSync(runDirectory);
+  outputFile(root, output, format);
   // Always render the checked case again; an existing HTML file may have been edited.
-  const source = require('./investigate-report.cjs').render(root, { interactive: false });
+  return convert(format, root, output, require('./investigate-report.cjs').render(root, { interactive: false }));
+}
+
+// Convert checked report HTML (images embedded as data URIs) into a PDF or DOCX inside the run.
+async function convert(format, runDirectory, output, source) {
+  a.need(['pdf', 'docx'].includes(format) && typeof source === 'string', 'Use pdf or docx with rendered HTML');
+  const root = fs.realpathSync(runDirectory), destination = outputFile(root, output, format);
   const tool = executable(format);
   const unavailable = reason => ({ verdict: 'EXPORT_UNAVAILABLE', format, reason, fallback: 'Use the local editable HTML report. No software was installed and nothing was uploaded.' });
   if (!tool) return unavailable(format === 'pdf' ? 'Chrome/Edge/Chromium was not found. FORGE_CHROME may name an installed executable.' : 'Pandoc was not found. FORGE_PANDOC may name an installed executable.');
@@ -49,7 +62,7 @@ async function exportReport(format, runDirectory, output = 'report.' + format) {
   try {
     const input = path.join(temporary, 'source.html'), converted = path.join(temporary, 'converted.' + format);
     fs.writeFileSync(input, source, { flag: 'wx' });
-    const argv = format === 'pdf' ? [tool, '--headless', '--no-first-run', '--no-default-browser-check', '--disable-background-networking', '--disable-component-update', '--disable-sync', '--disable-extensions', '--user-data-dir=' + path.join(temporary, 'profile'), '--no-pdf-header-footer', '--print-to-pdf=' + converted, pathToFileURL(input).href] : [tool, '--from=html', '--to=docx', '--standalone', '--data-dir=' + temporary, '--output=' + converted, input];
+    const argv = format === 'pdf' ? [tool, ...CHROME_ARGS, '--user-data-dir=' + path.join(temporary, 'profile'), '--no-pdf-header-footer', '--print-to-pdf=' + converted, pathToFileURL(input).href] : [tool, '--from=html', '--to=docx', '--standalone', '--data-dir=' + temporary, '--output=' + converted, input];
     const execution = await v.run(argv, { cwd: temporary, env: process.env, timeout_ms: 60000, output_limit: 1024 * 1024 });
     if (execution.error || execution.signal || execution.exit_code !== 0) {
       const hidden = Object.entries(process.env).filter(([key, value]) => value && /(?:^|_)(?:TOKEN|PASSWORD|PASSWD|SECRET|API_KEY|PRIVATE_KEY|CREDENTIALS|AUTHORIZATION|ACCESS_KEY|COOKIE|KEY)(?:_|$)/i.test(key)).map(([, value]) => value);
@@ -83,7 +96,7 @@ async function exportReport(format, runDirectory, output = 'report.' + format) {
   }
 }
 
-module.exports = { exportReport, executable };
+module.exports = { exportReport, convert, executable, CHROME_ARGS };
 if (require.main === module) (async () => {
   const [format, ...args] = process.argv.slice(2);
   a.need(['pdf', 'docx'].includes(format) && args.length >= 1 && args.length <= 2, 'pdf|docx <run-dir> [output-relative.pdf|docx]');

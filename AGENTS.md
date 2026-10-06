@@ -23,7 +23,7 @@ AutoForge is the product; `forge` is the engine and plugin it ships — all comm
 /plugin install forge@autoforge
 ```
 
-Restart session after install. All 24 commands become available as `/forge` and `/forge:<subcommand>`. Update later with `/plugin marketplace update autoforge`.
+Restart session after install. All 25 commands become available as `/forge` and `/forge:<subcommand>`. Update later with `/plugin marketplace update autoforge`.
 
 ### Codex (plugin)
 
@@ -50,7 +50,7 @@ bash scripts/install.sh --cursor --global
 This installs `~/.cursor/skills/forge/`. For project-local installation, run
 `bash /path/to/autoforge/scripts/install.sh --cursor --local` from the target project's root;
 it writes `.cursor/skills/forge/` there. Reload/reopen Cursor and start an Agent chat with
-`/forge <subcommand> [flags]`, for example `/forge design`. All 24 workflows are included.
+`/forge <subcommand> [flags]`, for example `/forge design`. All 25 workflows are included.
 Git, Node.js and Bash are required; Claude Code hooks are not installed. See
 [Cursor skills](https://cursor.com/docs/skills).
 
@@ -99,6 +99,7 @@ cp -r autoforge/.agents/skills/forge ~/.agents/skills/forge
 | `forge:test` | Full QA engagement on existing software — risk-based plan, RTM, formal test design, execution + defect ledger, exit-criteria verdict (ISO 29119/ISTQB-aligned) |
 | `forge:design` | UI/UX designer + design QA — direction protocol → machine-readable `DESIGN.md`; independent design audit (anti-slop floor `SLOP_GATE`, heuristic critique, personas, defect ledger, `SHIP|FIX|REBUILD` verdict); bounded `--fix` remediation |
 | `forge:backlog` | Work an employer's or client's tracker backlog on GitLab or GitHub — one item, one branch, one merge request, their pipeline green, review handoff; never merges its own work |
+| `forge:review` | Review a merge request or pull request in the repository's own format and validate it before anyone merges — `SAFE_TO_MERGE \| NEEDS_CHANGES \| CANNOT_VERIFY` from evidence, a Google Doc with images; posts only on your word, never approves or merges |
 
 ---
 
@@ -184,6 +185,19 @@ Detects the host and whose repository it is, reads the repository's own conventi
 issues assigned to you one at a time: one branch, one merge request, their pipeline green, handed to
 their reviewers. It never merges, never edits their CI or tracker, and keeps its run directory out of
 their history. GitLab needs `glab auth login --hostname <host>` once.
+
+### Review a merge request
+
+```
+forge:review 231
+forge:review --mine --no-post
+```
+
+Learns how the repository's reviewers write, screens the diff before running anything, then validates the
+change through seven gates (pipeline on the head, regression, tests that fail on the target, changed-line
+coverage, app before/after, security, mergeable). The verdict comes from evidence only; the proof goes into
+a Google Doc with images in the folder you approved. Comments are posted only on your word; it never
+approves or merges.
 
 ### Security audit
 

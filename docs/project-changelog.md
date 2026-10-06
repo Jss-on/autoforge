@@ -2,6 +2,70 @@
 
 All notable changes to the forge project are documented here.
 
+## Unreleased — /forge:review: is this merge request safe to merge? (2026-10-06)
+
+**Theme:** forge could write a merge request (`backlog`) but not review one. Code review in a
+company's repository has to sound like their reviewers, has to prove what it claims, and must never
+take the merge decision away from people.
+
+**Added:**
+
+- `/forge:review` (`commands/forge/review.md`) — the 25th command. Learns the repository's review
+  practice from the review comments on its last merged merge requests (`host.cjs reviews`), its
+  templates, CODEOWNERS and approval rules, and its severity scale (which labels block); pre-screens
+  the diff before running anything (the change's code is untrusted until read, and risky changes
+  wait for the user's OK); reviews base and head in worktrees outside the run and the repository,
+  never the user's checkout; validates through seven gates — `pipeline` (green for the reviewed
+  head), `regression` (the `regression` protocol, no green→red against the merge base), `tests-detect`
+  (the change's tests fail on the base code on an assertion and pass on the head), `coverage`
+  (changed-line coverage), `app` (before/after screenshots), `security`, `mergeable`; writes findings
+  in their format; challenges them with an independent pass of the same assistant; and ends on
+  `SAFE_TO_MERGE | NEEDS_CHANGES | CANNOT_VERIFY`. Posts only on the user's yes and only scrubbed
+  text (GitLab diff discussions plus a summary note, GitHub a `COMMENT` review pinned to the head),
+  re-checks the head first, and never approves, submits a request-changes review or merges.
+  `--mine`, `--no-post`, `--resume` for re-review after new commits.
+- `scripts/review.cjs` — `workspace` (review checkouts outside the run and the repository); `lines`
+  (changed lines of a unified diff: hunk counts, git-quoted paths, CRLF, deletions); `prescreen`
+  (what to read before running the change: CI, dependencies and install scripts, package-manager and
+  submodule configuration, git hooks, build and test configuration, links, executables, binaries,
+  tests and scripts that reach the environment or network); `coverage` (changed-line coverage from
+  lcov, Cobertura, coverage.py JSON, Istanbul JSON or a Go profile — absolute paths and Go import
+  paths matched by suffix, relative ones resolved under `--root` exactly, ambiguity refused, changed
+  files absent from the report counted as not run); `scrub` (no quick actions, merge-bot commands,
+  unapproved mentions or AI credit in a posted body); `capture` (runs one command without wrappers,
+  with an allow-listed environment for the change's code, cwd confined to the run or the review
+  checkouts, output redacted, inputs fingerprinted, declared products copied in from inside the
+  checkout and hashed, the run directory compared before and after so a change that rewrites
+  evidence is marked `TAMPERED`); `check` and `verdict`, which test every pass against its evidence
+  (the diff against git, the newest host reading for this merge request and head, a trusted
+  regression receipt over an unchanged results file, the new tests failing in the base checkout and
+  passing in the head, coverage recomputed from the diff and the report its run produced, differing
+  before/after screenshots with their URL, labels on the repository's scale). Missing evidence is
+  `CANNOT_VERIFY`; only the user can waive a missing `regression`, `tests-detect`, `coverage` or
+  `app` gate, never a failing one.
+- `scripts/review-report.cjs` — evidence images through an installed Chrome/Edge (the pipeline's
+  jobs, each command's output, each finding on its code, coverage drawn over the diff, app
+  screenshots that record their URL and time), a self-contained HTML report, and PDF/DOCX through the
+  shared converter. Code for a finding is read only from inside the head checkout — a link in the
+  change cannot pull another file into the document.
+- `scripts/gdoc.cjs` — checks the approved Drive folder (writable, and refused when anyone with the
+  link can open it), uploads the DOCX there as a Google Doc by resumable upload, named from the
+  review, exports it back and counts its images (`GDOC_CREATED`, or `GDOC_UNVERIFIED` without a
+  second upload). The token comes from the user's own `gcloud` sign-in for a named account and is
+  never printed; sharing is never changed.
+- `host.cjs reviews` — what people other than the author wrote on the last merged merge requests:
+  diff discussions and notes on GitLab; inline comments, review summaries and conversation comments
+  on GitHub; bots kept but marked.
+- `tests/test-review.sh`, `tests/review.test.cjs`, `tests/review-report.test.cjs` and the shared
+  `tests/review-fixture.cjs`; orchestrator archetype `review-change`; handoff source `review`, whose
+  verdict the validator recomputes from `review.json`; `doctor.sh` runs Pandoc (a package-manager
+  shim whose target is gone used to read as installed) and reports `gcloud`.
+
+**Changed:** `investigate-export.cjs` exposes `convert` (checked HTML → PDF/DOCX) so other reports
+reuse it, and skips relative `PATH` entries when looking for Chrome, Edge or Pandoc; `exportReport`
+behaves as before. Host protocol §3 and the SKILL.md invariant name their one exception: an evidence
+document the user asked for, into the private folder they approved for that repository.
+
 ## Unreleased — simplify-gate stops blocking prompts (2026-10-06)
 
 **Fixed:** `simplify-gate` (UserPromptSubmit) threw away the user's prompt whenever it contained a

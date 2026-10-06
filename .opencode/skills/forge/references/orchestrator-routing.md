@@ -16,6 +16,7 @@
 | `polish-ui` | redesign, UI/UX, user interface, look and feel, looks ugly/generic/dated, polish the UI, slop, usability, accessibility | loop | design (audit), design --fix, regression — predicate: `score-design.sh verdict … → DESIGN_VERDICT: SHIP` (SLOP 0, no blocking design defects); units = SLOP + blocking defects |
 | `package-android` | android, apk, aab, play store, google play, TWA, trusted web activity | dispatch | android — owns its own PWA → trust → package → device-gate → release loop; self-terminates on `score-android.sh verdict → ANDROID_VERDICT: STORE_READY` or `BLOCKED` (native-only needs, red gate) |
 | `clear-backlog` | backlog, assigned to me, my issues / my tickets, GitLab / GitHub / Jira issues or tickets | dispatch | backlog — owns its own intake → triage → branch → merge request → review-handoff loop; self-terminates when `host.cjs ledger` reports `remaining=0`, at the WIP cap, or at its bound. It never merges, so there is no ship gate to route to |
+| `review-change` | code review, review a merge request / pull request / MR / PR, review !N or #N, the merge requests waiting on me | dispatch | review — validates one merge request (their pipeline on the head, regression against the merge base, tests that fail on the target, changed-line coverage, app before/after, security) and ends on `SAFE_TO_MERGE \| NEEDS_CHANGES \| CANNOT_VERIFY`. It never approves or merges, so there is no ship gate to route to; a security audit of a change stays `harden` |
 | `migrate-platform` | migrate/port/rewrite/switch/replace a language, framework, backend, frontend, runtime or platform from/to/with another stack | dispatch | migrate — owns its frozen inventory → source characterization → incremental replacement → differential verification loop; `VERIFIED_SCOPE` describes checked source replacement, with production cutover `NOT_VERIFIED`. Routine data/schema migrations stay with feature/fix. |
 
 Keyword matching is fuzzy — partial matches and synonyms qualify. When a goal matches multiple archetypes, prefer the more specific one (fix-broken over explore; ship-ready over fix-broken if "ship" is explicit). When ambiguous, show the top two candidates in the upfront confirm and let the user choose.
@@ -67,6 +68,8 @@ advisory input to convergence — it never auto-approves ship, which stays human
 
 **Single-pass dispatch** — used when no mechanical predicate exists. The goal is subjective or the subcommand is internally-converging (reason runs its own adversarial loop) or a one-shot terminal emitter (learn, improve produce a document and stop). The orchestrator routes once, the subcommand self-terminates, and the orchestrator reports the result. No Units remaining, no Plateau counter, no ship gate. Archetypes: document, what-to-build, decide-design, package-android (the android command runs its own bounded gate loop and ends on a mechanical `STORE_READY | BLOCKED` verdict — the orchestrator reports it, never re-routes around a `BLOCKED` native-needs verdict), clear-backlog (the backlog command runs its own bounded item loop against someone else's tracker and ends at review handoff — "done" there is the repository owner's merge, which the orchestrator can neither perform nor route toward).
 
+`review-change` also uses single-pass dispatch: the review command owns its gates and its verdict; the orchestrator reports `SAFE_TO_MERGE | NEEDS_CHANGES | CANNOT_VERIFY` as given and never treats a review as permission to merge.
+
 `migrate-platform` also uses single-pass dispatch: its pinned inventory and source/candidate evidence are owned by `migrate`. A bounded or blocked result stays visible; the orchestrator never routes around it or infers deployment authorization from `VERIFIED_SCOPE`.
 
 The criterion is: "Can the orchestrator independently verify done without re-running the subcommand?" If yes → loop. If no → dispatch.
@@ -95,6 +98,7 @@ same modify→verify→keep/discard loop, `feature` just adds the ratchet so imp
 | package-android | android | — | — | — | — |
 | clear-backlog | backlog | — | — | — | — |
 | migrate-platform | migrate | — | — | — | — |
+| review-change | review | — | — | — | — |
 
 Presets are starting pipelines. The router adapts per cycle from observed state — it may skip, repeat, or reorder steps based on the decision table above. The preset is a prior, not a fixed schedule.
 
