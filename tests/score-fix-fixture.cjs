@@ -45,7 +45,7 @@ module.exports = (repo, scratch) => {
     put(run, 'evidence/def-D-1-red.txt', 'total([1,2,3]) = 3\n'); put(run, 'evidence/def-D-1-green.txt', 'total([1,2,3]) = 6\n');
     const proved = await fix.prove(run, request(run, 'D-1-prove', { item: 'D-1', repo: x.d, commit: head, tests: ['tests/total.test.js'], argv }));
     assert.equal(proved.verdict, 'DETECTS', proved.reason);
-    fix.sweep(run, request(run, 'D-1-sweep', { item: 'D-1', repo: x.d, commit: head, pattern: '\\.length\\b', paths: ['src'] }));
+    fix.sweep(run, request(run, 'D-1-sweep', { item: 'D-1', repo: x.d, commit: head, pattern: '\\.length([^A-Za-z0-9_]|$)', paths: ['src'] }));
     const m = await fix.mutate(run, request(run, 'D-1-mutate', { item: 'D-1', repo: x.d, commit: head, argv, mutants: [
       { name: 'seed of one', file: 'src/total.js', find: 'a + b, 0)', replace: 'a + b, 1)' },
       { name: 'guard dropped', file: 'src/total.js', find: 'if (!Array.isArray(xs))', replace: 'if (false)' },

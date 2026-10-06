@@ -159,7 +159,7 @@ spec_has "fail .{0,4}on an assertion"              "spec: a load error proves no
 spec_has "angles\.tsv"                             "spec: angle table"
 spec_has "twelve dimensions"                       "spec: scenario's dimensions"
 spec_has "qa-testing-protocol"                     "spec: techniques from the QA protocol"
-spec_has "critical and high . all twelve"          "spec: depth by severity"
+spec_has "critical and high .{1,3} all twelve"     "spec: depth by severity"
 spec_has "no crash.{0,3} is not an outcome"        "spec: negative tests assert the refusal"
 spec_has "sweep\.tsv"                              "spec: sweep for the same pattern"
 spec_has "callers of the fixed function"           "spec: callers swept"

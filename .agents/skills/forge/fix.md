@@ -122,8 +122,9 @@ runs `check --rerun` itself, and the evidence document shows the raw outputs.
    threw. "no crash" is not an outcome: a token test that accepts junk "without a server error" has
    verified the acceptance of junk.
 4. **The sweep.** A root cause is a pattern; search for it. `score-fix.cjs sweep <run>
-   requests/<item>-sweep.json` (`{item, repo, commit, pattern, paths}`) records every hit at the fix
-   commit, and `sweep.tsv` (`item file line disposition reference`) gives each one a disposition:
+   requests/<item>-sweep.json` (`{item, repo, commit, pattern, paths}`; the pattern is a POSIX
+   extended regular expression — `\b` is not portable) records every hit at the fix commit, and
+   `sweep.tsv` (`item file line disposition reference`) gives each one a disposition:
    `the-fix` (the line the fix changed), `fixed-here` (fixed and tested in the same change),
    `new-defect` (a `DEF-n` appended to the ledger as `open`), or `not-affected` with the reason. The
    callers of the fixed function are swept the same way.

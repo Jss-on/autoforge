@@ -66,7 +66,7 @@ test('prove: refuses what cannot be a proof; copies only git-ignored files', asy
 });
 test('sweep: the pattern as git grep finds it at the fix commit, secrets redacted; a broad pattern is refused', async () => {
   const x = world();
-  const r = fix.sweep(x.run, request(x.run, 's', { item: 'D-1', repo: x.d, commit: x.head, pattern: '\\.length\\b' }));
+  const r = fix.sweep(x.run, request(x.run, 's', { item: 'D-1', repo: x.d, commit: x.head, pattern: '\\.length([^A-Za-z0-9_]|$)' }));
   const s = read(x.run, 'evidence/D-1-sweep.json');
   assert.deepEqual([r.hits, s.kind, s.commit, s.hits.map(h => h.file + ':' + h.line)], [1, 'sweep', x.head, ['src/count.js:1']], 'the fix removed its own .length; only the legitimate count remains');
   assert.equal(fix.sweep(x.run, request(x.run, 's2', { item: 'D-1', repo: x.d, commit: x.head, pattern: 'total\\(', paths: ['tests'], n: 2 })).receipt, 'evidence/D-1-sweep-2.json');
@@ -118,7 +118,7 @@ test('check: a run with a proved, swept, angled and mutation-pinned critical fix
   const run = await F.valid(), r = await check(run);
   assert.deepEqual([r.valid, r.errors, r.gaps], [true, [], []]);
   assert.deepEqual(r.stats, { items: 1, proved: 1, exempt: 0, angles: 12, hits: 1, killed: 3, valid: 3, reran: 0 });
-  assert.equal(r.repo, fs.realpathSync(path.resolve(run, '..', '..')).replace(/\\/g, '/'), 'the repository is the one the run lives in');
+  assert.equal(r.repo, fs.realpathSync.native(path.resolve(run, '..', '..')).replace(/\\/g, '/'), 'the repository is the one the run lives in');
   const unpinned = await fix.check(run);
   assert.deepEqual([unpinned.valid, unpinned.gaps.length], [true, 1]); assert.match(unpinned.gaps[0], /--defects/);
   const cli = cp.spawnSync(process.execPath, [seam, 'check', run, '--defects', SRC], { encoding: 'utf8' });
@@ -262,7 +262,7 @@ test('CLI: prove, sweep, mutate and angles speak in one line and exit codes', as
   const run = (...args) => cp.spawnSync(process.execPath, [seam, ...args], { encoding: 'utf8' });
   const p = run('prove', x.run, request(x.run, 'p', { item: 'D-1', repo: x.d, commit: x.head, tests: ['tests/total.test.js'], argv }));
   assert.equal(p.status, 0, p.stderr); assert.match(p.stdout, /^PROVE: DETECTS D-1 — 1 test file\(s\) fail at [0-9a-f]{8}, pass at [0-9a-f]{8}/);
-  const s = run('sweep', x.run, request(x.run, 's', { item: 'D-1', repo: x.d, commit: x.head, pattern: '\\.length\\b' }));
+  const s = run('sweep', x.run, request(x.run, 's', { item: 'D-1', repo: x.d, commit: x.head, pattern: '\\.length([^A-Za-z0-9_]|$)' }));
   assert.equal(s.status, 0); assert.match(s.stdout, /^SWEEP: 1 hit\(s\) for D-1 in evidence\/D-1-sweep\.json/);
   const m = run('mutate', x.run, request(x.run, 'm', { item: 'D-1', repo: x.d, commit: x.head, argv, mutants: [{ name: 'punctuation', file: 'src/total.js', find: "'list required'", replace: "'list required!'" }] }));
   assert.equal(m.status, 1); assert.match(m.stdout, /^MUTATION: 0\/1 killed for D-1 — survived: punctuation/);

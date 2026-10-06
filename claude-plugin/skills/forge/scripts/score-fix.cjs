@@ -50,8 +50,9 @@ function git(repo, args, options = {}) {
 }
 function repository(dir) {
   a.need(typeof dir === 'string' && dir && fs.existsSync(dir), 'repo must be an existing directory');
-  const real = fs.realpathSync(dir), top = git(real, ['rev-parse', '--show-toplevel'], { lenient: true });
-  a.need(top.status === 0 && fs.realpathSync(top.stdout.trim()) === real, 'repo must be the top of a git repository');
+  // The native realpath: Windows spells a temp folder RUNNER~1 to Node and runneradmin to git.
+  const real = fs.realpathSync.native(dir), top = git(real, ['rev-parse', '--show-toplevel'], { lenient: true });
+  a.need(top.status === 0 && fs.realpathSync.native(top.stdout.trim()) === real, 'repo must be the top of a git repository');
   return real;
 }
 const commitOf = (repo, ref) => { const r = git(repo, ['rev-parse', '--verify', '--end-of-options', ref + '^{commit}'], { lenient: true }); a.need(r.status === 0, 'commit not found in the repository: ' + ref); return r.stdout.trim(); };
