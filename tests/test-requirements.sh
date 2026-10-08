@@ -611,5 +611,26 @@ for mf in "$REPO_ROOT/.claude-plugin/marketplace.json" \
 done
 
 # ============================================================================
+printf '\n--- designed document: requirements-report.cjs renders the SRS as a PDF ---\n'
+# ============================================================================
+type spec_has >/dev/null 2>&1 || spec_has() { grep -qiE -- "$1" "$SPEC" && pass "$2" || fail "$2 (spec missing /$1/)"; }
+spec_has "requirements-report\.cjs pdf"      "spec: the SRS is rendered as a designed PDF"
+spec_has "REPORT: PDF_EXPORTED"              "spec: the render verdict is pinned"
+spec_has "EXPORT_UNAVAILABLE"                "spec: no Chrome → the HTML stands in, said so"
+spec_has "requirements\.pdf"                 "spec: the PDF is named"
+spec_has "diagram"                           "spec: diagrams are rendered"
+spec_has "\-\-source playback\.md"           "spec: the client review renders the same way"
+spec_has "FORGE_MERMAID"                     "spec: an offline Mermaid copy can be named"
+spec_has "report"                            "spec: the handoff carries the document"
+if node "$REPO_ROOT/tests/requirements-report.test.cjs" "$REPO_ROOT" > "$T/requirements-report.txt" 2>&1; then
+  pass "requirements-report: $(tail -n 1 "$T/requirements-report.txt")"; grep -E '^(SKIP|NOTE)' "$T/requirements-report.txt" | sed 's/^/    /'
+else
+  fail "requirements-report: $(tail -n 1 "$T/requirements-report.txt")"; grep '^FAIL' "$T/requirements-report.txt" | sed 's/^/    /'
+fi
+for d in .claude/skills/forge claude-plugin/skills/forge .agents/skills/forge plugins/forge/skills/forge .opencode/skills/forge .cursor/skills/forge; do
+  if diff -q "$REPO_ROOT/scripts/requirements-report.cjs" "$REPO_ROOT/$d/scripts/requirements-report.cjs" >/dev/null 2>&1; then pass "seam parity: $d/scripts/requirements-report.cjs"; else fail "seam parity: $d/scripts/requirements-report.cjs (missing or diverged)"; fi
+done
+
+# ============================================================================
 printf '\n=== Results: %d/%d passed ===' "$PASS" "$TOTAL"
 if [[ "$FAIL" -gt 0 ]]; then printf ' (%d FAILED)\n' "$FAIL"; exit 1; else printf ' (all passed)\n'; exit 0; fi

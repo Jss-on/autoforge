@@ -511,7 +511,10 @@ and the accepted downsides, and asks you to approve, change the weights, ask for
 mandate your own stack (recorded with its risks, never overruled). After you approve
 the final playback, Forge finalizes the technical requirements and generates
 `evals/fullstack/<name>.spec.yaml`; the mechanical validation gate — including
-`STACK_DECISION: READY` — must pass before build starts.
+`STACK_DECISION: READY` — must pass before build starts. The signed-off SRS is also rendered as a
+**designed PDF** (`requirements.pdf`): a cover with the counts, a contents page, an icon per
+section, requirement cards with priority and provenance badges, every diagram rendered, the
+engagement's images as a gallery — the document the client reads, while `build` reads the markdown.
 See the [requirements guide](guide/forge-requirements.md) for an example.
 
 ### Step 2 — Build (greenfield)

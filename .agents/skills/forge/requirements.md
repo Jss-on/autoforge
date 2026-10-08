@@ -412,6 +412,18 @@ acceptance:
   dimension and re-run — repeat until VALID. The spec is handed to `build` only on the validator's VALID
   verdict AND the current owner-approved review. Fixing syntax needs no new interview; changing
   scope, a rule or an expected outcome returns to playback. VALID alone does not authorize handoff.
+- **The designed document.** Once the SRS is final, render it:
+  `node scripts/requirements-report.cjs pdf <run-dir>` turns `requirements.md` into a self-contained
+  document — a cover with the counts, a contents page, an icon per section, requirement cards with
+  MoSCoW, provenance and dimension badges, every Mermaid diagram rendered to real SVG, the run's
+  images (direction boards, wireframe captures) as a gallery, priority and dimension charts —
+  written as `requirements.html` and printed to `requirements.pdf` by the installed Chrome/Edge:
+  `REPORT: PDF_EXPORTED requirements.pdf pages=N … diagrams=R/T`. No browser → `REPORT: EXPORT_UNAVAILABLE`: the HTML stands in and the summary
+  says so. Diagrams render from a pinned Mermaid build fetched once into `~/.cache/forge/` and
+  hash-checked (`FORGE_MERMAID` names a local copy offline); a diagram that does not render is
+  printed as source and counted in the verdict line — fix its syntax, re-render with `--replace`.
+  The client review renders the same way for sending: `--source playback.md`. Re-render after any
+  change to the SRS; the PDF is the deliverable the client reads, the markdown is what `build` reads.
 
 ## Phase 6 — Emit build arguments + chain
 Print the ready invocation:
@@ -419,7 +431,8 @@ Print the ready invocation:
 /forge:build Spec: evals/fullstack/<name>.spec.yaml Iterations: 40
 ```
 Write handoff.json to the output dir (`forge/requirements-{YYMMDD}-{HHMM}/`): version "3.3.0",
-source "requirements", status COMPLETE, `spec` = generated spec path, config{name, stack,
+source "requirements", status COMPLETE, `spec` = generated spec path, `report` = `requirements.pdf`
+(the HTML when no browser printed it) with `report_verdict` = the `REPORT:` line, config{name, stack,
 stack_decision: <tracked decision-directory path>},
 traceability summary. Schema: `references/handoff-schema.md`; after writing, `scripts/validate-handoff.sh
 <run-dir>/handoff.json requirements` must print VALID.
@@ -441,7 +454,8 @@ out-of-scope. Deployment downstream stays human-gated.
 
 ## Summary
 Lead with the plain-language agreed scope, key decisions/exclusions and how the system will be used
-and run. Link the approved client review and SRS. Then print: # functional reqs, # NFRs (by dimension), MoSCoW counts, **provenance counts (stated /
+and run. Link the approved client review, the SRS and its designed document (`requirements.pdf`:
+pages, diagrams rendered / total, images — or the HTML and why no PDF). Then print: # functional reqs, # NFRs (by dimension), MoSCoW counts, **provenance counts (stated /
 derived-domain / default-confirmed — zero open)**, must-be checklist disposition tally, # scenarios +
 # wireframes reacted to, **the stack decision** (`STACK_DECISION` verdict, the recommended option's
 Y-statement, confidence + robustness, # candidates / # drivers / # sources by tier, the approval line

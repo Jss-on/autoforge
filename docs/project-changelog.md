@@ -2,6 +2,30 @@
 
 All notable changes to the forge project are documented here.
 
+## Unreleased — /forge:requirements: the SRS as a designed PDF (2026-10-07)
+
+**Theme:** the signed-off requirements left the engagement as plain markdown. The client reads a
+document; `build` reads the markdown. Now both exist.
+
+**Added:**
+
+- `scripts/requirements-report.cjs` — `html` and `pdf <run> [--source requirements.md] [--out]
+  [--no-gallery] [--replace]`: a markdown reader for the SRS subset (headings, nested lists, GFM
+  tables with escaped pipes, fences, images, quotes, inline emphasis/code/links), then a designed,
+  self-contained document — cover with the counts, contents page, one inline SVG icon per section
+  (chosen from the heading), FR/NFR/US/SC tables rendered as cards with the bold lead as title and
+  MoSCoW, provenance and dimension badges, requirement ids highlighted everywhere, a priority donut
+  and a requirements-by-dimension bar chart drawn from the counts, every Mermaid block rendered to
+  real SVG by headless Chrome (a pinned Mermaid 12.1.0 build fetched once into `~/.cache/forge/`,
+  hash-checked; `FORGE_MERMAID` for an offline copy; unrendered diagrams print as source and are
+  counted), the run's PNG/JPEG/WebP images as a gallery, raw markup escaped, no script and nothing
+  external (CSP `default-src 'none'`). The PDF is printed through `investigate-export.convert`
+  with its page count read back; `REPORT: PDF_EXPORTED | HTML_EXPORTED | EXPORT_UNAVAILABLE`.
+- `commands/forge/requirements.md` Phase 5 renders the final SRS (and `--source playback.md` for the
+  client review); the handoff carries `report` and `report_verdict`; the summary links the PDF.
+- `tests/requirements-report.test.cjs` (parser, inline markup, the document, the PDF, the CLI) and
+  spec/seam-parity rows in `tests/test-requirements.sh`.
+
 ## Unreleased — /forge:fix: every fix leaves tests behind (2026-10-07)
 
 **Theme:** four real `fix` runs kept twenty fixes; twelve of them changed no test file, among them
