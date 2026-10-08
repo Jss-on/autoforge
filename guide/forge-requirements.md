@@ -154,6 +154,27 @@ bundle in tracked `evals/fullstack/<name>.stack/`, and `score-requirements.sh st
 what to build and on what stack; mechanical validation checks the build spec's structure,
 acceptance coverage and the stack record. All are required.
 
+## 6. Read the result as a designed document
+
+The signed-off `requirements.md` stays the file `build` reads; what you and the client read is
+`requirements.pdf`, rendered by `scripts/requirements-report.cjs pdf <run-dir>`:
+
+| Page | What is on it |
+|---|---|
+| Cover | the title, the counts (functional and non-functional requirements, stories and scenarios, diagrams, tables, sections) |
+| Contents | every section with its icon, a priority (MoSCoW) donut and a requirements-by-dimension bar chart |
+| Sections | an icon per heading; FR/NFR tables become cards — id, bold title, the Given/When/Then text, priority badge, provenance and dimension chips |
+| Diagrams | every Mermaid block (ER, state, sequence, flowchart) rendered to real SVG, captioned by kind |
+| Gallery | the run's images — direction boards, wireframe captures, playback material — as direction evidence, not approved assets |
+
+The verdict line says what happened: `REPORT: PDF_EXPORTED requirements.pdf pages=N sections=S
+requirements=F+N diagrams=R/T images=I`. Diagrams render from a pinned Mermaid build fetched once into
+`~/.cache/forge/` and hash-checked; offline, `FORGE_MERMAID=<path>` names a local copy, and a diagram
+that cannot render is printed as its source and counted in `diagrams=R/T`. Without an installed
+Chrome or Edge the verdict is `EXPORT_UNAVAILABLE` and `requirements.html` — the same document — stands
+in. `--source playback.md` renders the client review the same way; `--replace` re-renders after a change.
+The document is self-contained: no script, nothing fetched when it is opened.
+
 ## Specify images, icons and UI motion
 
 ```text

@@ -92,7 +92,7 @@ cp -r autoforge/.agents/skills/forge ~/.agents/skills/forge
 | `forge:improve` | Research ICP challenges, discover improvements, generate per-feature PRDs |
 | `forge:evals` | Analyze iteration results — trends, plateaus, convergence, recommendations |
 | `forge:regression` | Stability gate — baseline vs candidate diff, STABLE/UNSTABLE verdict before you push |
-| `forge:requirements` | Turn a client brief into a validated build spec — interview to saturation, mechanical validate gate |
+| `forge:requirements` | Turn a client brief into a validated build spec — interview to saturation, mechanical validate gate; the signed-off SRS rendered as a designed PDF (cover, icons, requirement cards, diagrams, images) |
 | `forge:build` | Build greenfield full-stack software via the full SDLC to passing acceptance (6 weighted dims, logic-gated) |
 | `forge:feature` | Add a feature to an existing app — delta acceptance + hard non-regression ratchet |
 | `forge:migrate` | Migrate languages/frameworks with a frozen inventory, behavior parity, target-only verification and explicit cutover handoff |
