@@ -136,7 +136,7 @@ Evals dynamically detects available columns. All loop commands produce compatibl
 | `metric` | forge, fix | Numeric metric value |
 | `delta` | forge, fix | Change from previous kept iteration |
 | `guard` | forge, fix | pass / fail / skip |
-| `status` | All | baseline / keep / discard / rework |
+| `status` | All | baseline / keep / keep (simpler) / discard / crash / metric-error / out-of-scope / guard-fail / no-op |
 | `description` | All | One-line summary of what changed |
 | `severity` | debug, security | Critical / High / Medium / Low |
 | `hypothesis` | debug | Hypothesis text |

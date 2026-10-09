@@ -215,6 +215,23 @@ PARSED="$(node -e '
       } catch { migrationValid = false; passValid = false; }
     }
   }
+  let loopValid = true;
+  const loopCurrent = parts[0] > 3 || (parts[0] === 3 && parts[1] >= 4);
+  if (["forge", "loop"].includes(s("source")) && !legacy) {
+    // From schema 3.4.0 a loop result carries its receipts block and is trusted only once
+    // scripts/loop.cjs recomputes every row, decision and verdict from the ledger and git
+    // history. Older loop records stay readable (never passing) unless they carry a block.
+    passValid = false;
+    if (loopCurrent || "loop" in j) {
+      try {
+        const path = require("path"), loop = require(path.join(process.argv[3], "loop.cjs"));
+        const run = fs.realpathSync(path.dirname(path.resolve(process.argv[1])));
+        loopValid = object(j.loop) && text(j.results_tsv) && loop.VERDICTS.includes(j.loop.verdict) &&
+          loop.check(run, path.resolve(process.argv[1])).problems.length === 0;
+        passValid = loopValid && j.loop.verdict === "IMPROVED";
+      } catch { loopValid = false; }
+    }
+  }
   const h = (k) => {
     const v = j[k];
     let valid;
@@ -241,15 +258,15 @@ PARSED="$(node -e '
   console.log([s("version"), s("source"), s("status"), s("timestamp"), s("verdict"),
                h("results_tsv"), h("metric"), h("config"), h("coverage"),
                h("spec"), h("srs"), h("generated_spec"), h("errors_remaining"), h("design"),
-               h("report"), securityValid ? "1" : "0", shipValid ? "1" : "0", passValid ? "1" : "0", acceptanceValid ? "1" : "0", h("investigation"), migrationValid ? "1" : "0", h("tests_tsv"), c("target"), c("defects_source")]
+               h("report"), securityValid ? "1" : "0", shipValid ? "1" : "0", passValid ? "1" : "0", acceptanceValid ? "1" : "0", h("investigation"), migrationValid ? "1" : "0", h("tests_tsv"), c("target"), c("defects_source"), loopValid ? "1" : "0"]
               .join(String.fromCharCode(31)));
-' "$FILE" "$REQUIRE_PASS" "$SCRIPT_DIR" 2>/dev/null)"
+' "$FILE" "$REQUIRE_PASS" "$SCRIPT_DIR" "$EXPECT_SRC" 2>/dev/null)"
 
 if [[ "$PARSED" == "__PARSE_ERROR__" || -z "$PARSED" ]]; then
   echo "INVALID"; echo "not valid JSON: $FILE" >&2; exit 1
 fi
 IFS=$'\x1f' read -r VERSION SOURCE STATUS TS VERDICT \
-  H_RESULTS H_METRIC H_CONFIG H_COVERAGE H_SPEC H_SRS H_GENSPEC H_ERRREM H_DESIGN H_REPORT H_SECURITY H_SHIP H_PASS H_ACCEPTANCE H_INVESTIGATION H_MIGRATION H_TESTS CFG_TARGET CFG_DEFECTS <<< "$PARSED"
+  H_RESULTS H_METRIC H_CONFIG H_COVERAGE H_SPEC H_SRS H_GENSPEC H_ERRREM H_DESIGN H_REPORT H_SECURITY H_SHIP H_PASS H_ACCEPTANCE H_INVESTIGATION H_MIGRATION H_TESTS CFG_TARGET CFG_DEFECTS H_LOOP <<< "$PARSED"
 
 has_field() { # reads the pre-parsed presence-and-type flags
   case "$1" in
@@ -297,6 +314,9 @@ if [[ -n "$EXPECT_SRC" && -n "$SOURCE" && "$SOURCE" != "$EXPECT_SRC" ]]; then
 fi
 
 case "$SOURCE" in
+  forge|loop)
+    [[ "$H_LOOP" == "1" ]] || err "missing or invalid: loop (receipts block written by scripts/loop.cjs summary; scripts/loop.cjs check must pass against the run directory)"
+    ;;
   security)
     [[ "$H_SECURITY" == "1" ]] || err "missing or invalid: security (typed checks, findings and derived verdict required)"
     ;;
@@ -404,7 +424,7 @@ case "$SOURCE" in
 esac
 
 if [[ "$REQUIRE_PASS" == "--require-pass" && "$H_PASS" != "1" ]]; then
-  err "passing security/ship/build/feature/migrate disposition with readable in-run evidence required"
+  err "passing security/ship/build/feature/migrate disposition with readable in-run evidence, or an IMPROVED loop ledger, required"
 fi
 
 if [[ "$ERRORS" -gt 0 ]]; then

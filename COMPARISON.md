@@ -86,7 +86,7 @@ AGENT + CONSTRAINED_SCOPE + SCALAR_METRIC + FAST_VERIFICATION = AUTONOMOUS_IMPRO
 | **Guard** | None | Optional guard command prevents regressions |
 | **Stuck detection** | None | Auto-escalates after 5 consecutive discards |
 | **Crash recovery** | Manual | Auto-fix (max 3 attempts), then move on |
-| **Noise handling** | None | Multi-run median, min-delta thresholds |
+| **Noise handling** | None | Calibrated floor: median of N samples, `MinDelta` = 2 × baseline spread |
 | **Logging** | TSV (basic) | TSV with delta, guard status, and 10-iteration summaries |
 
 ---
@@ -138,7 +138,7 @@ Claude AutoForge answers: **all of them.**
 | **Direction** | Lower is better (fixed) | Higher or lower (user-specified) |
 | **Guard/safety** | None | Optional guard command |
 | **Extraction** | Built into prepare.py | `grep`, `awk`, `jq`, or custom script |
-| **Noise handling** | None | Multi-run median, min-delta thresholds |
+| **Noise handling** | None | Calibrated floor: median of N samples, `MinDelta` = 2 × baseline spread |
 | **Examples** | `val_bpb: 1.26` | `coverage: 87.3%`, `p95_ms: 42`, `bundle_kb: 180` |
 
 ---
@@ -311,9 +311,9 @@ forge/
 |---------|----------|---------------------|
 | Verify command | Built-in: train for 5 min, evaluate val_bpb | User-defined: any shell command that outputs a number |
 | Guard command | ❌ None | ✅ Optional safety net (e.g., `npm test`) |
-| Guard recovery | N/A | Reworks optimization to avoid regression (max 2 attempts) |
+| Guard recovery | N/A | Guard failure reverts the experiment; the receipt keeps the guard output |
 | Crash recovery | ❌ Manual (agent may keep iterating on broken code) | ✅ Auto-fix (max 3 attempts), then skip and continue |
-| Noise handling | ❌ None (single evaluation per experiment) | ✅ Multi-run median, min-delta thresholds, confirmation runs |
+| Noise handling | ❌ None (single evaluation per experiment) | ✅ Calibrated floor: median of N samples, `MinDelta` from baseline spread, holdout `OVERFIT` verdict |
 | Stuck detection | ❌ None | ✅ Auto-escalates after 5 consecutive discards |
 | Stuck strategy | N/A | Re-reads all files, combines near-misses, tries radical changes |
 | Precondition checks | ❌ None | ✅ Clean git tree, no stale locks, not detached HEAD, baseline established |
@@ -404,7 +404,7 @@ Takes a seed scenario and generates situations across 12 dimensions: happy path,
 One-shot analysis of iteration results. Reads `*-results.tsv` files, dynamically detects columns, identifies trends, plateaus, regressions, and diminishing returns. Adaptive mid-loop checkpoints (`floor(max_iterations/3)`) provide real-time feedback during long runs. Backward compatible with v2.0.x TSV format. Karpathy's loop produces raw TSV but has no built-in analytics.
 
 ### 12. Noise Handling
-Real-world metrics fluctuate (benchmark times, Lighthouse scores). Claude AutoForge supports multi-run verification (run verify 3-5 times, use median), minimum delta thresholds (only keep if improvement exceeds noise floor), and confirmation runs.
+Real-world metrics fluctuate (benchmark times, Lighthouse scores). `scripts/loop.cjs calibrate` runs Verify `Samples` times on the untouched tree and sets `MinDelta` to twice the spread; every iteration measures the median of the same number of samples, and only an improvement of at least `MinDelta` is kept. An optional `Holdout:` command, measured only at calibration and in the summary, turns a metric that moved while the holdout stayed flat into an `OVERFIT` verdict. Every sample's exit code and output hash lands in the iteration's receipt.
 
 ### 13. Crash Recovery Protocol
 | Failure | Karpathy | Claude AutoForge |

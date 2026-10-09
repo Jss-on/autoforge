@@ -44,7 +44,7 @@ For metric-driven goals:
 - Propose metric name and description
 
 For subjective goals:
-- Suggest proxy metrics where possible
+- Suggest proxy metrics where possible, paired with a `Holdout:` command the proxy cannot game
 - Or recommend /forge:reason for non-measurable goals
 
 ## Phase 4: Derive Verify Command
@@ -52,7 +52,9 @@ For subjective goals:
 1. Identify how to extract the metric as a number from a shell command
 2. Propose Verify command (e.g., `npm test -- --coverage | grep "All files" | awk '{print $10}'`)
 3. **Safety screen:** check proposed command for rm -rf, fork bombs, curl|sh, credentials
-4. Dry-run the Verify command → confirm it outputs a valid number
+4. Dry-run the Verify command → confirm its last line is a finite number (`forge` calibrate reruns
+   it `Samples` times and sets `MinDelta` from the spread; propose `Samples:` / `MinDelta:` /
+   `Holdout:` when the metric is noisy or a proxy)
 5. If dry-run fails → adjust command and retry
 
 ## Phase 5: Derive Guard (optional)
@@ -83,6 +85,7 @@ Metric: {derived metric}
 Direction: {higher_is_better|lower_is_better}
 Verify: {derived command}
 Guard: {derived guard or omit}
+Holdout: {independent check in the same direction, or omit}
 Iterations: {suggested count}
 ```
 
