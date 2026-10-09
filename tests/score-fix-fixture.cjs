@@ -43,7 +43,7 @@ module.exports = (repo, scratch) => {
       `0\tt\tbaseline\t-\t-\t1\t0\t-\tbaseline\tone critical open\n1\tt\tD-1\ttotal counted the items instead of summing them\t${head.slice(0, 7)}\t0\t-1\tpass\tkeep\tsum the amounts, refuse a non-list\n`);
     put(run, 'defects.tsv', 'id\tseverity\tpriority\tstatus\ttest_id\tsummary\tevidence\nD-1\tcritical\tP1\tfixed\tTC-7\ttotals show the item count\tevidence:def-D-1-green.txt\n');
     put(run, 'evidence/def-D-1-red.txt', 'total([1,2,3]) = 3\n'); put(run, 'evidence/def-D-1-green.txt', 'total([1,2,3]) = 6\n');
-    const proved = await fix.prove(run, request(run, 'D-1-prove', { item: 'D-1', repo: x.d, commit: head, tests: ['tests/total.test.js'], argv }));
+    const proved = await fix.prove(run, request(run, 'D-1-prove', { item: 'D-1', repo: x.d, commit: head, tests: ['tests/total.test.js'], argv, signature: '3 !== 6' }));
     assert.equal(proved.verdict, 'DETECTS', proved.reason);
     fix.sweep(run, request(run, 'D-1-sweep', { item: 'D-1', repo: x.d, commit: head, pattern: '\\.length([^A-Za-z0-9_]|$)', paths: ['src'] }));
     const m = await fix.mutate(run, request(run, 'D-1-mutate', { item: 'D-1', repo: x.d, commit: head, argv, mutants: [

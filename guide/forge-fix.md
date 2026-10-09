@@ -72,7 +72,7 @@ and BOUNDED runs, with the repository and source ledger the handoff names:
 
 | Record | What it shows | How it is proved |
 |---|---|---|
-| `tests.tsv` | the regression test, committed in the fix commit | `score-fix.cjs prove` runs it in two throwaway checkouts: it must **fail on an assertion** at the parent commit and pass at the fix (`PROVE: DETECTS`) |
+| `tests.tsv` | the regression test, committed in the fix commit | `score-fix.cjs prove` runs it in two throwaway checkouts: it must **fail on an assertion** at the parent commit — carrying the failure the tester recorded (`signature`, quoted from `defect-reports.md`), or it detects some other defect — and pass at the fix (`PROVE: DETECTS`) |
 | `angles.tsv` | the ways the fixed code can still fail — the twelve dimensions `scenario` uses, each tested (technique, test id, **expected outcome**) or n/a with a reason | critical/high: all twelve; medium: inputs and boundaries; low: the regression test alone |
 | `sweep.tsv` | where else the root cause's pattern occurs, and what was done about each hit | `score-fix.cjs sweep` records the hits with git grep; every hit gets a disposition |
 | `evidence/<item>-mutants.json` | three or more small defects planted in the fixed lines, all caught by the new tests (critical/high) | `score-fix.cjs mutate` runs the tests against each mutant; a survivor means the tests do not pin the fix |
