@@ -13,7 +13,7 @@
 Goal:       <what you want to improve>
 Scope:      <file globs Claude can modify>
 Metric:     <what number to track> (<direction>)
-Verify:     <shell command whose output contains the metric>
+Verify:     <shell command whose last output line is the metric>
 Guard:      <optional command that must always pass>
 Iterations: <N | unlimited — default: 25>
 ```
@@ -35,8 +35,11 @@ Iterations: <N | unlimited — default: 25>
 | `Goal` | Yes | Plain-language target. Include a concrete number when possible. |
 | `Scope` | Recommended | Glob patterns for files Claude may modify. |
 | `Metric` | Recommended | Number being tracked. Always specify direction. |
-| `Verify` | Recommended | Shell command whose stdout contains the metric value. |
+| `Verify` | Recommended | Shell command whose last stdout line is the metric value (a bare number, `%` allowed). |
 | `Guard` | Optional | Must exit 0 after every kept change. |
+| `Samples` | Optional | Verify runs per measurement; the median counts. Default 3 at calibration, repeated per iteration only while the metric is noisy. |
+| `MinDelta` | Optional | Smallest improvement that counts as a keep. Default: twice the spread calibrate measured (0 for a deterministic metric). |
+| `Holdout` | Optional | Second command in the same direction, measured only at calibration and in the summary. Metric moved while the holdout stayed flat = `OVERFIT`. |
 | `Iterations` | Optional | Default: 25. Use `unlimited` for overnight runs. |
 
 ---
@@ -49,8 +52,13 @@ Iterations: <N | unlimited — default: 25>
 4. Commit (so rollback is always clean)
 5. Run `Verify`, extract the metric
 6. Run `Guard` (if set)
-7. Metric improved + guard passed → **keep** | Metric worse → `git revert` | Guard failed → rework (max 2 attempts)
-8. Log result to TSV, move to next iteration
+7. Improved by at least `MinDelta` and guard passed → **keep** | equal result with less code → **keep (simpler)** | anything else (`discard`, `crash`, `metric-error`, `out-of-scope`, `guard-fail`) → `git revert` of the whole experiment, by the script
+8. The script appends the TSV row and a receipt (`receipts/NNN.json`: commits, every sample, guard output, decision), move to next iteration
+
+Steps 5–8 are one call: `node scripts/loop.cjs decide <run-dir> "<description>"`. Iteration 0 comes
+from `node scripts/loop.cjs calibrate`: Verify runs `Samples` times on the untouched tree, the median is
+the baseline and the spread sets `MinDelta`. Commands are safety-screened and a Verify that prints no
+number is refused before the loop starts, not discovered at iteration 7.
 
 ---
 
@@ -64,7 +72,7 @@ Iterations: 20
 Goal: Increase test coverage from 72% to 90%
 Scope: src/**/*.test.ts, src/**/*.ts
 Metric: coverage % (higher is better)
-Verify: npm test -- --coverage | grep "All files"
+Verify: npm test -- --coverage | grep "All files" | awk -F'|' '{print $2}'
 ```
 
 ### Reduce bundle size
@@ -75,7 +83,7 @@ Iterations: 15
 Goal: Reduce production bundle size below 200KB
 Scope: src/**/*.tsx, src/**/*.ts
 Metric: bundle size in KB (lower is better)
-Verify: npm run build 2>&1 | grep "First Load JS"
+Verify: npm run build 2>&1 | grep "First Load JS" | awk '{print $(NF-1)}'
 Guard: npm test
 ```
 
@@ -99,7 +107,7 @@ Iterations: 20
 Goal: API response time under 100ms (p95)
 Scope: src/api/**/*.ts, src/services/**/*.ts
 Metric: p95 response time in ms (lower is better)
-Verify: npm run bench:api | grep "p95"
+Verify: npm run bench:api | grep "p95" | awk '{print $NF}' | tr -d 'ms'
 Guard: npm test
 ```
 
@@ -155,7 +163,7 @@ Iterations: 25
 Goal: Reduce lint errors to zero
 Scope: src/**/*.ts
 Metric: lint error count (lower is better)
-Verify: npx eslint src/ 2>&1 | grep -c "error"
+Verify: npx eslint src/ 2>&1 | grep -c "error" || true
 --evals
 --evals-interval 5
 ```
@@ -202,12 +210,20 @@ Guard: npx playwright test
 ## Results TSV
 
 ```tsv
-iteration  commit   metric  delta   guard  status    description
-0          a1b2c3d  85.2    0.0     -      baseline  initial state
-1          b2c3d4e  87.1    +1.9    pass   keep      add auth edge case tests
-2          -        86.5    -0.6    -      discard   refactor helpers
-3          c3d4e5f  88.3    +1.2    pass   keep      add error handling tests
+# metric_direction: higher_is_better
+iteration  timestamp             commit   metric  delta   guard  guard-metric  status    description
+0          2026-10-09T08:00:11Z  a1b2c3d  85.2    0.0     pass   -             baseline  initial state
+1          2026-10-09T08:03:40Z  b2c3d4e  87.1    +1.9    pass   -             keep      add auth edge case tests
+2          2026-10-09T08:06:02Z  -        86.5    -0.6    -      -             discard   refactor helpers
+3          2026-10-09T08:09:55Z  c3d4e5f  88.3    +1.2    pass   -             keep      add error handling tests
 ```
+
+Every row is written by `scripts/loop.cjs`, never by hand. `receipts/NNN.json` beside the TSV holds
+each row's commits, samples, guard output and revert; `node scripts/loop.cjs check <run-dir>` fails on
+any row, receipt or commit that no longer agrees with git or with the decision rule. `summary`
+re-measures Verify once at the ledger end (a result it cannot reproduce is `DRIFT`), recomputes the
+final report from the receipts and writes `handoff.json`, which `validate-handoff.sh <run>/handoff.json loop`
+audits the same way before any chained command may consume it.
 
 Use `/forge:evals` after a run to analyze trends, plateaus, and velocity from the TSV.
 
@@ -232,7 +248,8 @@ Use `/forge:evals` after a run to analyze trends, plateaus, and velocity from th
 ## Tips
 
 - Write a tight `Verify` command. One number, cleanly extracted with `grep`/`awk`/`jq`.
-- Run your `Verify` command manually before starting — know your baseline.
+- Run your `Verify` command manually before starting — know your baseline. `calibrate` then runs it three times and prints the spread; a noisy metric gets a `MinDelta` floor automatically, or set `Samples:` / `MinDelta:` yourself.
+- A metric the agent can game inside `Scope` (coverage via trivial tests, latency via a cache that drops correctness) needs a `Holdout:` or a `Guard:` that catches the shortcut — the loop proves the number moved, not that the goal did.
 - Use `Guard: npm test` liberally when your metric isn't test pass rate.
 - Run `Iterations: 10` first on an unfamiliar codebase, then scale up.
 - `git log` after a run shows exactly what changed and why. `git revert <hash>` undoes any single change.

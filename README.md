@@ -104,9 +104,9 @@ LOOP (N iterations or until done):
   2. Pick the next change (based on what worked, what failed, what's untried)
   3. Make ONE focused change
   4. Git commit (before verification)
-  5. Run mechanical verification (tests, benchmarks, scores)
-  6. If improved → keep. If worse → git revert. If crashed → fix or skip.
-  7. Log the result
+  5. scripts/loop.cjs decide: scope check, Verify (median of N samples), Guard
+  6. Improved by at least MinDelta → keep. Anything else → git revert, by the script.
+  7. Receipt + TSV row written by the script, never by hand
   8. Repeat until N iterations complete or goal is met.
 ```
 
@@ -129,9 +129,9 @@ Before looping, the agent performs a one-time setup:
 | 1 | **Bounded by default** — every command has a default iteration count; unlimited is opt-in via `Iterations: unlimited` |
 | 2 | **Read before write** — understand full context before modifying |
 | 3 | **One change per iteration** — atomic changes; if it breaks, you know why |
-| 4 | **Mechanical verification only** — no subjective "looks good"; use metrics |
-| 5 | **Automatic rollback** — failed changes revert instantly |
-| 6 | **Simplicity wins** — equal results + less code = keep |
+| 4 | **Mechanical verification only** — no subjective "looks good"; `scripts/loop.cjs` measures, decides, reverts and logs, the model never computes a metric by hand |
+| 5 | **Automatic rollback** — any status other than keep reverts instantly, whole experiment range |
+| 6 | **Simplicity wins** — equal results (inside the noise floor) + less code = `keep (simpler)` |
 | 7 | **Git is memory** — experiments committed with `experiment:` prefix; agent reads `git log` + `git diff` before each iteration. Commits carry your git identity only: no `Co-Authored-By` trailer or "Generated with" footer naming Claude, Fable, Opus or any other model |
 | 8 | **When stuck, think harder** — re-read, combine near-misses, try radical changes |
 
@@ -869,7 +869,7 @@ Cursor. See [Cursor's skill documentation](https://cursor.com/docs/skills) and
 Goal: Increase test coverage from 72% to 90%
 Scope: src/**/*.test.ts, src/**/*.ts
 Metric: coverage % (higher is better)
-Verify: npm test -- --coverage | grep "All files"
+Verify: npm test -- --coverage | grep "All files" | awk -F'|' '{print $2}'
 Iterations: 25
 ```
 
@@ -1936,7 +1936,7 @@ When optimizing a metric, the loop might break existing behavior. **Guard** is a
 ```
 /forge
 Goal: Reduce API response time to under 100ms
-Verify: npm run bench:api | grep "p95"
+Verify: npm run bench:api | grep "p95" | awk '{print $NF}' | tr -d 'ms'
 Guard: npm test
 ```
 

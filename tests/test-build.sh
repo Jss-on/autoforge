@@ -402,7 +402,7 @@ for mutation in '{"source":"not-a-command"}' '{"source":"build\u001fCOMPLETE"}' 
   assert_eq "INVALID/1" "$VH_BAD/$VH_BAD_CODE" "validate-handoff: rejects core field $mutation"
 done
 for mutation in '{"source":"loop"}' '{"source":"forge"}' '{"version":"2.1.0"}' \
-                '{"source":"loop","version":"4.0.0"}' '{"timestamp":"2024-02-29T23:00:00Z"}' \
+                '{"source":"evals","version":"4.0.0"}' '{"timestamp":"2024-02-29T23:00:00Z"}' \
                 '{"timestamp":"2026-01-01T08:00:00.123+08:00"}'; do
   node -e 'const f=require("fs");const j=JSON.parse(f.readFileSync(process.argv[1],"utf8"));f.writeFileSync(process.argv[2],JSON.stringify({...j,...JSON.parse(process.argv[3])}));' "$_ht/current-coverage.json" "$_ht/good-core.json" "$mutation"
   assert_eq "VALID" "$(bash "$VH" "$_ht/good-core.json" 2>/dev/null)" "validate-handoff: preserves valid core field $mutation"
