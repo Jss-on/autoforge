@@ -1,7 +1,7 @@
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict'),cp=require('node:child_process');
 const repo=path.resolve(process.argv[2]||'.'),metric=process.argv.includes('--metric'),target=path.join(repo,'scripts/loop.cjs');
 if(!fs.existsSync(target)){console.error('Loop receipt engine absent');console.log('0');process.exit(metric?0:1);}
-const loop=require(target),tmp=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'forge-loop-')));
+const loop=require(target),tmp=fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(),'forge-loop-')));
 const bashPath=process.env.FORGE_TEST_BASH||(process.platform==='win32'?'C:/Program Files/Git/bin/bash.exe':'bash');
 let seq=0,passed=0,failed=0;
 function fixture(){

@@ -22,11 +22,13 @@ function git(root, args) {
   a.need(!r.error && r.status === 0, 'git ' + args[0] + ' failed: ' + (r.stderr || r.error?.message || '').trim());
   return r.stdout;
 }
+// realpathSync.native expands Windows 8.3 names (C:\Users\RUNNER~1) the way git prints them.
+const real = p => fs.realpathSync.native(p);
 function projectRoot(run) {
-  if (process.env.FORGE_PROJECT_ROOT) return fs.realpathSync(process.env.FORGE_PROJECT_ROOT);
+  if (process.env.FORGE_PROJECT_ROOT) return real(process.env.FORGE_PROJECT_ROOT);
   for (const cwd of [run, process.cwd()]) {
     const r = cwd && gitRaw(cwd, ['rev-parse', '--show-toplevel']);
-    if (r && !r.error && r.status === 0) return fs.realpathSync(r.stdout.trim());
+    if (r && !r.error && r.status === 0) return real(r.stdout.trim());
   }
   throw Error('Not inside a git repository (set FORGE_PROJECT_ROOT)');
 }
@@ -81,7 +83,7 @@ function row(r) {
     r.decision, String(r.description || '').replace(/[\t\r\n]+/g, ' ').trim()].join('\t');
 }
 function loadRun(runDir) {
-  const run = fs.realpathSync(path.resolve(runDir)), file = path.join(run, CONFIG);
+  const run = real(path.resolve(runDir)), file = path.join(run, CONFIG);
   a.need(fs.existsSync(file), 'No ' + CONFIG + ' in ' + run + ' (run calibrate first)');
   const bytes = fs.readFileSync(file), cfg = JSON.parse(bytes.toString('utf8'));
   const cmd = c => c === null || a.text(c), int = (n, max) => Number.isSafeInteger(n) && n > 0 && n <= max;
@@ -152,7 +154,7 @@ async function calibrate(o) {
   cfg.samples_per_iteration = m.spread > 0 || cfg.min_delta > 0 ? samples : 1;
   cfg.baseline = { commit: head, value: m.value, spread: m.spread, holdout: h ? { value: h.value, spread: h.spread } : null };
   fs.mkdirSync(run, { recursive: true });
-  run = fs.realpathSync(run);
+  run = real(run);
   fs.writeFileSync(path.join(run, '.gitignore'), '*\n'); // the ledger never rides along in an experiment commit
   const bytes = JSON.stringify(cfg, null, 2) + '\n';
   fs.writeFileSync(path.join(run, CONFIG), bytes, { flag: 'wx' });
