@@ -167,8 +167,10 @@ Per iteration, exactly one focused slice:
    crash/data-loss/security/blocked core flow; high = major function broken w/ workaround; medium;
    low — priority P1–P4 by business urgency, proposed for triage) plus a full report in
    `defect-reports.md`: title (symptom + condition), environment, numbered repro steps with exact
-   values, expected vs actual with the oracle cited, evidence ref, reproducibility, isolation notes,
-   regression flag. Validate the ledger each cycle: `scripts/score-test.sh defects defects.tsv`.
+   values, expected vs actual with the oracle cited (the actual quoted verbatim from the raw output
+   — an error message, a status, `3 !== 6` — a `fix` run's red is matched to it), evidence ref,
+   reproducibility, isolation notes, regression flag. Validate the ledger each cycle:
+   `scripts/score-test.sh defects defects.tsv`.
 5. **Log** the iteration to `iterations.tsv`; append, never rewrite history.
 Interleave, per the plan:
 - **Exploratory sessions (SBTM)** on high-risk and defect-dense areas: charter ("Explore <area> with

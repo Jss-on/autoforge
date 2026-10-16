@@ -1,9 +1,10 @@
 'use strict';
-// What a fix run must show for every fix it kept: a committed test that fails without the fix and
-// passes with it (proved in two throwaway checkouts), the same pattern searched for elsewhere, a
-// table of the ways the fixed code can still fail, and for critical/high defects planted bugs the
-// new tests catch. `check` recomputes all of it from receipts this script wrote and from the
-// repository; `check --rerun` executes the proofs again. It never takes the ledger's word for a pass.
+// What a fix run must show for every fix it kept: a committed test that fails without the fix — on
+// the failure the tester reported — and passes with it (proved in two throwaway checkouts), the same
+// pattern searched for elsewhere, a table of the ways the fixed code can still fail, and for
+// critical/high defects planted bugs the new tests catch. `check` recomputes all of it from receipts
+// this script wrote and from the repository; `check --rerun` executes the proofs again. It never
+// takes the ledger's word for a pass.
 const fs = require('node:fs'), os = require('node:os'), path = require('node:path'), cp = require('node:child_process');
 const a = require('./acceptance.cjs'), v = require('./verification.cjs');
 const { WRAPPERS, NOT_AN_ASSERTION, SECRET_NAME, screen } = require('./review.cjs');
@@ -24,6 +25,9 @@ const NO_CRASH = /^(?:(?:returns? |status |http )?200(?: ok)?|no (?:server |5xx 
 const TEST = /(^|\/)(tests?|__tests__|e2e|specs?)\/|\.(test|spec)\.[cm]?[jt]sx?$|_test\.(go|py|rs|rb|php)$|(^|\/)test_[^/]*\.py$|_spec\.rb$|Tests?\.(cs|java|kt|swift|scala)$/;
 const LINKS = ['node_modules', '.venv', 'venv', 'vendor']; // dependency folders a fresh checkout borrows from the repository
 const ITEM = /^[A-Za-z][\w.+-]{0,63}$/, TAIL = 64 * 1024;
+// The failure the tester recorded, quoted verbatim from the actual line of defect-reports.md: the
+// parent's output must carry it, or the test detects some other defect than the reported one.
+const NO_TEXT = /^n\/a:\s*\S/, quoted = s => typeof s === 'string' && (NO_TEXT.test(s) || (s.length >= 6 && s.length <= 300));
 
 const norm = p => String(p).replace(/\\/g, '/');
 const json = file => { const t = fs.readFileSync(file, 'utf8'); return JSON.parse(t.charCodeAt(0) === 0xfeff ? t.slice(1) : t); };
@@ -114,7 +118,8 @@ async function execute(argv, cwd, timeout) {
 const SHAPE = r => a.object(r) && r.version === 1 && typeof r.run === 'string' && ITEM.test(r.item || '') && typeof r.kind === 'string' && typeof r.repo === 'string'
   && /^[0-9a-f]{40}$/.test(r.commit || '') && Number.isFinite(Date.parse(r.at || r.started_at));
 const RUN_SHAPE = r => SHAPE(r) && Array.isArray(r.argv) && r.argv.every(s => typeof s === 'string') && Array.isArray(r.tests) && r.tests.every(t => typeof t === 'string') && a.object(r.tests_sha256)
-  && typeof r.stdout === 'string' && typeof r.stderr === 'string' && r.stdout_sha256 === a.sha(r.stdout) && r.stderr_sha256 === a.sha(r.stderr);
+  && typeof r.stdout === 'string' && typeof r.stderr === 'string' && r.stdout_sha256 === a.sha(r.stdout) && r.stderr_sha256 === a.sha(r.stderr)
+  && (r.signature == null || typeof r.signature === 'string');
 const MUTANT_STATUSES = ['killed', 'survived', 'invalid'];
 
 function request(runDir, requestFile, fields) {
@@ -130,6 +135,9 @@ async function proveWith(root, req, repo, fix, { save = true } = {}) {
   const parent = commitOf(repo, fix + '^');
   a.need(Array.isArray(req.tests) && req.tests.length > 0 && req.tests.every(t => relative(t) && TEST.test(t)), 'tests names test files, relative to the repository (tests/, __tests__/, *.test.*, *_test.*, …)');
   vet(req.argv);
+  const sig = req.signature, reported = ledger(path.join(root, 'defects.tsv'), () => {}, 'defects.tsv');
+  a.need(sig === undefined || quoted(sig), 'signature quotes the failure the tester recorded — 6 to 300 characters, verbatim from the actual line of defect-reports.md — or "n/a: <why>" when no text shows it');
+  a.need(sig !== undefined || !req.item.split('+').some(id => reported.has(id)), `${req.item} is a defect of this run: the request needs signature, the failure the tester recorded, so the red is the reported failure and not some other`);
   const { timeout, link, copy } = bound(req, repo), sums = {}, contents = {};
   for (const t of req.tests) { const b = blob(repo, fix, t); a.need(b, `${t} is not in the fix commit: the test belongs in the same commit as the fix`); contents[t] = b; sums[t] = a.sha(b); }
   const runAt = async (sha, kind, inject) => {
@@ -138,7 +146,7 @@ async function proveWith(root, req, repo, fix, { save = true } = {}) {
       if (inject) for (const t of req.tests) { const f = path.join(w.dir, t); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, contents[t]); }
       a.need(git(w.dir, ['rev-parse', 'HEAD']).stdout.trim() === sha, 'the checkout is not at the expected commit');
       const r = await execute(req.argv, w.dir, timeout);
-      const receipt = { version: 1, run: path.basename(root), item: req.item, kind: `tests-${kind}`, repo: norm(repo), commit: sha, fix_commit: fix, parent_commit: parent, tests: req.tests, tests_sha256: sums, link, copy, ...r };
+      const receipt = { version: 1, run: path.basename(root), item: req.item, kind: `tests-${kind}`, repo: norm(repo), commit: sha, fix_commit: fix, parent_commit: parent, tests: req.tests, tests_sha256: sums, link, copy, signature: sig ?? null, ...r };
       if (kind === 'red') receipt.assertion = Number.isInteger(r.exit_code) && r.exit_code !== 0 && !NOT_AN_ASSERTION.test(r.stdout + '\n' + r.stderr);
       if (save) write(path.join(root, 'evidence', `${req.item}-tests-${kind}.json`), receipt);
       return receipt;
@@ -148,6 +156,7 @@ async function proveWith(root, req, repo, fix, { save = true } = {}) {
   const reason = red.error ? `the run at the parent commit did not finish (${red.error})`
     : red.exit_code === 0 ? 'the tests pass on the parent commit too: they do not detect the defect'
     : !red.assertion ? 'the parent fails for a reason other than an assertion (missing module, symbol or compile error): write the test against what exists at the parent, or record the item as new-behaviour'
+    : sig !== undefined && !NO_TEXT.test(sig) && !(red.stdout + '\n' + red.stderr).includes(sig) ? `the parent fails, but not with the reported failure: "${sig}" is not in its output`
     : green.error ? `the run at the fix commit did not finish (${green.error})`
     : green.exit_code !== 0 ? 'the tests fail at the fix commit' : null;
   return { item: req.item, verdict: reason ? 'NOT_PROVEN' : 'DETECTS', reason, parent, fix, tests: req.tests, red: `evidence/${req.item}-tests-red.json`, green: `evidence/${req.item}-tests-green.json` };
@@ -263,7 +272,7 @@ async function check(runDir, options = {}) {
   const root = fs.realpathSync(runDir), errors = [], gaps = [], stats = { items: 0, proved: 0, exempt: 0, angles: 0, hits: 0, killed: 0, valid: 0, reran: 0 };
   const need = (ok, message) => { if (!ok) errors.push(message); return ok; };
   const result = () => ({ valid: errors.length === 0, errors, gaps, stats, repo: anchor ? norm(anchor) : null });
-  let anchor = null;
+  let anchor = null, report = null, reportFile = null;
   try { anchor = options.repo ? repository(options.repo) : repository(git(root, ['rev-parse', '--show-toplevel']).stdout.trim()); }
   catch (e) { need(false, `the repository the fixes were proved in is unknown: the run is not inside one and --repo was not given (${e.message})`); }
   const receipt = (rel, shape) => {
@@ -284,6 +293,8 @@ async function check(runDir, options = {}) {
     if (need(fs.existsSync(f) && fs.statSync(f).isFile(), `the source ledger is not a file: ${options.defects}`)) {
       const source = ledger(f, need, 'source ledger');
       for (const [id, d] of sev) need(source.has(id) && source.get(id).severity === d.severity, `defects.tsv: ${id} is ${d.severity} here but ${source.get(id)?.severity ?? 'absent'} in the source ledger ${options.defects}`);
+      reportFile = path.join(path.dirname(f), 'defect-reports.md'); // the tester's report, beside the tester's ledger
+      if (fs.existsSync(reportFile)) report = fs.readFileSync(reportFile, 'utf8');
     }
   } else if (sev.size) gaps.push('severities are the run\'s own copy: pass --defects <source ledger> to pin them');
   const testsFile = path.join(root, 'tests.tsv');
@@ -321,6 +332,15 @@ async function check(runDir, options = {}) {
       for (const t of red.tests) { const b = blob(anchor, fix, t); need(b && a.sha(b) === red.tests_sha256[t] && green.tests_sha256?.[t] === red.tests_sha256[t], `${item}: ${t} differs from what the fix commit holds (re-prove after changing a test)`); }
       need(Number.isInteger(red.exit_code) && red.exit_code !== 0 && red.assertion === true && !NOT_AN_ASSERTION.test(red.stdout + '\n' + red.stderr), `${item}: the tests must fail on an assertion at the parent commit`);
       need(green.exit_code === 0 && !green.error, `${item}: the tests must pass at the fix commit`);
+      const sig = red.signature, reported = item.split('+').some(id => sev.has(id));
+      if (sig == null) need(!reported, `${item}: the red receipt carries no signature — re-prove with the failure the tester recorded (the actual line of defect-reports.md), so the red is the reported failure and not some other`);
+      else if (!quoted(sig)) need(false, `${item}: the signature is not a quote of 6 to 300 characters or "n/a: <why>"`);
+      else if (NO_TEXT.test(sig)) gaps.push(`${item}: no text shows the reported failure (${sig}) — the re-engagement confirms the test reproduces it`);
+      else {
+        need((red.stdout + '\n' + red.stderr).includes(sig), `${item}: the parent's output does not carry the reported failure "${sig}": the test detects some other defect`);
+        if (reported && report !== null) need(report.includes(sig), `${item}: "${sig}" is not in the tester's ${norm(reportFile)} — the signature quotes the actual line of the defect report, verbatim`);
+        else if (reported) gaps.push(`${item}: the signature "${sig}" is not anchored to a tester's report — no defect-reports.md beside ${options.defects ? 'the source ledger' : 'a source ledger (pass --defects)'}`);
+      }
       for (const t of red.tests) if (!changed.has(t)) gaps.push(`${item}: ${t} existed before the fix and the fix did not change it — the re-engagement confirms it is the regression test`);
       let mutants = null;
       if (['critical', 'high'].includes(severity)) {
@@ -340,7 +360,7 @@ async function check(runDir, options = {}) {
       if (options.rerun && errors.length === 0) {
         // The proof, executed again from the receipts' own request: an edited exit code cannot survive this.
         stats.reran++;
-        const again = await proveWith(root, { item, tests: red.tests, argv: red.argv, link: red.link ?? LINKS, copy: red.copy ?? [] }, anchor, fix, { save: false });
+        const again = await proveWith(root, { item, tests: red.tests, argv: red.argv, link: red.link ?? LINKS, copy: red.copy ?? [], ...(red.signature == null ? {} : { signature: red.signature }) }, anchor, fix, { save: false });
         need(again.verdict === 'DETECTS', `${item}: re-running the proof disagrees with the receipts — ${again.reason}`);
         if (mutants && Array.isArray(mutants.mutants)) {
           const plan = mutants.mutants.filter(x => x.status !== 'invalid').map(x => ({ name: x.name, file: x.file, find: x.find, replace: x.replace }));

@@ -8,6 +8,7 @@ const F = require('./score-fix-fixture.cjs')(repo, scratch), { fix, world, reque
 const seam = path.join(repo, 'scripts/score-fix.cjs');
 const HEADER = 'id\tseverity\tpriority\tstatus\ttest_id\tsummary\tevidence\n';
 const SRC = put(scratch, 'source-defects.tsv', HEADER + 'D-1\tcritical\tP1\topen\tTC-7\ttotals show the item count\tevidence:x\n');
+put(scratch, 'defect-reports.md', '## D-1 — totals show the item count\n\n**Steps:** total([1, 2, 3])\n**Expected:** 6\n**Actual:** `3 !== 6` — the item count came back\n'); // the tester's report, beside the tester's ledger
 const check = (run, o = {}) => fix.check(run, { defects: SRC, ...o }), self = run => ({ defects: path.join(run, 'defects.tsv') });
 let n = 0, total = 0;
 const queue = [], test = (name, f) => queue.push([name, f]);
@@ -42,6 +43,28 @@ test('prove: a test that passes before the fix, or fails for a missing module, p
   assert.equal(imp.verdict, 'NOT_PROVEN'); assert.match(imp.reason, /other than an assertion/);
   assert.equal(read(x.run, 'evidence/D-3-tests-red.json').assertion, false, 'the receipt records that the parent failed to load, not to assert');
 });
+test('prove: the red must be the reported failure — a test for a neighbouring bug, "fixed" with the reported defect left in place, is NOT_PROVEN; a defect of the run needs the tester\'s quote', async () => {
+  const x = world();
+  put(x.run, 'defects.tsv', HEADER + 'D-1\tcritical\tP1\tin-progress\tTC-7\ttotals show the item count\tevidence:x\n');
+  // The tester saw total([1, 2, 3]) come back as 3. The fixer guards against a non-list instead and keeps xs.length.
+  put(x.d, 'src/total.js', F.BUG); git(x.d, 'add', '.'); git(x.d, 'commit', '-qm', 'the count bug');
+  put(x.d, 'src/total.js', "exports.total = xs => {\n  if (!Array.isArray(xs)) throw new TypeError('list required');\n  return xs.length;\n};\n");
+  put(x.d, 'tests/guard.test.js', "require('node:test')('refuses a non-list', () => { require('node:assert/strict').throws(() => require('../src/total.js').total('abc'), /list required/); });\n");
+  git(x.d, 'add', '.'); git(x.d, 'commit', '-qm', 'fix D-1: refuse a non-list');
+  const wrong = git(x.d, 'rev-parse', 'HEAD').trim(), guard = { item: 'D-1', repo: x.d, commit: wrong, tests: ['tests/guard.test.js'], argv: [process.execPath, '--test', 'tests/guard.test.js'] };
+  await assert.rejects(fix.prove(x.run, request(x.run, 'w0', guard)), /needs signature/, 'a defect of the run is not proved without the failure the tester recorded');
+  const r = await fix.prove(x.run, request(x.run, 'w1', { ...guard, signature: '3 !== 6' }));
+  assert.equal(r.verdict, 'NOT_PROVEN'); assert.match(r.reason, /not with the reported failure: "3 !== 6" is not in its output/);
+  const red = read(x.run, 'evidence/D-1-tests-red.json');
+  assert.deepEqual([red.signature, red.assertion, red.exit_code !== 0], ['3 !== 6', true, true], 'the receipt records the quote; the parent did fail, on an assertion — just not the reported one');
+  const right = await fix.prove(x.run, request(x.run, 'w2', { item: 'D-1', repo: x.d, commit: x.head, tests: ['tests/total.test.js'], argv, signature: '3 !== 6' }));
+  assert.equal(right.verdict, 'DETECTS', right.reason);
+  assert.equal(read(x.run, 'evidence/D-1-tests-red.json').signature, '3 !== 6');
+  const visual = await fix.prove(x.run, request(x.run, 'w3', { item: 'D-1', repo: x.d, commit: x.head, tests: ['tests/total.test.js'], argv, signature: 'n/a: the failure shows only in the rendered page' }));
+  assert.equal(visual.verdict, 'DETECTS', 'a failure no text shows is accepted with its reason; check reports it as a gap');
+  const free = await fix.prove(x.run, request(x.run, 'w4', { item: 'E-1', repo: x.d, commit: x.head, tests: ['tests/total.test.js'], argv }));
+  assert.equal(free.verdict, 'DETECTS', 'an error-mode item, not in defects.tsv, may go without');
+});
 test('prove: refuses what cannot be a proof; copies only git-ignored files', async () => {
   const x = world();
   const bad = [
@@ -57,6 +80,8 @@ test('prove: refuses what cannot be a proof; copies only git-ignored files', asy
     [{ item: 'D-1', repo: x.d, commit: x.head, tests: ['tests/total.test.js'], argv, link: ['../elsewhere'] }, /dependency folders/],
     [{ item: 'D-1', repo: x.d, commit: x.head, tests: ['tests/total.test.js'], argv, timeout_ms: 0 }, /timeout_ms/],
     [{ item: 'D-1', repo: x.d, commit: x.head, tests: ['tests/total.test.js'], argv, copy: ['src/count.js'] }, /not git-ignored/],
+    [{ item: 'D-1', repo: x.d, commit: x.head, tests: ['tests/total.test.js'], argv, signature: '3 !==' }, /signature quotes/],
+    [{ item: 'D-1', repo: x.d, commit: x.head, tests: ['tests/total.test.js'], argv, signature: 5 }, /signature quotes/],
   ];
   for (const [i, [body, re]] of bad.entries()) await assert.rejects(fix.prove(x.run, request(x.run, 'b' + i, body)), re, JSON.stringify(body));
   await assert.rejects(fix.prove(x.run, put(scratch, 'outside.json', '{}')), /inside project/, 'the request lives in the run');
@@ -120,7 +145,7 @@ test('check: a run with a proved, swept, angled and mutation-pinned critical fix
   assert.deepEqual(r.stats, { items: 1, proved: 1, exempt: 0, angles: 12, hits: 1, killed: 3, valid: 3, reran: 0 });
   assert.equal(r.repo, fs.realpathSync.native(path.resolve(run, '..', '..')).replace(/\\/g, '/'), 'the repository is the one the run lives in');
   const unpinned = await fix.check(run);
-  assert.deepEqual([unpinned.valid, unpinned.gaps.length], [true, 1]); assert.match(unpinned.gaps[0], /--defects/);
+  assert.deepEqual([unpinned.valid, unpinned.gaps.length], [true, 2], unpinned.gaps.join('; ')); assert.match(unpinned.gaps.join('\n'), /--defects/); assert.match(unpinned.gaps.join('\n'), /not anchored/);
   const cli = cp.spawnSync(process.execPath, [seam, 'check', run, '--defects', SRC], { encoding: 'utf8' });
   assert.equal(cli.status, 0, cli.stdout + cli.stderr); assert.match(cli.stdout, /^FIX_EVIDENCE: VALID items=1 proved=1 .* repo=\S+/);
 });
@@ -134,6 +159,11 @@ test('check: every way the run can be short of its evidence is INVALID, and says
     'red run passed': run => edit(run, 'evidence/D-1-tests-red.json', j => { j.exit_code = 0; }),
     'red failure was a load error': run => edit(run, 'evidence/D-1-tests-red.json', j => { j.assertion = false; }),
     'green run failed': run => edit(run, 'evidence/D-1-tests-green.json', j => { j.exit_code = 1; }),
+    'a proved defect without the reported failure': run => edit(run, 'evidence/D-1-tests-red.json', j => { delete j.signature; }),
+    'a signature the red output does not carry': run => edit(run, 'evidence/D-1-tests-red.json', j => { j.signature = 'the item count came back'; }),
+    'a signature the tester never reported': run => edit(run, 'evidence/D-1-tests-red.json', j => { j.signature = 'sums the amounts'; }),
+    'a signature too short to mean anything': run => edit(run, 'evidence/D-1-tests-red.json', j => { j.signature = '3 !=='; }),
+    'a signature that is not text': run => edit(run, 'evidence/D-1-tests-red.json', j => { j.signature = ['3 !== 6']; }),
     'receipts for another commit': run => { for (const k of ['red', 'green']) edit(run, `evidence/D-1-tests-${k}.json`, j => { j.fix_commit = 'a'.repeat(40); }); },
     'test changed after the proof': run => { for (const k of ['red', 'green']) edit(run, `evidence/D-1-tests-${k}.json`, j => { j.tests_sha256['tests/total.test.js'] = 'b'.repeat(64); }); },
     'red and green ran different tests': run => edit(run, 'evidence/D-1-tests-green.json', j => { j.tests = ['tests/base.test.js']; }),
@@ -201,6 +231,10 @@ test('check: exemptions, depth by severity and error-mode items', async () => {
   let r = await check(noRunner); assert.deepEqual([r.valid, r.gaps.length], [true, 1], r.errors.join('; ')); assert.match(r.gaps[0], /no test runner/);
   const waived = await F.gamed(run => { fs.unlinkSync(path.join(run, 'evidence/D-1-mutants.json')); put(run, 'tests.tsv', 'item\tcategory\ttests\tmutation\treason\nD-1\tproved\ttests/total.test.js\tn/a: the fix is a one-line config change\t\n'); });
   r = await check(waived); assert.deepEqual([r.valid, r.gaps.length], [true, 1], r.errors.join('; ')); assert.match(r.gaps[0], /without mutation evidence/);
+  const visual = await F.gamed(run => edit(run, 'evidence/D-1-tests-red.json', j => { j.signature = 'n/a: the failure shows only in the rendered page'; }));
+  r = await check(visual); assert.deepEqual([r.valid, r.gaps.length], [true, 1], r.errors.join('; ')); assert.match(r.gaps[0], /no text shows the reported failure/);
+  const unanchored = await F.valid();
+  r = await check(unanchored, self(unanchored)); assert.deepEqual([r.valid, r.gaps.length], [true, 1], r.errors.join('; ')); assert.match(r.gaps[0], /not anchored to a tester's report/);
   const medium = await F.gamed(run => { put(run, 'defects.tsv', HEADER + 'D-1\tmedium\tP3\tfixed\tTC-7\ts\tevidence:x\n'); put(run, 'angles.tsv', 'item\tdimension\ttechnique\tstatus\ttest_id\texpected\treason\n' + F.angles('D-1').split('\n').filter(l => /\t(?:validation|data)\t/.test(l)).join('\n') + '\n'); fs.unlinkSync(path.join(run, 'evidence/D-1-mutants.json')); });
   r = await check(medium, self(medium)); assert.deepEqual([r.valid, r.errors], [true, []], 'medium: inputs and boundaries, no mutation');
   const thin = await F.gamed(run => { put(run, 'defects.tsv', HEADER + 'D-1\tmedium\tP3\tfixed\tTC-7\ts\tevidence:x\n'); put(run, 'angles.tsv', 'item\tdimension\ttechnique\tstatus\ttest_id\texpected\treason\n'); });
@@ -227,7 +261,7 @@ test('check: a test that existed before the fix is accepted and flagged for the 
   const again = git(d, 'rev-parse', 'HEAD').trim();
   fs.appendFileSync(path.join(run, 'iterations.tsv'), `2\tt\tD-2\tregressed\t${again.slice(0, 7)}\t0\t0\tpass\tkeep\tfix again\n`);
   fs.appendFileSync(path.join(run, 'defects.tsv'), 'D-2\tlow\tP4\tfixed\tTC-8\tregressed\tevidence:x\n');
-  const p = await fix.prove(run, request(run, 'D-2-prove', { item: 'D-2', repo: d, commit: again, tests: ['tests/total.test.js'], argv }));
+  const p = await fix.prove(run, request(run, 'D-2-prove', { item: 'D-2', repo: d, commit: again, tests: ['tests/total.test.js'], argv, signature: '3 !== 6' }));
   assert.equal(p.verdict, 'DETECTS', p.reason);
   fix.sweep(run, request(run, 'D-2-sweep', { item: 'D-2', repo: d, commit: again, pattern: 'never-matches-anything' }));
   fs.appendFileSync(path.join(run, 'tests.tsv'), 'D-2\tproved\ttests/total.test.js\trequired\t\n');
@@ -243,7 +277,7 @@ test('check --rerun: the proofs are executed again, so a receipt that lies about
   fs.appendFileSync(path.join(run, 'iterations.tsv'), `2\tt\tD-2\tempty list\t${c3.slice(0, 7)}\t0\t0\tpass\tkeep\tempty\n`);
   fs.appendFileSync(path.join(run, 'defects.tsv'), 'D-2\tlow\tP4\tfixed\tTC-8\tempty\tevidence:x\n');
   fs.appendFileSync(path.join(run, 'tests.tsv'), 'D-2\tproved\ttests/empty.test.js\trequired\t\n');
-  const honest = await fix.prove(run, request(run, 'D-2-prove', { item: 'D-2', repo: d, commit: c3, tests: ['tests/empty.test.js'], argv: argv3 }));
+  const honest = await fix.prove(run, request(run, 'D-2-prove', { item: 'D-2', repo: d, commit: c3, tests: ['tests/empty.test.js'], argv: argv3, signature: 'empty list' }));
   assert.equal(honest.verdict, 'NOT_PROVEN');
   fix.sweep(run, request(run, 'D-2-sweep', { item: 'D-2', repo: d, commit: c3, pattern: 'never-matches-anything' }));
   edit(run, 'evidence/D-2-tests-red.json', j => { j.exit_code = 1; j.assertion = true; });

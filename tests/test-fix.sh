@@ -175,6 +175,10 @@ spec_has "\-\-defects <source ledger>"             "spec: severities pinned to t
 spec_has "git-ignored files"                       "spec: copy takes only git-ignored files"
 spec_has "never in a test"                         "spec: mutants go in the fixed source lines"
 spec_has "evidence/<item>-red\.txt"                "spec: error-mode evidence files named"
+spec_has "reported failure"                        "spec: the red must be the reported failure, not just a failure"
+spec_has "signature"                               "spec: prove carries the failure the tester recorded"
+spec_has "not with the reported failure"           "spec: NOT_PROVEN names a red that is some other failure"
+spec_has "defect-reports\.md"                      "spec: the quote comes from the tester's report"
 if node "$REPO_ROOT/tests/score-fix.test.cjs" "$REPO_ROOT" > "$TMP/score-fix.txt" 2>&1; then
   pass "score-fix: $(tail -n 1 "$TMP/score-fix.txt")"
 else

@@ -2,6 +2,34 @@
 
 All notable changes to the forge project are documented here.
 
+## Unreleased — /forge:fix: the red must be the reported failure (2026-10-09)
+
+**Theme:** `prove` showed that a test fails before the fix and passes after it — any failure. A test
+written for a neighbouring bug, "fixed" with a guard that left the reported defect in place, passed
+`prove`, killed its three mutants and got `FIX_EVIDENCE: VALID` while the reported value was still
+wrong. Nothing matched the red to what the tester saw.
+
+**Added:**
+
+- `score-fix.cjs prove` — `signature`: the failure the tester recorded, quoted verbatim from the
+  *actual* line of `defect-reports.md`. The parent commit's output must carry it, or the verdict is
+  `NOT_PROVEN — fails, but not with the reported failure`; the red receipt records it. Required for
+  every item of the run's `defects.tsv` (`n/a: <why>` for a failure no text shows, reported as a
+  gap); error-mode items may carry one.
+- `score-fix.cjs check` — a proved defect without a signature is INVALID, as is one the red output
+  does not carry, one under six characters, or (with `--defects <source ledger>`) one that does not
+  occur in the `defect-reports.md` beside that ledger; no report beside it is a gap (the quote is not
+  anchored to the tester's record). `check --rerun` matches it against fresh output. A receipt that
+  lies about its red now also has to show the reported failure in a hashed output.
+- `commands/forge/fix.md` — Phase 2: a red is a reproduction only when the output carries the
+  tester's recorded actual; another failure is another defect, left `open`, never root-caused as
+  this one. "Tests that guard every fix": assert on what the tester observed so the red carries it.
+- `commands/forge/test.md` — the defect report's actual is quoted verbatim from the raw output, so a
+  fix's red can be matched to it.
+- `tests/score-fix.test.cjs`: the wrong-red case (a guard-only fix for a reported count bug is
+  `NOT_PROVEN`; without the quote the request is refused), the check refusals and gaps, and spec
+  rows in `tests/test-fix.sh`.
+
 ## Unreleased — /forge:requirements: the SRS as a designed PDF (2026-10-07)
 
 **Theme:** the signed-off requirements left the engagement as plain markdown. The client reads a
