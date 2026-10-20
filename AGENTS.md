@@ -23,7 +23,7 @@ AutoForge is the product; `forge` is the engine and plugin it ships — all comm
 /plugin install forge@autoforge
 ```
 
-Restart session after install. All 25 commands become available as `/forge` and `/forge:<subcommand>`. Update later with `/plugin marketplace update autoforge`.
+Restart session after install. All 26 commands become available as `/forge` and `/forge:<subcommand>`. Update later with `/plugin marketplace update autoforge`.
 
 ### Codex (plugin)
 
@@ -50,7 +50,7 @@ bash scripts/install.sh --cursor --global
 This installs `~/.cursor/skills/forge/`. For project-local installation, run
 `bash /path/to/autoforge/scripts/install.sh --cursor --local` from the target project's root;
 it writes `.cursor/skills/forge/` there. Reload/reopen Cursor and start an Agent chat with
-`/forge <subcommand> [flags]`, for example `/forge design`. All 25 workflows are included.
+`/forge <subcommand> [flags]`, for example `/forge design`. All 26 workflows are included.
 Git, Node.js and Bash are required; Claude Code hooks are not installed. See
 [Cursor skills](https://cursor.com/docs/skills).
 
@@ -100,6 +100,7 @@ cp -r autoforge/.agents/skills/forge ~/.agents/skills/forge
 | `forge:design` | UI/UX designer + design QA — direction protocol → machine-readable `DESIGN.md`; independent design audit (anti-slop floor `SLOP_GATE`, heuristic critique, personas, defect ledger, `SHIP|FIX|REBUILD` verdict); bounded `--fix` remediation |
 | `forge:backlog` | Work an employer's or client's tracker backlog on GitLab or GitHub — one item, one branch, one merge request, their pipeline green, review handoff; never merges its own work |
 | `forge:review` | Review a merge request or pull request in the repository's own format and validate it before anyone merges — `SAFE_TO_MERGE \| NEEDS_CHANGES \| CANNOT_VERIFY` from evidence, a Google Doc with images; posts only on your word, never approves or merges |
+| `forge:semver` | Give a repository you own semantic versioning — backfill the history semantic-release would have produced (a tag, a CHANGELOG section and a GitHub Release per past release point), then semantic-release versions every push CI passes; `ADOPTED \| PLANNED \| BLOCKED` |
 
 ---
 
@@ -198,6 +199,21 @@ change through seven gates (pipeline on the head, regression, tests that fail on
 coverage, app before/after, security, mergeable). The verdict comes from evidence only; the proof goes into
 a Google Doc with images in the folder you approved. Comments are posted only on your word; it never
 approves or merges.
+
+### Version a project forge built earlier
+
+```
+forge:semver --dry-run
+forge:semver
+Target: acme/payroll, acme/pos
+```
+
+Every new `build` installs semantic-release, so each push CI passes is versioned from Conventional Commits
+(`feat` → minor, `fix` → patch, breaking → major; the first `feat` releases `v1.0.0`). `semver` brings older
+repositories you own level: it works out what semantic-release would have released over the whole history
+(you classify the commits that are not Conventional Commits), tags each past release point, writes the
+`CHANGELOG.md` and a GitHub Release per tag, then opens the adoption PR — tags first, so the first release
+run finds them and releases nothing twice.
 
 ### Security audit
 

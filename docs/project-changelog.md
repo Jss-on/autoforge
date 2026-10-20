@@ -2,6 +2,47 @@
 
 All notable changes to the forge project are documented here.
 
+## Unreleased — semantic versioning for every project: semantic-release + /forge:semver (2026-10-18)
+
+**Theme:** built projects had no versions. Releases were `ship`'s manual `gh release create`, so in
+practice none were cut, and the loop's own commits (`experiment: …`, git's `Revert "…"`) would have
+meant nothing — or, for the reverts, a patch each — to a release tool. Every build is now versioned by
+semantic-release from Conventional Commits, and the projects built before can be brought level.
+
+**Added:**
+
+- `scripts/semver.cjs` — `init` writes `.releaserc.json` (commit-analyzer + release-notes-generator on
+  the `conventionalcommits` preset, changelog, npm with `npmPublish: false` or `sed` for the owning
+  table's version in `pyproject.toml` / `Cargo.toml` plus their `uv.lock` / `Cargo.lock` entry, and
+  `.csproj` versions, git, github) and `.github/workflows/release.yml` (runs after a push-triggered CI
+  passes on the default branch, checks out the tested commit, pinned tool chain through `npx` frozen to
+  its verification date with install scripts off, dispatches tag-triggered workflows that a
+  `GITHUB_TOKEN` tag would never start); `scan` → `plan` → `apply` → `check` backfill the history
+  semantic-release would have produced — commit-analyzer 13's reading reproduced exactly (header,
+  per-line case-insensitive BREAKING CHANGE notes, upper-case `FEAT`/`FIX`, the preset's revert pattern,
+  newest-first exact-match revert cancellation) in linear time, replayed over the default branch's
+  integration points, non-Conventional commits classified by the agent with a changelog note each, the
+  preset's changelog layout, the base and planned tags pushed before the adoption PR, GitHub Releases
+  oldest first, symlinked write targets refused, and a gate that checks configuration, CI wiring, tags
+  locally and on the remote, changelog sections, manifest version and the squash-merge setting.
+  Cross-checked against semantic-release 25.0.9 through the release job's own `npx` invocation: a
+  backfilled repository releases nothing on its first run and the next `feat` releases exactly the
+  predicted minor.
+- `/forge:semver` (`commands/forge/semver.md`) — the 26th command: fresh clone, owner role only, scan,
+  classify, plan (`--dry-run` stops here), apply, merge the adoption PR once CI is green, verify;
+  `ADOPTED | PLANNED | BLOCKED`. `validate-handoff.sh` accepts source `semver`, re-runs `check` for every
+  adopted repository and requires the weakest row as the verdict.
+- `tests/semver.test.cjs` + `tests/test-semver.sh`; guide page `guide/forge-semver.md`.
+
+**Changed:**
+
+- `build`: Phase 0 sets squash merges to take the PR title; the DevOps slice runs `semver.cjs init`; the
+  first `feat` on the default branch releases `v1.0.0` (semantic-release's default — no pre-releases);
+  a `devops` row pins `SEMVER: ADOPTED`; the summary prints the version. `feature` and `fix` title their
+  PRs as Conventional Commits and squash-merge under them; `ship` deploys the latest tag instead of
+  tagging by hand (`--prerelease` is gone); the `android` release workflow attaches its bundle to the
+  GitHub Release semantic-release created; the host protocol lists release automation as GitHub-only.
+
 ## Unreleased — /forge:requirements: the SRS as a designed PDF (2026-10-07)
 
 **Theme:** the signed-off requirements left the engagement as plain markdown. The client reads a
