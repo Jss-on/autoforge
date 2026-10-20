@@ -73,7 +73,9 @@ verified, which blocks convergence later — surface that now, not at iteration 
 Every project this command builds gets its **own private GitHub repository** under the
 authenticated `gh` account, created in Phase 0 right after the local `git init`:
 `gh repo create <account>/<slug> --private` (slug = the spec/scope name; `Repo:` argument
-overrides). Then wire `origin` and push. This is non-optional plumbing, not shipping: the full
+overrides). Then wire `origin`, push, and make squash merges take the PR title — `gh api -X PATCH
+repos/<account>/<slug> -f squash_merge_commit_title=PR_TITLE -f squash_merge_commit_message=PR_BODY`
+(the version signal, below). This is non-optional plumbing, not shipping: the full
 GitHub lifecycle — Actions CI, PRs, issues, code review, merge conflicts, releases/pre-releases —
 must be exercisable on the ACTUAL output, so the client/owner can inspect what was built in a
 transparent, standard way. A generated `ci.yml` that never executes on GitHub is theater — the
@@ -98,8 +100,18 @@ Cadence:
   issues carrying the `forge:<run-id>/<defect-id>` marker (dedupe by marker; severity mapped;
   `fixed` → in-review, `verified` → done). Exactly one tracker of record — never dual-file;
   no team resolvable unattended → fall back to GitHub and say so. GitHub stays the default.
-- **Releases are `ship`'s job** (human-gated): tag + `gh release create` (`--prerelease` until
-  acceptance is fully converged). `build` never tags releases on its own.
+- **Versions are automatic: semantic-release, from Conventional Commits.** The DevOps slice runs
+  `node scripts/semver.cjs init <project>` → `.releaserc.json` + `.github/workflows/release.yml`,
+  which runs after CI passes on each push to the default branch and releases what the commits since
+  the last tag say: breaking → major, `feat` → minor, `fix`/`perf` → patch — **the first `feat` on
+  the default branch releases `v1.0.0`**, wherever the build is. It writes `CHANGELOG.md` and the
+  manifest version back (`chore(release): X.Y.Z [skip ci]`), tags `vX.Y.Z` and publishes the GitHub
+  Release. The signal is the **PR title**: feature-slice PRs are titled as Conventional Commits
+  (`feat: …`, `fix: …`, `feat!: …` only for a breaking change) and squash-merge under it; inner-loop
+  `experiment:` commits and their reverts never release. A `devops` acceptance row pins it:
+  `semver.cjs check <project>` → `SEMVER: ADOPTED`. Never hand-tag beside it; deploying stays
+  `ship`'s (human-gated) — a version is not a deployment. Repos forge built before this:
+  `/forge:semver`.
 - Record the repo URL in `handoff.json` (`repo` field) and in the run summary.
 The repo stays **private** and its visibility is never changed by the loop. If `gh` is
 unauthenticated, say so and continue local-only — do not silently skip the contract.
@@ -430,6 +442,7 @@ markers on deliberate ceilings. Order within a build:
    data. Seeded rows are **fixtures for tests only — never the app's only data path** (an in-memory /
    seed-only store that resets is a demo, not a product). Frontend wired to the design system → tests green.
 4. **DevOps** — multi-stage **Dockerfile** (non-root, `HEALTHCHECK`), compose/IaC, CI (lint+test+build+dep-scan),
+   release automation (`semver.cjs init` once CI exists — "Output repository"),
    forward-only migrations, `SIGTERM` graceful shutdown, env config + `.env.example`.
 5. **Monitoring** — `/healthz`, `/readyz`, `/metrics` (Prometheus), structured JSON logs, trace/correlation IDs.
 6. **UX** — implement the design system under the surface's **visitor-mode rules** (protocol §1:
@@ -526,9 +539,10 @@ deploy → verify) then a canary check:
   primary workflows, settings. When the app replaces an existing process or system, it includes an
   old-step → new-step guide that maps every former step (the spreadsheet column, the paper form, the
   legacy screen) to its new place — preparing users for change is part of the deliverable.
-**Deployment is human-gated** — `build` never deploys to production, tags releases, or publishes on
-its own (pushing to the private output repo per the "Output repository" contract is standard-loop, not
-deployment).
+**Deployment is human-gated** — `build` never deploys to production or publishes packages on its own.
+Versions, tags and GitHub Releases on the private output repo come from semantic-release in its CI
+(standard loop, "Output repository"); `RELEASE_NOTES.md` stays the stakeholder narrative beside the
+generated `CHANGELOG.md`.
 
 ## Phase 8 — Operations / Maintenance
 The SDLC is a **cycle** — maintenance feeds back into planning. Build's share is docs + wiring (build
@@ -636,7 +650,8 @@ can re-run the scorer on the stored ledger and check every pass row's evidence f
 ## Safety Invariants
 - **Never deploy to production, publish packages, or make a repo public.** Those stay human-gated
   (`ship`). Pushing to the project's **own private output repo** (created in Phase 0, below) is NOT
-  publishing — it is part of the standard loop and is how the generated CI actually runs.
+  publishing — it is part of the standard loop and is how the generated CI actually runs; so is the
+  semantic-release job versioning it there (tags, `CHANGELOG.md`, GitHub Releases, `npmPublish: false`).
 - **Build into the declared Scope only** — never mutate the skill repo or unrelated trees.
 - Every derived shell command is safety-screened via `scripts/orchestrate.sh screen-cmd`. DB URLs obey
   the anchored localhost/_test allowlist. No real secrets — throwaway dev creds via env, never committed.
@@ -648,7 +663,8 @@ scores (incl **logic** + **ux**), assertions green/total, **security PASS|FAIL|B
 untested production assumptions**, **requirement-satisfaction audit verdict**,
 phases completed (of the 8 SDLC phases), iterations used, kept vs discarded slices, total `loc_delta`
 + **ponytail debt rows** harvested into `DEBT.md`, build output
-path, and a **deliverables checklist** (charter · SRS + RTM · HLD/LLD + `DESIGN.md` · test summary ·
+path, the **version** (the latest `v`-tag semantic-release cut on the output repo, or `none yet` before
+the first `feat` reached the default branch), and a **deliverables checklist** (charter · SRS + RTM · HLD/LLD + `DESIGN.md` · test summary ·
 release notes · user manual · runbook — each present/missing). List still-red
 assertions — **golden/`logic` failures first** — and any untraced requirements/tokens **plus any FR
 satisfied engine-only (audit gaps)** as remaining work.
@@ -744,8 +760,9 @@ living — never heavyweight documents for their own sake.
   written. Validation, data-loss handling, security, a11y and anything requested are never cut.
 - **Comprehensive ≠ "tests pass".** Phase 6 requires the whole pyramid (unit→integration→e2e→a11y→design QA),
   not just unit green. e2e + a11y + the design floor run against the *running* app via Playwright.
-- **Deployment is human-gated.** Phase 7 reuses `ship`; `build` never deploys to production or cuts
-  releases on its own — pushes to the private output repo are the standard loop, everything beyond is `ship`'s.
+- **Deployment is human-gated.** Phase 7 reuses `ship`; `build` never deploys to production on its own —
+  pushes to the private output repo, and the versions semantic-release cuts there in CI, are the standard
+  loop; everything beyond is `ship`'s.
 - **Maintenance closes the cycle.** Phase 8 documents operations (runbook) and routes change requests
   to `feature`/`fix`/`improve` with the shipped acceptance baseline as the regression floor —
   maintenance feeds back into planning.

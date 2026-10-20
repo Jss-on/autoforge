@@ -15,7 +15,7 @@ An autonomous iteration engine for Claude Code, OpenCode, OpenAI Codex, and Curs
 ![Version](https://img.shields.io/badge/version-3.6.0-blue.svg)
 [![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 
-**25 commands · 4 agent platforms · bounded iteration · evidence-backed gates**
+**26 commands · 4 agent platforms · bounded iteration · evidence-backed gates**
 
 [Capabilities](#capabilities) · [Scenarios](#practical-scenarios) · [Install](#quick-start) · [Commands](#commands) · [Build Software](#building-complex-software) · [Secure & Ship](#security-and-shipping-guide) · [Guides](guide/)
 
@@ -54,6 +54,10 @@ the packaged release; see the [project changelog](docs/project-changelog.md) for
   fail on the target, changed-line coverage, the app before and after, security) and puts the
   evidence in a Google Doc with images. It posts only on your word and never merges.
   [Review guide](guide/forge-review.md).
+- **Every project versioned the same way:** builds install semantic-release, so each push CI passes is
+  versioned from Conventional Commits (`feat` → minor, `fix` → patch, breaking → major) with a
+  `CHANGELOG.md` and a GitHub Release. `/forge:semver` brings repositories forge built earlier level:
+  their whole history tagged as semantic-release would have released it. [Semver guide](guide/forge-semver.md).
 - **GitLab, and work in a repository that is not yours:** `/forge:backlog` works an employer's or
   client's issue backlog — one item, one branch, one merge request, their pipeline green, handed to
   their reviewers. Forge now detects the git host and whose repository it is; on GitLab the
@@ -80,7 +84,7 @@ the packaged release; see the [project changelog](docs/project-changelog.md) for
 | Documentation and memory | Codebase docs, navigable wikis, checked links, run history and scoped procedures retained from verified recoveries | `learn`, [procedural lessons](.claude/skills/forge/references/procedural-lessons.md) |
 | Integrations and runtime | Native image tools or media MCP, Figma import, GitHub/GitLab/Linear tracking, environment checks, safety hooks and validated command handoffs | [Integrations and assets](#integrations-assets-and-memory), [hooks](#hooks--safety) |
 
-The [command reference](#commands) lists all 25 commands. Required checks remain required when
+The [command reference](#commands) lists all 26 commands. Required checks remain required when
 a tool or integration is unavailable; the run reports what is blocked instead of assuming success.
 
 ---
@@ -195,6 +199,7 @@ See [guide/hooks.md](guide/hooks.md) for full reference.
 | `/forge:android` | Package a deployed web app as a verified, signed Android TWA with a store pack | 12 |
 | `/forge:backlog` | Work an employer's or client's tracker backlog on GitLab or GitHub: one item, one branch, one merge request, their pipeline green, review handoff — never merges its own work | 25 |
 | `/forge:review` | Review a merge request or pull request in the repository's own format and validate it before anyone merges; `SAFE_TO_MERGE \| NEEDS_CHANGES \| CANNOT_VERIFY` with the evidence in a Google Doc with images; posts only on your word, never approves or merges | N/A |
+| `/forge:semver` | Give a repository you own semantic versioning: backfill what semantic-release would have released (a tag, a CHANGELOG section and a GitHub Release per past release point), then let it version every push CI passes; `ADOPTED \| PLANNED \| BLOCKED` | N/A |
 | `/forge:debug` | Hunt bugs via hypothesis iteration | 15 |
 | `/forge:investigate` | Investigate reported issues and research explanations with captured evidence, explicit uncertainty and plain-language reports; `--audit <run>` reviews an existing case | 12 |
 | `/forge:fix` | Remediate defects to zero, root-cause first | 20 |
@@ -238,6 +243,8 @@ they are workflows, not a standalone `forge` shell executable.
 | Work one ticket in someone else's repo and hand it to their reviewers | `/forge:backlog Item: <id>` |
 | Review a merge request and prove it is safe to merge, with a Google Doc of evidence | `/forge:review <number>` |
 | Review everything waiting on you, posting nothing | `/forge:review --mine --no-post` |
+| Version a project forge built earlier: tags, changelog and GitHub Releases for its whole history | `/forge:semver Target: <owner/repo>` |
+| See the version plan for a repository without changing anything | `/forge:semver --dry-run` |
 | Give a plain-language goal, let it self-orchestrate | `/forge <goal>` (bare, no Metric/Verify) |
 | Improve test coverage / reduce bundle size / any metric | `/forge` |
 | Run bounded iterations | Add `Iterations: N` to any command |
@@ -773,7 +780,7 @@ cp -r autoforge/.opencode/skills/forge ~/.config/opencode/skills/forge
 cp autoforge/.opencode/commands/forge*.md ~/.config/opencode/commands/
 ```
 
-> All 25 commands available as `/forge_debug`, `/forge_fix`, `/forge_improve`, etc.
+> All 26 commands available as `/forge_debug`, `/forge_fix`, `/forge_improve`, etc.
 
 ### Codex Quick Start
 
@@ -798,7 +805,7 @@ $forge security --diff --fail-on high
 $forge build Spec: ./spec.yaml
 ```
 
-All 25 workflows use `$forge` followed by a subcommand. The plugin loads the selected command
+All 26 workflows use `$forge` followed by a subcommand. The plugin loads the selected command
 and its bundled references and verification scripts. Results are written into the target
 repository's `forge/` directory. The package includes skills and scripts; the nine Claude Code
 hooks are specific to Claude Code.
@@ -856,7 +863,7 @@ The local destination is `.cursor/skills/forge/` in the target project. Reload C
 /forge security --diff --fail-on high
 ```
 
-All 25 workflows use `/forge <subcommand> [flags]`; `/forge` is the single skill entry.
+All 26 workflows use `/forge <subcommand> [flags]`; `/forge` is the single skill entry.
 Git, Node.js and Bash remain required for workflow checks. Claude Code hooks are not installed
 in Cursor. Update by pulling the AutoForge checkout, rerunning the same installer and reloading
 Cursor. See [Cursor's skill documentation](https://cursor.com/docs/skills) and
@@ -1218,6 +1225,50 @@ DOCX and created as a Google Doc in the folder you approved for that repository 
 Workspace for company code). It **never approves, never submits a request-changes review, and never
 merges**; approval and the merge stay people's clicks. Seams: `scripts/review.cjs`,
 `scripts/review-report.cjs`, `scripts/gdoc.cjs`, `host.cjs reviews`. [Review guide](guide/forge-review.md).
+
+---
+
+## /forge:semver — What Would semantic-release Have Released?
+
+Every project `build` creates now ships with [semantic-release](https://semantic-release.gitbook.io/):
+after CI passes on a push to the default branch, the release job reads the Conventional Commits since
+the last tag — breaking → major, `feat` → minor, `fix`/`perf` → patch, the first `feat` → `v1.0.0` —
+writes `CHANGELOG.md` and the manifest version back, tags `vX.Y.Z` and publishes the GitHub Release.
+Feature and fix PRs carry the signal in their titles (`feat: …`, `fix: …`) and squash-merge under them;
+the loop's own `experiment:` commits never release. `/forge:semver` brings the projects built before
+this level.
+
+```
+/forge:semver --dry-run                       # the version plan for this repository, nothing written
+/forge:semver                                 # backfill, adopt, release history, verify
+/forge:semver Target: acme/payroll, acme/pos  # several repositories, one summary
+/forge:semver Initial: 0.1.0                  # keep an unfinished project in 0.x
+```
+
+**How it works:** a fresh clone (never your working copy) → `semver.cjs scan` lists every commit since
+the highest `v`-tag; real Conventional Commits classify themselves, forge's `experiment:` commits and
+free text are yours to classify (with a changelog line each) → `plan` replays semantic-release's rules
+over the default branch's integration points (each merged PR, each run of direct commits) → `apply`
+tags the release points, pushes the tags **before** the adoption PR (otherwise the first release run
+would release the whole history as `1.0.0`), opens `ci: adopt semantic-release` with the backfilled
+`CHANGELOG.md`, the manifest version and the release workflow, and creates a GitHub Release per tag →
+the PR merges once CI is green → `check --remote` → `SEMVER: ADOPTED`.
+
+```
+PLAN: READY releases=4 base=none latest=v1.2.0 unreleased=1 head=6b7c348
+v1.0.0	fbed57f	2026-08-12	initial	direct	2 commits
+v1.1.0	0fee370	2026-08-14	minor	PR #2	1 commits
+v1.1.1	659a686	2026-08-15	patch	direct	1 commits
+v1.2.0	5553be5	2026-08-20	minor	PR #3	3 commits
+```
+
+The release workflow pins the tool chain (semantic-release 25.0.9, conventionalcommits preset 9.3.1 —
+10.x cannot render with release-notes-generator 14) and freezes everything it pulls in to the day it
+was verified, keeps `package.json`, `pyproject.toml` + `uv.lock`, `Cargo.toml` + `Cargo.lock` or a
+`.csproj` `<Version>` in step, and dispatches tag-triggered workflows such as
+`android-release.yml`, which a tag pushed with `GITHUB_TOKEN` would never start. Owner role only; a
+public repository asks before anything is pushed. Seam: `scripts/semver.cjs`
+(`init` · `scan` · `plan` · `apply` · `check`). [Semver guide](guide/forge-semver.md).
 
 ---
 
@@ -2015,7 +2066,7 @@ autoforge/
 │   │                                                security, personas, orchestrator routing, ux + hardening
 │   └── commands/
 │       ├── forge.md                        ← core loop (self-contained)
-│       └── forge/                          ← 24 subcommand files (25 commands total)
+│       └── forge/                          ← 25 subcommand files (26 commands total)
 ├── .claude-plugin/marketplace.json                ← marketplace manifest (marketplace name: autoforge)
 ├── claude-plugin/                                 ← Claude Code plugin package (skills + commands + hooks)
 ├── .opencode/                                     ← OpenCode port (via transform.sh)
@@ -2067,13 +2118,13 @@ A: Point it at any `*-results.tsv` file from a previous run. It reports trends, 
 A: Yes. Any language, framework, or domain. Install via plugin (Claude Code), installer script, or manual copy.
 
 **Q: Does this work with OpenCode?**
-A: Yes. Run `./scripts/install.sh --opencode --global` or manually copy `.opencode/` files. Commands use underscore naming (`/forge_debug`, `/forge_evals`, etc.). All 25 commands available.
+A: Yes. Run `./scripts/install.sh --opencode --global` or manually copy `.opencode/` files. Commands use underscore naming (`/forge_debug`, `/forge_evals`, etc.). All 26 commands available.
 
 **Q: Does this work with OpenAI Codex?**
 A: Yes. Run `codex plugin marketplace add Jss-on/autoforge`, then `codex plugin add forge@forge-local`. Start a new thread and invoke `$forge plan`, `$forge build`, or any other subcommand. See [Codex Quick Start](#codex-quick-start) for updates, Windows setup and the manual skill fallback.
 
 **Q: Does this work with Cursor?**
-A: Yes. From the authenticated clone, run `bash scripts/install.sh --cursor --global`, reload Cursor, and invoke `/forge plan` or another subcommand in Agent chat. All 25 workflows are included. See [Cursor Quick Start](#cursor-quick-start) for project-local installation and prerequisites.
+A: Yes. From the authenticated clone, run `bash scripts/install.sh --cursor --global`, reload Cursor, and invoke `/forge plan` or another subcommand in Agent chat. All 26 workflows are included. See [Cursor Quick Start](#cursor-quick-start) for project-local installation and prerequisites.
 
 **Q: How do I stop the loop?**
 A: `Ctrl+C` or add `Iterations: N` to your inline config. Claude commits before verifying, so your last successful state is always in git.

@@ -159,7 +159,7 @@ printf '\n--- doctor: what review needs ---\n'
 # ============================================================================
 grep -q 'row "pandoc"' "$REPO_ROOT/scripts/doctor.sh" && pass "doctor runs Pandoc instead of trusting a shim" || fail "doctor has no Pandoc check"
 grep -q 'check opt gcloud gcloud' "$REPO_ROOT/scripts/doctor.sh" && pass "doctor reports gcloud for Google Docs" || fail "doctor missing gcloud"
-grep -q '25 commands' "$REPO_ROOT/scripts/doctor.sh" && pass "doctor header counts 25 commands" || fail "doctor header stale"
+grep -q '26 commands' "$REPO_ROOT/scripts/doctor.sh" && pass "doctor header counts 26 commands" || fail "doctor header stale"
 
 # ============================================================================
 printf '\n--- distribution: six surfaces ---\n'
@@ -180,7 +180,7 @@ printf '%s\n' '+++ b/src/a.js' '@@ -0,0 +1,2 @@' '+one' '+two' > "$T/d.patch"
 assert_eq '{"src/a.js":[1,2]}' "$(node "$REPO_ROOT/claude-plugin/skills/forge/scripts/review.cjs" lines "$T/d.patch" 2>/dev/null)" "bundled review.cjs runs from the plugin tree"
 for mf in "$REPO_ROOT/.claude-plugin/marketplace.json" "$REPO_ROOT/claude-plugin/.claude-plugin/plugin.json" "$REPO_ROOT/plugins/forge/.codex-plugin/plugin.json"; do
   name="${mf#$REPO_ROOT/}"
-  grep -q "25 commands" "$mf" && pass "manifest count 25: $name" || fail "manifest count 25: $name"
+  grep -q "26 commands" "$mf" && pass "manifest count 26: $name" || fail "manifest count 26: $name"
   grep -q "backlog, review" "$mf" && pass "manifest lists review: $name" || fail "manifest lists review: $name"
 done
 grep -q '`/forge:review`' "$REPO_ROOT/claude-plugin/skills/forge/SKILL.md" && pass "claude router lists /forge:review" || fail "claude router missing /forge:review"

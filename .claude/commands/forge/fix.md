@@ -244,7 +244,8 @@ Owner role — in a repository that is not yours, "Whose repository?" at the top
 instead. When the working repo is an output repo (per `build`'s contract), fixes ride the standard lifecycle:
 - Work on branch **`fix/<stamp>`**; push at every kept fix; final commits squashed/reworded to
   conventional `fix: <summary> (DEF-n)` messages.
-- **Open a PR** when the queue is done (or the bound hits): body = per-defect table (root cause →
+- **Open a PR** titled `fix: <summary>` (it squash-merges under that title, so the repo's
+  semantic-release job releases the patch) when the queue is done (or the bound hits): body = per-defect table (root cause →
   fix commit → evidence → the test that guards it), one **`Fixes #<issue>`** line per remediated GitHub issue so the `qa`
   issues close on merge. The PR's **CI check must be green** — a red-CI fix branch is not done
   (and when the defect WAS the red CI, the green run is the proof).
@@ -280,14 +281,16 @@ After merging: confirm the **base branch's own CI run is green** (a PR-green/mai
 merge surfaced something the PR never ran) and confirm the linked `qa` issues actually closed. A red
 base branch immediately re-opens the loop as a new item — the run is not COMPLETE while `main` is red.
 - **Escape hatches:** `--no-merge` (open the PR and stop), `Merge: manual`, or a repo where protection
-  requires review. Merging is still never deploying: `ship` stays human-gated, releases are not tagged.
+  requires review. Merging is still never deploying: `ship` stays human-gated, and the version is
+  semantic-release's to cut in CI, never tagged by hand.
 - A **contract change** or any finding needing the owner's adjudication does not block the merge — it
   is called out in the PR body, the issue comment, and the summary, and it stays reverted-in-one-click
   (squash merge = one commit to `git revert`).
 
 ## Safety Invariants
-- **Never deploy, tag releases, or publish** — `ship` stays human-gated. Pushing the fix branch + PR
-  to the private output repo is standard-loop.
+- **Never deploy, hand-tag a release, or publish** — `ship` stays human-gated and versions come from
+  semantic-release in the output repo's CI. Pushing the fix branch + PR to the private output repo is
+  standard-loop.
 - Scope-only writes; never mutate the skill tree, the frozen test run dir, or unrelated trees.
 - Never weaken the safety net: no deleted/skipped tests, no loosened assertions, no lowered
   coverage floors, no silenced errors (`|| true`, broad try/catch) to move the metric.

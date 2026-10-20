@@ -66,7 +66,7 @@ Gather everything that will be shipped:
 Generate domain-specific checklist:
 
 **Code PR:** tests pass, types check, lint clean, no secrets, PR description, reviewers assigned
-**Release:** version bumped, changelog updated, migration tested, rollback plan
+**Release:** version bumped (a semantic-release repo: the `v`-tag and its GitHub Release already exist — `semver.cjs check` → `SEMVER: ADOPTED`), changelog updated, migration tested, rollback plan
 **Deployment:** env vars set, health checks configured, rollback ready, monitoring active
 **Content:** links valid, images optimized, SEO metadata, spell check
 **Package:** version bumped, README updated, breaking changes documented, CI green
@@ -123,10 +123,10 @@ session authorization in a redacted evidence file; `ship.authorization` binds so
 
 Execute the ship action:
 - Code PR: create/update PR; request reviewers only when separately authorized
-- Release: tag, build, publish — for AutoForge output repos: `git tag vX.Y.Z` +
-  `gh release create vX.Y.Z --notes-file RELEASE_NOTES.md` on the project's own repo, with
-  `--prerelease` while acceptance is not fully converged; the release is the transparent,
-  addressable artifact of the build
+- Release: tag, build, publish — AutoForge output repos are versioned by semantic-release in their
+  own CI (`.releaserc.json`): never hand-tag beside it. A release ship builds and deploys the latest
+  `v`-tag (`git describe --tags --abbrev=0`), whose GitHub Release is the transparent, addressable
+  artifact of the build. A repository you own without it → `/forge:semver` first.
 - Deployment: deploy to target environment
 - Content: publish to CMS/platform
 - Save the observed provider receipt ID, destination and artifact immediately after the action,
