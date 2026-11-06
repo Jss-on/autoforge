@@ -2,6 +2,37 @@
 
 All notable changes to the forge project are documented here.
 
+## Unreleased — /forge:requirements: wireframes cloned from popular open-source peers, gated by a quality–diversity score (2026-11-07)
+
+**Theme:** the artifact-reaction loop invented its throwaway wireframes from scratch. Now it sweeps
+GitHub for the most-starred live projects of the same kind, clones their layouts (never their code
+or assets) into the variants the client reacts to, and a mechanical gate refuses a set that is not
+a real choice.
+
+**Added:**
+
+- `scripts/wireframes-score.cjs` — `sweep "<category>"` (`gh search repos` → `wireframes/references.tsv`
+  rows: popular ≥500 stars, pushed within 24 months, license recorded) and `score <dir>
+  [--require SC-n,…] [--capture] [--asof YYYY-MM-DD]` → `WIREFRAMES: PASS|FAIL wqd=N/M coverage=F
+  diversity=F refs=N bytes_max=K`. Quality per wireframe = its contract (THROWAWAY banner, `lineage`
+  resolving to a ledger row and self-contained are hard; `screen`/`sc`/viewport metas, nav, main,
+  `[data-primary]`, empty + error states, ≤64 KiB are the nine soft checks). Renders are
+  fingerprinted (192-bit average hash + horizontal/vertical difference hashes of a 9×9 luminance
+  grid; PNG decoded without dependencies); variants of one screen < 32 bits apart share a niche and
+  only the best counts (MAP-Elites QD-score). Calibrated on real renders: recolour 0, copy-only 17,
+  different layouts 72–100 bits. `--capture` renders through the project's Playwright. Deterministic;
+  the liveness clock is `--asof`.
+- `score-design.sh wireframes <dir> …` dispatches to it; `transform.sh` ships it in every tree.
+- `references/elicitation-protocol.md` §5 — the reference sweep, the clone rule (structure, never
+  code/CSS/icons/logos/copy), the wireframe contract and the gate; `commands/forge/requirements.md`
+  Phase 1 bullet, Phase 4 playback (captures with lineage), Safety and Summary (`WIREFRAMES:` line);
+  `design-protocol.md` §3 reads the chosen lineage; `guide/forge-requirements.md` explains the score.
+- `tests/fixtures/requirements/wireframes/` — the worked POS example: three wireframes cloned from
+  opensourcepos, laravel-pos and flutter-pos-system plus the ledger with two excluded references;
+  `tests/wireframes-score.test.cjs` (PNG decoder across all five filters, fingerprint niche rule,
+  ledger, contract, verdicts, gh row filter) renders it through Playwright when one resolves and
+  expects three niches, then one recolour more to fail at `wqd=3.00/4`; rows in `tests/test-requirements.sh`.
+
 ## Unreleased — /forge:requirements: the SRS as a designed PDF (2026-10-07)
 
 **Theme:** the signed-off requirements left the engagement as plain markdown. The client reads a

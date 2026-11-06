@@ -9,6 +9,8 @@
 #   verdict  <design-defects.tsv> [scan.json] [DESIGN.md] [critique.tsv] [asset-project-root]
 #                                                 → DESIGN_VERDICT: SHIP | FIX | REBUILD
 #   routes <DESIGN.md> <routes.txt> [<scenarios.md>] → ROUTES: PARITY | DRIFT   (## Navigation table = router; every SC-n has a screen)
+#   wireframes <run-dir>/wireframes [--require SC-1,SC-2] [--capture]
+#                                                 → WIREFRAMES: PASS | FAIL wqd=… (requirements' throwaway wireframes, cloned from popular peers; wireframes-score.cjs)
 #   seed     <text-or-file> <n>                   → 1-based deterministic index (the direction roll)
 #   rubric   [design.md]                          → SCORE: N   (grep-rubric of the command spec)
 #
@@ -448,6 +450,7 @@ routes() {
 case "${1:-}" in
   lint)     shift; lint "$@" ;;
   routes)   shift; routes "$@" ;;
+  wireframes) shift; node "$SCRIPT_DIR/wireframes-score.cjs" score "$@" ;;
   scan)     shift; scan "$@" ;;
   critique) shift; critique "$@" ;;
   defects)  shift; defects "$@" ;;

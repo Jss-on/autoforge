@@ -1,0 +1,6 @@
+slug	repo	stars	license	pushed	category	screen	capture	notes
+opensourcepos	https://github.com/opensourcepos/opensourcepos	4505	other	2026-11-06	point of sale	sales	refs/opensourcepos-sales.png	top icon bar nav; register-mode toolbar; scan/search row; cart table with an empty-state banner; customer + totals card at right (captured from demo.opensourcepos.org, Ventas)
+laravel-pos	https://github.com/angkosal/laravel-pos	508	mit	2026-10-23	point of sale	sale	refs/laravel-pos-sale.png	dark left sidebar; cart column at left (scan, customer select, qty inputs, total, Cancel/Submit); product image grid with search at right (README screenshots/pos.png)
+flutter-pos-system	https://github.com/evan361425/flutter-pos-system	637	apache-2.0	2026-10-25	pos system	order	refs/flutter-pos-system-order.png	top bar with Checkout; category chips; product image grid at right; order list with checkboxes + steppers at left; bulk-actions bar with count/price; modifier chips (docs index-introduction.png)
+nexopos	https://github.com/Blair2004/NexoPOS	1303	gpl-3.0	2026-11-06	pos system			demo.nexopos.com is a 404 and the README image is only the logo — not looked at, so it does not count
+store-pos	https://github.com/tngoman/Store-POS	1054	none	2026-10-25	point of sale			Electron till; no screenshots in the repo or README and no public demo — not looked at, so it does not count
