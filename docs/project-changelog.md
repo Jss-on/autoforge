@@ -2,6 +2,13 @@
 
 All notable changes to the forge project are documented here.
 
+## v3.7.4 — the section ledger: every section of the book, its mechanism, its forge artifact (2026-11-08)
+
+- **`references/data-intensive-section-ledger.md`** — 216 rows, one per section of the table of contents of *Designing Data-Intensive Applications*, 2nd ed. (the contents are committed as `tests/fixtures/data/ddia2-toc.tsv`): the mechanism the section teaches, in one sentence, and the forge artifact that encodes it — a protocol anchor, a `DATA.md` key, a seam verdict, an acceptance row, a stack rule or a digest rule. No row says "not applicable".
+- **Verified on every suite run, without the book.** `tests/book-ledger-verify.cjs` requires a row for every table-of-contents entry at the right page, a mechanism sentence, and an encoding that names an artifact that exists in forge (§ anchors parsed from the protocol, `DATA.md` keys from the protocol and the fixture, seam verdicts, rows, scripts, references, digests). `tests/test-data.sh` runs it unconditionally; the heading-level and content-level checks still run when `DDIA_PAGES_JSON` is set.
+- **Research ledger tightened** — the Elle row now quotes the checker's README (the anomaly classes G0, G1a–c, G-Single, G2 and the soundness statement) beside the paper's abstract.
+- **Install verified through the harness.** `claude plugin marketplace update autoforge` then `claude plugin update forge@autoforge` reported the latest version installed and `claude plugin list` shows it enabled — the loader's own view, not a copied cache.
+
 ## v3.7.3 — the metrics research ledger; every section of the book covered (2026-11-08)
 
 - **`references/data-intensive-metrics-research.md`** — the research step behind protocol §5 made a deliverable: for each of the nine gated metrics, the candidate measures considered, the primary-source statements (quoted, with URL and access date: the SRE book and workbook, k6's open-model and constant-arrival-rate pages and its `dropped_iterations` definition, HdrHistogram's corrected recording, Elle, strong_migrations and Squawk, PostgreSQL's replication lag columns, AWS REL09-BP04, OpenTelemetry's database histogram, GDPR Articles 12 and 17, the UK data-quality dimensions), the decision and the rejected alternatives. Protocol §5 and §9 point at it; the suite asserts nine metric sections and at least twelve distinct sources.

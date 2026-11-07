@@ -481,7 +481,11 @@ self-reported number — the receipts and the independent verify before converge
 
 ## §10 Coverage of the book
 
-The book lives in forge in three layers. This protocol is the condensed layer (§0-§8: the decisions, the
+The book lives in forge in four layers. `references/data-intensive-section-ledger.md` is the section
+layer: one row per section of the table of contents (216), the mechanism that section teaches and the
+forge artifact that encodes it; `tests/book-ledger-verify.cjs` checks, on every suite run and without
+the book, that every table-of-contents entry has a row and that every encoding names an artifact that
+exists (a § anchor here, a `DATA.md` key, a seam verdict, a row, a stack rule, a digest). This protocol is the condensed layer (§0-§8: the decisions, the
 rules, the metrics). `references/data-intensive-book-map.md` is the row-level map: every section of the
 table of contents and its home — a gate, a `DATA.md` decision, protocol guidance or the stack decision;
 no section is left as "not applicable". `references/data-intensive-digest-ch01.md` … `data-intensive-digest-ch14.md` are

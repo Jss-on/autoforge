@@ -1,0 +1,217 @@
+chapter	page	title
+1	3	Operational Versus Analytical Systems
+1	5	Characterizing Transaction Processing and Analytics
+1	7	Data Warehousing
+1	10	Systems of Record and Derived Data
+1	12	Cloud Versus Self-Hosting
+1	13	Pros and Cons of Cloud Services
+1	14	Cloud Native System Architecture
+1	17	Operations in the Cloud Era
+1	19	Distributed Versus Single-Node Systems
+1	20	Problems with Distributed Systems
+1	21	Microservices and Serverless
+1	23	Cloud Computing Versus Supercomputing
+1	24	Data Systems, Law, and Society
+1	25	Summary
+2	34	Case Study: Social Network Home Timelines
+2	34	Representing Users, Posts, and Follows
+2	35	Materializing and Updating Timelines
+2	37	Describing Performance
+2	38	Latency and Response Time
+2	40	Average, Median, and Percentiles
+2	41	Use of Response Time Metrics
+2	43	Reliability and Fault Tolerance
+2	43	Fault Tolerance
+2	44	Hardware and Software Faults
+2	47	Humans and Reliability
+2	49	Scalability
+2	50	Understanding Load
+2	51	Shared-Memory, Shared-Disk, and Shared-Nothing Architectures
+2	52	Principles for Scalability
+2	52	Maintainability
+2	53	Operability: Making Life Easy for Operations
+2	54	Simplicity: Managing Complexity
+2	55	Evolvability: Making Change Easy
+2	56	Summary
+3	67	Relational Versus Document Models
+3	68	The Object-Relational Mismatch
+3	72	Normalization, Denormalization, and Joins
+3	75	Many-to-One and Many-to-Many Relationships
+3	77	Stars and Snowflakes: Schemas for Analytics
+3	80	When to Use Which Model
+3	84	Graph-Like Data Models
+3	86	Property Graphs
+3	88	The Cypher Query Language
+3	90	Graph Queries in SQL
+3	92	Triple Stores and SPARQL
+3	96	Datalog: Recursive Relational Queries
+3	98	GraphQL
+3	101	Event Sourcing and CQRS
+3	105	DataFrames, Matrices, and Arrays
+3	107	Summary
+4	116	Storage and Indexing for OLTP
+4	118	Log-Structured Storage
+4	125	B-Trees
+4	129	Comparing B-Trees and LSM-Trees
+4	132	Multicolumn and Secondary Indexes
+4	133	Storing Values Within the Index
+4	133	Keeping Everything in Memory
+4	134	Data Storage for Analytics
+4	135	Cloud Data Warehouses
+4	136	Column-Oriented Storage
+4	142	Query Execution: Compilation and Vectorization
+4	143	Materialized Views and Data Cubes
+4	145	Multidimensional and Full-Text Indexes
+4	146	Full-Text Search
+4	147	Vector Embeddings
+4	150	Summary
+5	163	Formats for Encoding Data
+5	164	Language-Specific Formats
+5	165	JSON, XML, and Binary Variants
+5	169	Protocol Buffers
+5	172	Avro
+5	177	The Merits of Schemas
+5	178	Modes of Dataflow
+5	178	Dataflow Through Databases
+5	180	Dataflow Through Services: REST and RPC
+5	187	Durable Execution and Workflows
+5	189	Event-Driven Architectures
+5	191	Summary
+6	198	Single-Leader Replication
+6	200	Synchronous Versus Asynchronous Replication
+6	201	Setting Up New Followers
+6	204	Handling Node Outages
+6	206	Implementation of Replication Logs
+6	209	Problems with Replication Lag
+6	214	Solutions for Replication Lag
+6	215	Multi-Leader Replication
+6	216	Geographically Distributed Operation
+6	220	Sync Engines and Local-First Software
+6	222	Dealing with Conflicting Writes
+6	229	Leaderless Replication
+6	229	Writing to the Database When a Node Is Down
+6	235	Single-Leader Versus Leaderless Replication Performance
+6	236	Multi-Region Operation
+6	237	Detecting Concurrent Writes
+6	243	Summary
+7	253	Pros and Cons of Sharding
+7	254	Sharding for Multitenancy
+7	255	Sharding of Key-Value Data
+7	256	Sharding by Key Range
+7	258	Sharding by Hash of Key
+7	263	Skewed Workloads and Relieving Hot Spots
+7	264	Operations: Automatic Versus Manual Rebalancing
+7	265	Request Routing
+7	268	Sharding and Secondary Indexes
+7	268	Local Secondary Indexes
+7	270	Global Secondary Indexes
+7	271	Summary
+8	278	What Exactly Is a Transaction?
+8	279	The Meaning of ACID
+8	284	Single-Object and Multi-Object Operations
+8	288	Weak Isolation Levels
+8	290	Read Committed
+8	293	Snapshot Isolation and Repeatable Read
+8	299	Preventing Lost Updates
+8	303	Write Skew and Phantoms
+8	308	Serializability
+8	309	Actual Serial Execution
+8	313	Two-Phase Locking
+8	317	Serializable Snapshot Isolation
+8	323	Distributed Transactions
+8	324	Two-Phase Commit
+8	328	Distributed Transactions Across Different Systems
+8	333	Database-Internal Distributed Transactions
+8	334	Exactly-Once Message Processing Revisited
+8	335	Summary
+9	346	Faults and Partial Failures
+9	347	Unreliable Networks
+9	348	The Limitations of TCP
+9	350	Network Faults in Practice
+9	351	Fault Detection
+9	352	Timeouts and Unbounded Delays
+9	355	Synchronous Versus Asynchronous Networks
+9	358	Unreliable Clocks
+9	359	Monotonic Versus Time-of-Day Clocks
+9	360	Clock Synchronization and Accuracy
+9	362	Relying on Synchronized Clocks
+9	366	Process Pauses
+9	371	Knowledge, Truth, and Lies
+9	372	The Majority Rules
+9	373	Distributed Locks and Leases
+9	377	Byzantine Faults
+9	380	System Model and Reality
+9	384	Formal Methods and Randomized Testing
+9	388	Summary
+10	402	Linearizability
+10	404	What Makes a System Linearizable?
+10	408	Relying on Linearizability
+10	411	Implementing Linearizable Systems
+10	413	The Cost of Linearizability
+10	417	ID Generators and Logical Clocks
+10	420	Logical Clocks
+10	423	Linearizable ID Generators
+10	425	Consensus
+10	427	The Many Faces of Consensus
+10	433	Consensus in Practice
+10	437	Coordination Services
+10	440	Summary
+11	454	Batch Processing with Unix Tools
+11	454	Simple Log Analysis
+11	456	Chain of Commands Versus Custom Program
+11	456	Sorting Versus In-Memory Aggregation
+11	457	Batch Processing in Distributed Systems
+11	458	Distributed Filesystems
+11	460	Object Stores
+11	461	Distributed Job Orchestration
+11	466	Batch Processing Models
+11	466	MapReduce
+11	468	Dataflow Engines
+11	469	Shuffling Data
+11	471	Joins and Grouping
+11	473	Query Languages
+11	475	DataFrames
+11	476	Batch Use Cases
+11	476	Extract–Transform–Load
+11	477	Analytics
+11	478	Machine Learning
+11	479	Serving Derived Data
+11	481	Summary
+12	488	Transmitting Event Streams
+12	489	Messaging Systems
+12	495	Log-Based Message Brokers
+12	500	Databases and Streams
+12	501	Keeping Systems in Sync
+12	503	Change Data Capture
+12	508	State, Streams, and Immutability
+12	513	Processing Streams
+12	514	Uses of Stream Processing
+12	518	Reasoning About Time
+12	523	Stream Joins
+12	526	Fault Tolerance
+12	529	Summary
+13	539	Data Integration
+13	540	Combining Specialized Tools by Deriving Data
+13	544	Batch and Stream Processing
+13	546	Unbundling Databases
+13	547	Composing Data Storage Technologies
+13	551	Designing Applications Around Dataflow
+13	555	Observing Derived State
+13	561	Aiming for Correctness
+13	562	The End-to-End Argument for Databases
+13	566	Enforcing Constraints
+13	571	Timeliness and Integrity
+13	575	Trust, but Verify
+13	579	Summary
+14	586	Predictive Analytics
+14	586	Bias and Discrimination
+14	587	Responsibility and Accountability
+14	588	Feedback Loops
+14	589	Privacy and Tracking
+14	590	Surveillance
+14	591	Consent and Freedom of Choice
+14	592	Privacy and Use of Data
+14	594	Data as Assets and Power
+14	595	Remembering the Industrial Revolution
+14	596	Legislation and Self-Regulation
+14	597	Summary
