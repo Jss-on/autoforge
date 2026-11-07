@@ -215,11 +215,36 @@ spec_has "ux|UI/UX"                               "spec: ux dimension"
 spec_has "DESIGN.md"                              "spec: DESIGN.md design source"
 spec_has "conformance|design-review"              "spec: design conformance / review"
 
+# --- generated CI finishes in minutes ---
+spec_has "ci-protocol\.md"                        "spec: CI shaped by the CI protocol"
+spec_has "8 min wall-clock"                       "spec: CI wall-clock budget"
+CIPROTO="$REPO_ROOT/claude-plugin/skills/forge/references/ci-protocol.md"
+[[ -f "$CIPROTO" ]] && pass "protocol: ci reference exists" || fail "protocol: ci reference exists"
+ciproto_has() { grep -qiE -- "$1" "$CIPROTO" 2>/dev/null && pass "$2" || fail "$2 (protocol missing /$1/)"; }
+ciproto_has "Wall-clock ≤ 8 min"                  "protocol: budget is measured wall-clock"
+ciproto_has "cancel-in-progress"                  "protocol: superseded runs cancelled"
+ciproto_has "ms-playwright"                       "protocol: browser cache"
+ciproto_has "\-\-shard"                           "protocol: e2e sharded across jobs"
+ciproto_has "per shard"                           "protocol: one database per shard"
+ciproto_has "type=gha"                            "protocol: docker layer cache"
+ciproto_has "contributor role"                    "protocol: contributor pipelines untouched"
+for m in "$REPO_ROOT/.claude/skills/forge/references/ci-protocol.md" \
+         "$REPO_ROOT/.agents/skills/forge/references/ci-protocol.md" \
+         "$REPO_ROOT/plugins/forge/skills/forge/references/ci-protocol.md" \
+         "$REPO_ROOT/.opencode/skills/forge/references/ci-protocol.md"; do
+  if [[ -f "$m" ]] && diff -q "$CIPROTO" "$m" >/dev/null 2>&1; then
+    pass "ci protocol parity: ${m#$REPO_ROOT/}"
+  else
+    fail "ci protocol parity: ${m#$REPO_ROOT/} (missing or diverged)"
+  fi
+done
+
 # ============================================================================
 printf '\n--- hardening checklist + eval specs present ---\n'
 # ============================================================================
 
 [[ -f "$CHECKLIST" ]] && pass "hardening checklist exists" || fail "hardening checklist missing"
+grep -qiE 'ci-protocol\.md' "$CHECKLIST" 2>/dev/null && pass "checklist: CI row points at the CI protocol" || fail "checklist: CI row points at the CI protocol"
 SPEC_COUNT=$(find "$EVALS" -name '*.spec.yaml' 2>/dev/null | wc -l | tr -d ' ')
 assert_ge "${SPEC_COUNT:-0}" 3 "at least 3 eval specs in evals/fullstack (got ${SPEC_COUNT:-0})"
 

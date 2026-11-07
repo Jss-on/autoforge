@@ -441,8 +441,9 @@ markers on deliberate ceilings. Order within a build:
    (account + org), and **onboarding** so a **fresh account/tenant starts EMPTY** and creates its own
    data. Seeded rows are **fixtures for tests only — never the app's only data path** (an in-memory /
    seed-only store that resets is a demo, not a product). Frontend wired to the design system → tests green.
-4. **DevOps** — multi-stage **Dockerfile** (non-root, `HEALTHCHECK`), compose/IaC, CI (lint+test+build+dep-scan),
-   release automation (`semver.cjs init` once CI exists — "Output repository"),
+4. **DevOps** — multi-stage **Dockerfile** (non-root, `HEALTHCHECK`), compose/IaC, CI (lint+test+build+dep-scan)
+   shaped per `references/ci-protocol.md` — parallel jobs, cached dependencies and browsers, sharded e2e,
+   **≤ 8 min wall-clock** on the output repo — release automation (`semver.cjs init` once CI exists — "Output repository"),
    forward-only migrations, `SIGTERM` graceful shutdown, env config + `.env.example`.
 5. **Monitoring** — `/healthz`, `/readyz`, `/metrics` (Prometheus), structured JSON logs, trace/correlation IDs.
 6. **UX** — implement the design system under the surface's **visitor-mode rules** (protocol §1:

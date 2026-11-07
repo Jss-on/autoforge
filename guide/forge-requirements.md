@@ -105,6 +105,50 @@ Forge shows the change: `A-001` is rejected; `A-002` is corrected to require sta
 happens to competing requests, and adds the staff story and approval/rejection scenarios. The
 owner can correct those revised flows before approving the complete picture.
 
+## Wireframes are cloned from popular open-source and premium peers, then scored
+
+Forge does not invent the first screens. It searches GitHub for the most-starred open-source
+projects of the same kind and the App Store for the paid and premium products of the same kind —
+popular (500+ stars or ratings) and alive (a push or release within two years) — looks at 3–5 of
+them (the premium listings' screenshots are downloaded for it), captures the screens that match
+your busiest scenarios and records each one in `wireframes/references.tsv` (link, stars or
+ratings, license, the screen, the capture, what it gets right). At least one reference must be a
+paid product: the layouts people pay for are the strongest evidence of what the category expects.
+You see those captures first and say what you dislike. Each throwaway wireframe is then a
+re-expression of a different reference's layout in your own objects and words — its structure,
+never its code, styling, icons or logos — so the choice you make is between patterns thousands
+of users already corrected, not between the interviewer's guesses.
+
+The set is gated mechanically before you react to it:
+
+```text
+scripts/score-design.sh wireframes forge/requirements-<run>/wireframes --require SC-1,SC-2 --capture
+screen sale: variants=4 lineages=4 niches=4 diversity=0.46
+WIREFRAMES: PASS wqd=4.00/4 coverage=1.00 diversity=0.46 refs=5 premium=2 bytes_max=7k
+```
+
+`wqd` is a quality–diversity score: every wireframe earns up to 1 for meeting its contract (the
+scenario ids it covers, navigation, a main area, one primary action, an empty and an error state,
+self-contained and small enough to open instantly); wireframes of the same screen whose renders
+look like the same layout under a perceptual hash count once, so three recolours score about 1,
+not 3. `coverage` is the share of the required scenarios that have a screen, `diversity` how far
+apart the variants of a screen are, `refs` the live references with captures and `premium` how
+many of those are paid products. PASS needs at least three references with one premium among
+them, every required scenario covered, two or more lineages per screen that really
+differ, and `wqd` of at least 0.8 per wireframe. Creativity beyond that is yours to judge in the
+reaction round; the number only guarantees you are choosing between real, complete alternatives.
+
+The lines above come from a sari-sari store POS brief. The sweep found `opensourcepos` (4.5k stars,
+captured from its public demo), `laravel-pos` and `flutter-pos-system` (README screenshots) on
+GitHub and, on the App Store, Shopify POS (7.5k ratings; its iPad "New order" screenshot was
+downloaded by the sweep) and Square POS (607k ratings; its listing shows a reports screen and
+marketing shots but no sale screen, so it is recorded and not cloned), while `NexoPOS` (demo
+offline, logo-only README) and `Store-POS` (no screenshots anywhere) were excluded with the reason
+printed. The four wireframes re-express four layouts — top icon bar + cart table + customer card;
+dark sidebar + cart + product grid; category chips + grid + order list with a bulk bar; icon rail +
+tile grid + cart panel with a pinned Checkout — and a fifth that only recoloured the first failed
+the gate at `wqd=4.00/5`. The example ships as `tests/fixtures/requirements/wireframes/`.
+
 ## 4. Choose the stack on evidence — you approve it
 
 Before the technical requirements are written, Forge chooses the technology stack the way it

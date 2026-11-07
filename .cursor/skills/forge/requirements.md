@@ -131,16 +131,30 @@ retain unchanged confirmations. Preserve decision history and the review revisio
   difficulty model, platforms + input (mobile touch elicited FIRST, never as a port), audio
   expectations, and the juice bar ("game feel" is a requirement — name it). Asset licensing and the
   size budget land in the spec's `hardening`/`devops` rows.
-- **Artifact-reaction loop (protocol §5) for design intent:** show 3–5 named design directions and
-  collect what they **dislike**; generate 2–3 **throwaway static HTML wireframes** of the 1–2
-  highest-traffic screens in the run dir (THROWAWAY banner in-file, never reused by `build`),
-  screenshot via Playwright, present the PNGs, capture reactions per screen. With native imagegen
+- **Artifact-reaction loop (protocol §5) for design intent — clone what already won:** first the
+  **reference sweep**: `node scripts/wireframes-score.cjs sweep "<category>" --shots wireframes/refs`
+  lists the popular, alive products of the same kind from two sources — the most-starred open-source
+  projects on GitHub (≥500 stars, pushed within 24 months) and the paid/premium products on the App
+  Store (≥500 ratings, released within 24 months, their screenshots downloaded); look at 3–5, at
+  least one of them premium, capture the screens matching the highest-traffic scenarios into
+  `wireframes/refs/`, and record each in `wireframes/references.tsv` (slug · repo · stars · license ·
+  pushed · category · screen · capture · notes). Show those captures as the 3–5 named directions and
+  collect what they **dislike**. Then 2–3 **throwaway static HTML wireframes** per highest-traffic
+  screen (1–2 screens), **each a re-expression of a different reference's layout** in the client's
+  objects — structure copied, never their code, CSS, icons, logos or copy — in `wireframes/`
+  (THROWAWAY banner, `lineage`/`screen`/`sc` metas, self-contained, never reused by `build`),
+  rendered via Playwright (`wireframes-score.cjs score <dir> --capture`), the PNGs presented,
+  reactions captured per screen. The gate `scripts/score-design.sh wireframes <run-dir>/wireframes
+  --require <SC-ids>` must print `WIREFRAMES: PASS` (the quality–diversity score: ≥3 live references
+  with ≥1 paid/premium among them,
+  every required SC-n on a wireframe, ≥2 lineages per screen whose renders are genuinely different
+  layouts, `wqd ≥ 0.8 × count`) before the reaction round is logged. With native imagegen
   or a matching media MCP (`references/integrations-protocol.md` §1), ≤4 generated **moodboard images** (one per
   candidate direction, style-contract prompts, THROWAWAY — provenance rows still written) may join
   the wireframes as reaction artifacts. A client-shared **Figma link** is read through the design
   bridge (§2) and its key frames become reaction artifacts too. Outcome = the
-  `DESIGN.md` source + density/navigation/states patterns, each traced to a client reaction —
-  taste is captured by **selection and correction, never adjectives**.
+  `DESIGN.md` source + density/navigation/states patterns, each traced to a client reaction **and
+  to its reference lineage** — taste is captured by **selection and correction, never adjectives**.
 - **Asset and motion brief** (design-protocol §3a, integrations-protocol §1): proactively consider
   a small, coherent set of real photos, illustrations or artworks for the primary entry/overview
   and appropriate content/empty states, even without an `Assets:` hint. Use the existing reaction
@@ -309,7 +323,7 @@ playback and finalizes this document. No new scope may enter through translation
 Playback is **never the SRS document** (protocol §7). Present the latest `client-review.md` revision:
 the understanding, complete assumptions/decisions, changes since the previous review, then (a) the stories and numbered
 day-in-the-life scenarios re-told **with the system in place** ("Maria scans 3 items, the customer
-shows an SC card, the screen shows ₱X because …"), (b) the wireframe screenshots, (c) the
+shows an SC card, the screen shows ₱X because …"), (b) the reference captures and the wireframe screenshots, each with its lineage, (c) the
 worked-example table for every money rule, (d) the **derived-requirements list read back item by
 item** — `derived-domain` provenance is where miscommunication lives, so each gets its own yes/no —
 (e) the Won't/deferred list with consequences, (f) delivery, deployment, security/compliance,
@@ -442,7 +456,8 @@ the requirements complete or chain. Include the review path/revision in the trac
 
 ## Safety
 Documents + spec only — no product code, no deploy. Throwaway wireframes may be static HTML in
-the run dir, THROWAWAY-bannered, never copied into the build scope.
+the run dir, THROWAWAY-bannered, never copied into the build scope; they borrow a reference's
+layout, never its code, CSS, icons, logos or copy, and the ledger names the license either way.
 When the owner requests a spike before choosing a stack, a disposable feasibility experiment in
 `<run-dir>/stack/spike/` may resolve that named uncertainty. Record the result, then replay the
 decision; this exception does not authorize product scaffolding or a deployment.
@@ -457,7 +472,7 @@ Lead with the plain-language agreed scope, key decisions/exclusions and how the 
 and run. Link the approved client review, the SRS and its designed document (`requirements.pdf`:
 pages, diagrams rendered / total, images — or the HTML and why no PDF). Then print: # functional reqs, # NFRs (by dimension), MoSCoW counts, **provenance counts (stated /
 derived-domain / default-confirmed — zero open)**, must-be checklist disposition tally, # scenarios +
-# wireframes reacted to, **the stack decision** (`STACK_DECISION` verdict, the recommended option's
+# wireframes reacted to with the `WIREFRAMES:` verdict line and # references swept, **the stack decision** (`STACK_DECISION` verdict, the recommended option's
 Y-statement, confidence + robustness, # candidates / # drivers / # sources by tier, the approval line
 — `approved` or `owner-mandated`, never "chosen by Forge"), generated spec path, validation verdict,
 and the `/forge:build` invocation. Open assumptions mean the draft is unfinished; list them with the next needed answer,

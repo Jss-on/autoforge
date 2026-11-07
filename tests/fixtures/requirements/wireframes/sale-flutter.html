@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="screen" content="sale">
+<meta name="lineage" content="flutter-pos-system:order">
+<meta name="sc" content="SC-1,SC-2">
+<title>Sale — variant C (category chips + product grid + order list with bulk bar)</title>
+<!-- THROWAWAY elicitation mockup. Layout re-expressed from evan361425/flutter-pos-system "order" (top bar with back + Checkout · category chips · product image grid at right · order list with checkboxes + steppers at left · bulk-actions bar with count/price at the bottom · modifier chips). No code, CSS, icons or copy taken from the reference. Never product code. -->
+<style>
+*{box-sizing:border-box}body{margin:0;font:14px/1.4 system-ui,sans-serif;color:#1c1c1e;background:#fafafa}
+.banner{background:#ffe08a;color:#5a4300;padding:6px 12px;font-weight:600;text-align:center}
+nav{display:flex;align-items:center;gap:16px;height:56px;padding:0 16px;background:#fff;border-bottom:1px solid #e6e6e6}
+nav .back{font-size:20px}nav .title{font-weight:600}nav .spacer{flex:1}nav a{color:inherit;text-decoration:none;padding:6px 10px}
+nav button[data-primary]{background:#1e3a8a;color:#fff;border:0;border-radius:20px;padding:10px 18px;font-weight:700;font-size:15px}
+main{display:grid;grid-template-columns:360px 1fr;min-height:700px}
+.order{display:flex;flex-direction:column;border-right:1px solid #e6e6e6;background:#fff}
+.order .tools{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px}.order .tools button{padding:10px;border:1px solid #c9c9cf;background:#fff;border-radius:8px}
+.line{display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid #f0f0f0}.line.sel{background:#e3ecff}
+.line input[type=checkbox]{width:18px;height:18px}.line .name{flex:1}.line .name small{display:block;color:#666}
+.line .step{display:flex;align-items:center;gap:8px}.line .step b{width:26px;height:26px;border-radius:50%;border:1px solid #333;display:grid;place-items:center;font-weight:400}
+.bulk{margin-top:auto;display:flex;align-items:center;gap:12px;padding:12px;border-top:1px solid #e6e6e6}.bulk button{background:#1e3a8a;color:#fff;border:0;border-radius:8px;padding:10px 14px;font-weight:600}
+.mods{display:flex;flex-wrap:wrap;gap:8px;padding:0 12px 12px}.chip{border:1px solid #c9c9cf;border-radius:8px;padding:8px 12px;background:#fff}.chip.on{background:#e3ecff;border-color:#1e3a8a}
+.catalog{padding:12px 16px}.cats{display:flex;gap:8px;align-items:center}.cats .spacer{flex:1}.cats .view{border:1px solid #c9c9cf;border-radius:6px;width:36px;height:36px;display:grid;place-items:center}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:4px;margin-top:16px}
+.product{position:relative;aspect-ratio:1/1;background:#d8d8dc;border-radius:2px}.product span{position:absolute;left:0;right:0;bottom:0;padding:6px;background:rgba(0,0,0,.55);color:#fff;text-align:center;font-weight:600}
+.empty{padding:24px 12px;text-align:center;color:#666}
+.error{margin:12px;padding:12px;background:#fde8e8;color:#7a1f1f;border-left:4px solid #c62828;border-radius:6px}
+@media (max-width:900px){main{grid-template-columns:1fr}.order{border-right:0;border-bottom:1px solid #e6e6e6}}
+</style>
+</head>
+<body>
+<div class="banner">THROWAWAY — elicitation mockup, variant C. React to it; it is never product code.</div>
+<nav aria-label="Primary">
+  <span class="back">←</span><span class="title">New sale</span>
+  <span class="spacer"></span>
+  <a href="#history">History</a><a href="#stash">Stash</a><span>⋯</span>
+  <button data-primary>Checkout ₱ 540.00</button>
+</nav>
+<main>
+  <section class="order" aria-label="Order">
+    <div class="tools"><button>Select all</button><button>Toggle</button></div>
+    <div class="line sel"><input type="checkbox" checked><div class="name">Rice 5kg (Sinandomeng)<small>Takal · 1 kg</small></div><div class="step">1 <b>+</b> ₱ 280</div></div>
+    <div class="line"><input type="checkbox"><div class="name">Coke 1.5L<small>Default</small></div><div class="step">2 <b>+</b> ₱ 170</div></div>
+    <div class="line"><input type="checkbox"><div class="name">Lucky Me Pancit Canton<small>Default</small></div><div class="step">6 <b>+</b> ₱ 90</div></div>
+    <p class="empty" data-state="empty" hidden>Nothing ordered yet — tap a product on the right.</p>
+    <p class="error" data-state="error" hidden>Checkout failed — the drawer is still open from the last sale. Close it and try again.</p>
+    <div class="bulk"><button>Bulk actions</button><span>Count: 3 · Price: ₱ 540</span></div>
+    <div class="mods"><span class="chip on">✓ Takal (loose)</span><span class="chip">Per pack</span><span class="chip">Utang</span></div>
+    <div class="mods"><span class="chip">Default (1.0)</span><span class="chip on">✓ Half (0.5)</span><span class="chip">Quarter (0.25)</span></div>
+  </section>
+  <section class="catalog" aria-label="Products">
+    <div class="cats"><span class="chip on">✓ Bigas &amp; staples</span><span class="chip">Drinks</span><span class="chip">Snacks</span><span class="chip">Household</span><span class="chip">Load</span><span class="spacer"></span><span class="view">▦</span></div>
+    <div class="grid">
+      <div class="product"><span>Rice 5kg</span></div><div class="product"><span>Sugar 1kg</span></div><div class="product"><span>Cooking oil</span></div>
+      <div class="product"><span>Eggs (1 pc)</span></div><div class="product"><span>Sardines</span></div><div class="product"><span>Noodles</span></div>
+    </div>
+  </section>
+</main>
+</body>
+</html>
