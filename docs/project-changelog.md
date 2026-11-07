@@ -2,6 +2,12 @@
 
 All notable changes to the forge project are documented here.
 
+## v3.7.6 — concept terms versus proper nouns; the source reading log (2026-11-08)
+
+- **Substance measured on concept terms.** `tests/book-substance-verify.cjs` now sets a section's proper nouns aside mechanically (a stem whose cased occurrences in the section are mostly capitalized: the products, people and places of the book's worked examples) and ranks the remaining stems by tf × idf; it prints the raw figure beside the concept figure instead of attributing the gap in prose. Gate restored to the original: every section ≥ 30 % of its concept terms inside its own artifacts, concept mean ≥ 60 %. Measured: concept mean 60 %, raw mean 60 %, no section under 30 %.
+- **Protocol text where rows pointed at thin anchors:** §2.3 storage-engine mechanics (memtable, SSTables, compaction, Bloom filters, B-tree pages and the write-ahead log, covering and clustered indexes), §2.7 application semantics define correctness, §2.9 clock mechanics (NTP, drift, leap seconds, confidence intervals), §2.10 technology, law and society.
+- **Source reading log** in the research ledger: one row per source stating how it was read (full page in one fetch, two fetches for the two longer pages, abstract page for the paper) and which passages were used; `tests/test-data.sh` asserts the log covers every quoted source.
+
 ## v3.7.5 — four mechanisms become lint rules; the substance check measures each row's own artifacts (2026-11-08)
 
 - **Linted decisions, not guidance.** `data-score.cjs lint` now requires: `integrity.trust_model` (trusted-deployment must list `integrity.weak_lies` input-validation, restore-digests, multiple-time-sources — DDIA2 p.377-380); `durability.fault_model` (partial-failure, or checkpoint-restart with a reason — p.23); `durability.replication_log` whenever replication is not none (statement | wal-shipping | logical | trigger — p.206-208); `derived.*.rerun: idempotent` for every consumer or job outside the source transaction (p.466-475, p.528). The fixtures and the §4 schema carry the keys; eight new lint tests pin the messages. Existing records without the keys lint INVALID until they decide.
