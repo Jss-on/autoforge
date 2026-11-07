@@ -197,13 +197,96 @@ Manual workflow checks remain useful:
 
 ## Release Process
 
-Maintainers use `scripts/release.sh`. See `scripts/release.md` for details.
+Contributors don't need to bump versions; maintainers release with the scripts below.
+
+These terminal scripts maintain **AutoForge itself** at `Jss-on/autoforge`. Use `$forge ship`
+for an application's own repository or deployment. Run the scripts from an AutoForge checkout
+with Bash, Git, Node, the [harness prerequisites](README.md#prerequisites), and authenticated Git access.
+Versioned releases also require the `gh` CLI and repository write access.
+Both publication paths also require fresh installed Claude/Codex evaluations and independently
+verified CI evidence for the prepared bundle. Missing or skipped required evaluations block release;
+see the [installed evaluation guide](guide/installed-evaluation.md).
+
+| Intent | Command | Result |
+|--------|---------|--------|
+| Publish committed product changes | `bash scripts/publish-autoforge.sh "publish: describe the change"` | One verified product commit on `master`; local source history is not published. |
+| Prepare and release a new version | `bash scripts/release.sh X.Y.Z --title "Release title"` | Version updates, a reviewed PR, verified merge, version tag, and GitHub release. |
+
+### Publish committed changes
+
+Review and commit only the intended product files first. The publisher checks the **entire tracked
+tree**, so keeping private/client output in an earlier commit's current tree still blocks publication.
+Its credential gate checks filenames and PEM private-key headers; review content and use a dedicated
+secret scanner for broader detection.
 
 ```bash
-./scripts/release.sh 2.2.0 --title "New Feature"
+git status --short
+git log -1 --oneline
+git show --stat HEAD
+bash scripts/publish-autoforge.sh "publish: harden security and shipment checks"
 ```
 
-Contributors don't need to bump versions.
+The last line performs a remote write after its gates pass. The script uses the `autoforge`
+remote, creates that remote with the canonical URL if absent, and validates effective fetch and
+push URLs against `Jss-on/autoforge`. The `origin` remote is not a publication destination.
+
+Publication requires a fresh fetch of product `master` and proof that its tree appears in the
+candidate's local ancestry. It rejects tracked client run directories, credential artifacts,
+hidden index flags, and changes to HEAD, index, or tracked files during verification. Every
+`tests/test-*.sh` suite and `scripts/smoke-seam.sh` must pass; `AUTOFORGE_SKIP_TESTS` cannot bypass them.
+
+The publisher pushes a commit containing the exact verified tree with the fetched product commit
+as its parent, then checks the remote receipt. The published commit ID can differ from local HEAD.
+If the marketplace version has no remote tag, its tag and the commit are pushed atomically.
+Existing version tags are preserved and unrelated local tags are not pushed. If the tree already
+matches product `master`, the verified run reports that there is nothing to publish.
+
+### Create a versioned release
+
+Start in a clean product checkout with `master` at the freshly fetched `autoforge/master` commit.
+A separate clone is useful when your development checkout contains private source history:
+
+```bash
+git clone --origin autoforge --branch master https://github.com/Jss-on/autoforge.git autoforge-release
+cd autoforge-release
+gh auth status
+node -p "require('./claude-plugin/.claude-plugin/plugin.json').version"
+# Choose an unused version greater than the one printed above.
+bash scripts/release.sh 3.6.1 --title "Security and shipment hardening"
+```
+
+`3.6.1` is an example: replace it with the next intended version. Versions must increase, use
+`X.Y.Z` without leading zeros, and have no existing release tag; an initial `v` is accepted.
+Authenticate with `gh auth login` if needed before starting.
+
+1. The script creates `release/X.Y.Z`, updates the three manifests, all generated skill versions, and
+   version badges, then pauses for document review. Review `README.md`, `guide/`, `CONTRIBUTING.md`,
+   and `COMPARISON.md`; press Enter to continue or type `abort` to retain local changes and stop.
+2. It stages only release/documentation paths, commits them, runs all harness suites and the seam
+   smoke, then pushes the verified release branch and creates a PR against product `master`.
+3. Review the PR. Enter `merge` to continue; any other response leaves it open. The script waits
+   for CI, requires a successful GitHub Actions `Harness test suites` check on that exact head,
+   and checks that the PR is non-draft, cleanly mergeable, and has no blocking review decision.
+4. It publishes a merge containing the verified tree and reviewed parents, verifies GitHub's
+   merge receipt, tags that exact merge, and creates the GitHub release. Existing repository
+   permissions and branch rules still apply; the script does not change or bypass them.
+
+### Resolve a blocked publication
+
+| Stop condition | How to proceed |
+|----------------|----------------|
+| Dirty tracked files or hidden index flags | Review the changes/flags, commit only intended files, and verify again. |
+| Private output or credentials in the tree | Prepare a clean product candidate containing only intended distribution files. |
+| Product changes absent from source history | Reconcile product changes or apply the intended commits on a fresh product checkout. |
+| Tests fail, or the candidate changes during tests | Fix the failure, commit the candidate, and rerun publication gates. |
+| PR head or product base advances | Update the candidate and rerun verification against the new revisions. |
+| CI is pending, failed, or lacks the required harness success | Resolve the exact-head CI result before release. |
+| Remote denies the push | Follow the repository's permitted merge workflow; do not bypass its rules. |
+| Push, receipt lookup, tag, or release creation is interrupted | Inspect remote `master`, PR, tag, and release state before retrying; an earlier write may have succeeded. |
+
+Neither script force-pushes, deletes branches, or automatically resets failed work. See the
+[release and publication runbook](scripts/release.md) for the complete gate and retry contract.
+
 
 ## Getting Help
 
