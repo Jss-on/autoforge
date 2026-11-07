@@ -75,6 +75,11 @@ if [[ -n "${DDIA_PAGES_JSON:-}" && -f "${DDIA_PAGES_JSON}" ]]; then
 else
   pass "book content check skipped (set DDIA_PAGES_JSON to run tests/book-concepts-verify.cjs)"
 fi
+if [[ -n "${DDIA_PAGES_JSON:-}" && -f "${DDIA_PAGES_JSON}" ]]; then
+  BSV="$(node "$REPO_ROOT/tests/book-substance-verify.cjs" "$DDIA_PAGES_JSON" "$REPO_ROOT" 2>&1)" && pass "book substance verified inside each row's own artifacts: $(printf '%s' "$BSV" | grep BOOK_SUBSTANCE_VERIFY)" || fail "book substance: $(printf '%s' "$BSV" | grep -E 'WEAK|BOOK_SUBSTANCE_VERIFY' | head -6 | tr '\n' ' ')"
+else
+  pass "book substance check skipped (set DDIA_PAGES_JSON to run tests/book-substance-verify.cjs)"
+fi
 LEDGER_OUT="$(node "$REPO_ROOT/tests/book-ledger-verify.cjs" "$REPO_ROOT" 2>&1)" && pass "section ledger: $(printf '%s' "$LEDGER_OUT" | grep BOOK_LEDGER_VERIFY)" || fail "section ledger: $(printf '%s' "$LEDGER_OUT" | grep -vE '^BOOK_LEDGER:' | head -5 | tr '\n' ' ')"
 [[ $(wc -l < "$REPO_ROOT/tests/fixtures/data/ddia2-toc.tsv") -eq 217 ]] && pass "table-of-contents fixture: 216 sections + header" || fail "table-of-contents fixture: unexpected line count"
 grep -q "data-intensive-section-ledger.md" "$PROTO" && pass "protocol §10 points at the section ledger" || fail "protocol does not reference the section ledger"

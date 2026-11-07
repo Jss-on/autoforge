@@ -50,7 +50,12 @@ const ENUM = {
   failover: ['automatic', 'manual', 'none'],
   mechanism: ['cdc', 'outbox', 'event-log', 'batch', 'trigger', 'same-transaction'],
   load_model: ['open', 'closed'],
+  replication_log: ['statement', 'wal-shipping', 'logical', 'trigger'],
+  fault_model: ['partial-failure', 'checkpoint-restart'],
+  trust_model: ['trusted-deployment', 'byzantine-tolerant'],
+  rerun: ['idempotent', 'non-idempotent'],
 };
+const WEAK_LIES = ['input-validation', 'restore-digests', 'multiple-time-sources']; // the "weak forms of lying" DDIA2 p.377-380 says to guard against
 const DEFAULT_MIN_SAMPLES = 300, MAX_DELETION_DAYS = 30;
 
 const num = v => { if (v === undefined || v === null || v === '') return NaN; const s = String(v).replace(/[_,\s]/g, '').replace(/(ms|s|gb|mb|x)$/i, ''); return /^-?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i.test(s) ? Number(s) : NaN; };
@@ -132,6 +137,8 @@ function lint(md) {
     if (i.idempotency === undefined) errs.push('integrity.idempotency: missing — a retried request or redelivered event must not apply twice; name the key (or { na: <reason> } for a read-only system)');
     else if (!isNa(i.idempotency) && !(isObj(i.idempotency) && text(i.idempotency.key))) errs.push('integrity.idempotency.key: missing (e.g. Idempotency-Key header, event id)');
     if (i.constraints !== undefined && !(Array.isArray(i.constraints) ? i.constraints.length : text(i.constraints))) warns.push('integrity.constraints: empty — list the uniqueness/check constraints the database enforces');
+    if (i.trust_model === undefined) errs.push('integrity.trust_model: missing — trusted-deployment (nodes honest but fallible; DDIA2 p.377-380) or byzantine-tolerant; the choice decides which lies the system guards against');
+    else { enumCheck('integrity', 'trust_model', i.trust_model, ENUM.trust_model); if (text(i.trust_model) && i.trust_model.trim().toLowerCase() === 'trusted-deployment') { const guards = Array.isArray(i.weak_lies) ? i.weak_lies.map(x => String(x).trim().toLowerCase()) : []; for (const g of WEAK_LIES) if (!guards.includes(g)) errs.push(`integrity.weak_lies: must include ${g} — a trusted deployment still guards against corrupted bytes, bad input and a wrong clock (DDIA2 p.378-379)`); } }
   }
   const e = grp('evolution');
   if (e) {
@@ -149,6 +156,9 @@ function lint(md) {
     if (!isObj(d.backup)) errs.push('durability.backup: missing map { rpo_s, rto_s, frequency } — recovery objectives are numbers a drill can measure');
     else { numCheck('durability.backup', 'rpo_s', d.backup.rpo_s, { min: 0 }); numCheck('durability.backup', 'rto_s', d.backup.rto_s, { min: 1 }); if (!text(d.backup.frequency)) warns.push('durability.backup.frequency: not stated'); }
     enumCheck('durability', 'failover', d.failover, ENUM.failover);
+    if (d.fault_model === undefined) errs.push('durability.fault_model: missing — partial-failure (commodity nodes fail and are replaced while the system keeps serving; DDIA2 p.23) is what forge builds for; checkpoint-restart needs durability.reason and makes the failover and restore rows n/a');
+    else { enumCheck('durability', 'fault_model', d.fault_model, ENUM.fault_model); if (text(d.fault_model) && d.fault_model.trim().toLowerCase() === 'checkpoint-restart' && !text(d.reason)) errs.push('durability.fault_model: checkpoint-restart needs durability.reason'); }
+    if (rep && rep !== 'none') { if (d.replication_log === undefined) errs.push('durability.replication_log: missing — statement | wal-shipping | logical | trigger (DDIA2 p.206-208); wal-shipping pins leader and followers to one storage-engine version, so evolution must plan the rolling upgrade'); else enumCheck('durability', 'replication_log', d.replication_log, ENUM.replication_log); }
   }
   const dv = grp('derived');
   if (dv) {
@@ -162,6 +172,7 @@ function lint(md) {
       else enumCheck(`derived.${k}`, 'mechanism', v.mechanism, ENUM.mechanism);
       numCheck(`derived.${k}`, 'freshness_s', v.freshness_s, { min: 0 });
       if (!text(v.reconcile)) errs.push(`derived.${k}.reconcile: missing — the command or test that compares the derived copy with its source (trust, but verify)`);
+      if (mech && mech !== 'same-transaction') { if (v.rerun === undefined) errs.push(`derived.${k}.rerun: missing — a job or consumer that is not in the source transaction must be idempotent so a failure is a re-run and the rebuild equals live (DDIA2 p.466-475, p.528); declare rerun: idempotent`); else { enumCheck(`derived.${k}`, 'rerun', v.rerun, ENUM.rerun); if (text(v.rerun) && v.rerun.trim().toLowerCase() === 'non-idempotent') errs.push(`derived.${k}.rerun: non-idempotent — a retried job would double-apply; make it idempotent (dedupe by op id, overwrite by key, or rebuild from scratch)`); } }
     }
   }
   const r = grp('retention');

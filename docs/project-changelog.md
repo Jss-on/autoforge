@@ -2,6 +2,12 @@
 
 All notable changes to the forge project are documented here.
 
+## v3.7.5 — four mechanisms become lint rules; the substance check measures each row's own artifacts (2026-11-08)
+
+- **Linted decisions, not guidance.** `data-score.cjs lint` now requires: `integrity.trust_model` (trusted-deployment must list `integrity.weak_lies` input-validation, restore-digests, multiple-time-sources — DDIA2 p.377-380); `durability.fault_model` (partial-failure, or checkpoint-restart with a reason — p.23); `durability.replication_log` whenever replication is not none (statement | wal-shipping | logical | trigger — p.206-208); `derived.*.rerun: idempotent` for every consumer or job outside the source transaction (p.466-475, p.528). The fixtures and the §4 schema carry the keys; eight new lint tests pin the messages. Existing records without the keys lint INVALID until they decide.
+- **Substance inside the named artifacts.** `tests/book-substance-verify.cjs` resolves the artifacts each section-ledger row names (the § anchor's own text, the digest, the key's definitions, the seam's source) and measures the section's distinctive terms inside those only — not anywhere in forge. Before this release 52 sections fell under 30 % (mean 44 %); the protocol gained §2.9 (networks, timeouts, clocks, pauses, leases and fencing, quorums, consensus, coordination services, linearizability, sharding and multitenancy, batch infrastructure, messaging and backpressure), §2.10 (decisions about people) and richer §2.1, §2.3, §2.4, §2.5, §2.6 and §2.7, and the rows were repointed: every section is now ≥ 30 % inside its own artifacts, mean 58 % (gate: all sections ≥ 30 %, mean ≥ 55 %). Run by `tests/test-data.sh` when `DDIA_PAGES_JSON` is set.
+- **Research ledger** records that every source page was read to its end, including the two that needed a second fetch.
+
 ## v3.7.4 — the section ledger: every section of the book, its mechanism, its forge artifact (2026-11-08)
 
 - **`references/data-intensive-section-ledger.md`** — 216 rows, one per section of the table of contents of *Designing Data-Intensive Applications*, 2nd ed. (the contents are committed as `tests/fixtures/data/ddia2-toc.tsv`): the mechanism the section teaches, in one sentence, and the forge artifact that encodes it — a protocol anchor, a `DATA.md` key, a seam verdict, an acceptance row, a stack rule or a digest rule. No row says "not applicable".
