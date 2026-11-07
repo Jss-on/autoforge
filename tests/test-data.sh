@@ -124,7 +124,8 @@ V=$(REQUIRE_DATA=1 REQUIRE_LOGIC=1 bash "$SR" validate "$REPO_ROOT/tests/fixture
 assert_contains "$V" "VALIDATION: VALID" "validate: the data-intensive fixture spec is VALID with REQUIRE_DATA=1"
 assert_contains "$V" "data=present(groups_traced=8)" "validate: all eight groups traced"
 assert_eq 0 "$RC" "validate: VALID exit 0"
-sed 's/data:slo/data:nowhere/' "$REPO_ROOT/tests/fixtures/requirements/data.spec.yaml" | sed '/data:/,$ s/data:\(workload\|model\|integrity\|evolution\|durability\|derived\|retention\)/traced/' > "$T/untraced.spec.yaml"
+sed 's/data:slo/data:nowhere/' "$REPO_ROOT/tests/fixtures/requirements/data.spec.yaml" | sed -E '/data:/,$ s/data:(workload|model|integrity|evolution|durability|derived|retention)/traced/' > "$T/untraced.spec.yaml"   # -E: BSD sed has no \| alternation
+grep -q 'data:' "$T/untraced.spec.yaml" && ! grep -qE 'data:(workload|slo|model|integrity|evolution|durability|derived|retention)' "$T/untraced.spec.yaml" && pass "fixture: untraced spec keeps its data block and traces no group" || fail "fixture: untraced spec was not rewritten (sed portability)"
 V=$(bash "$SR" validate "$T/untraced.spec.yaml" 2>/dev/null)
 assert_contains "$V" "VALIDATION: INVALID" "validate: a data block tracing no data group is INVALID"
 # a data:<group> mention outside the data block (another dimension's assert) does not count
