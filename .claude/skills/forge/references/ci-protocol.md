@@ -66,8 +66,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with: { node-version: 24, cache: npm }
       - run: npm ci --no-audit --no-fund
       - run: npm run lint && npm run typecheck && npm test
@@ -86,13 +86,13 @@ jobs:
         options: --health-cmd "pg_isready -U app" --health-interval 5s --health-timeout 3s --health-retries 20
     env: { DATABASE_URL: 'postgres://app:ci-disposable@127.0.0.1:5432/app' }
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with: { node-version: 24, cache: npm }
       - run: npm ci --no-audit --no-fund
       - id: pw
         run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         id: pw-cache
         with: { path: ~/.cache/ms-playwright, key: 'pw-${{ runner.os }}-${{ steps.pw.outputs.version }}' }
       - if: steps.pw-cache.outputs.cache-hit != 'true'
@@ -101,16 +101,16 @@ jobs:
         run: npx playwright install-deps chromium
       - run: npm run build
       - run: npx playwright test --shard=${{ matrix.shard }}/${{ strategy.job-total }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with: { name: 'e2e-${{ matrix.shard }}', path: test-results/, retention-days: 7 }
   container:                               # container hosting only
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/build-push-action@v6
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
         with: { context: ., push: false, cache-from: type=gha, cache-to: 'type=gha,mode=max' }
 ```
 
