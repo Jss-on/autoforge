@@ -2,6 +2,14 @@
 
 All notable changes to the forge project are documented here.
 
+## v3.7.1 — the book map covers every section, verified against the body text (2026-11-07)
+
+**Theme:** v3.7.0 mapped the table of contents of *Designing Data-Intensive Applications*, 2nd ed. to forge but left four sections as "n/a" and had no check that the rows matched the book's text. This release closes both.
+
+- **No section is left out.** The four rows that said n/a now have a mechanical home: cloud-versus-supercomputing → the fault model forge assumes (rolling node loss, never checkpoint-restart; protocol §2.6); replication-log implementation → `durability.replication` names the log type and `evolution` plans the rolling upgrade it allows (§2.6); Byzantine faults → declined on the book's advice inside the trusted deployment, while its "weak forms of lying" are gates (restore digests, input validation at trust boundaries, several time sources; §2.4); batch processing models → deterministic, idempotent jobs whose rebuild must equal live (`DATA_RECONCILE`), join/grouping skew as the Tier B shard-skew metric (§2.7). Each chapter gained a Summary row pointing back at the rows that carry its rules.
+- **Verified against the book, both ways.** `tests/book-map-verify.cjs` (stdlib) checks that every row's section titles occur on the pages it cites and that every table-of-contents entry is covered: on the 2nd-edition text (649 body pages, 255k words) → `BOOK_MAP_ROWS: 111/111`, `BOOK_MAP_TOC: 216/216`, `BOOK_MAP_VERIFY: PASS`. The book is not in the repo; `tests/test-data.sh` runs the check when `DDIA_PAGES_JSON` points at a locally extracted pages file and otherwise records the skip. The suite also asserts no `n/a` row and 14 Summary rows.
+- **Pilot proof.** The protocol was exercised end to end on a real brief (prepaid canteen cards, repo `Jss-on/kantin-pilot`): `/forge:requirements` → `/forge:build` with 84 pinned rows and execution receipts, `PASS_RATE: 1.00` (strict evidence), `COMPLETION: COMPLETE`, handoff 3.3.0 valid under `--require-pass`, design SHIP, security PASS, CI green, v1.0.0 cut by semantic-release.
+
 ## v3.7.0 — forge designs and builds data-intensive systems: the data-intensive protocol, `DATA.md` and the gated `data` dimension (2026-11-07)
 
 **Release note:** v3.7.0 also ships every entry below marked *Unreleased* down to and including

@@ -148,6 +148,8 @@ come from the database's sequence, a single decider or a logical clock — never
 timestamps, which skew and collide (p.363-364, p.417-424). Hard invariants vs apology workflows is an
 owner decision recorded here (p.573-574).
 
+**Trust model (ch.9 pp.377-380).** Nodes inside the deployment are assumed honest but fallible; Byzantine fault tolerance is not designed for, on the book's own advice. The "weak forms of lying" it does guard against are gates here: digests compared on every restore drill (`operational.cjs recovery`), input validation at every trust boundary (the `hardening` rows), and more than one time source for clocks (§2.6).
+
 ### 2.5 `evolution` — encoding, compatibility, migrations (DDIA2 ch.5)
 Rolling upgrades mean old and new code and old and new data coexist: new code must read old data
 (backward) and old code must read new data (forward); older code must preserve unknown fields on a
@@ -178,6 +180,8 @@ clocks (p.220-229, p.237-243). RPO/RTO are numbers a drill
 measures: restore into an isolated destination, time from incident to the service answering its
 journey, compare row counts and content digests (`operational.cjs recovery`).
 
+**Replication log type and the fault model (ch.6 pp.206-208, ch.1 pp.23-24).** Name the mechanism's log type in `durability.replication` (statement, WAL shipping, logical/row-based, trigger-based): WAL shipping pins leader and followers to one storage-engine version, so the rolling-upgrade plan in `evolution` must say how followers are upgraded first; a logical log decouples the two. forge targets cloud and commodity deployments that keep serving through partial failure: the failover and restore rows assume rolling node loss and replacement, never a whole-system checkpoint-restart.
+
 ### 2.7 `derived` — caches, indexes, views, exports, models (DDIA2 ch.1, ch.11-13)
 Every derived dataset names its system-of-record **source**, the **mechanism** that keeps it in sync
 (`cdc`, `outbox`, `event-log`, `batch`, `trigger`, `same-transaction`), its **freshness** budget and
@@ -191,6 +195,8 @@ or bulk-load and swap atomically (p.479-481). Consumer lag and the age of the ol
 are exported and alerted (p.499); poison messages go to a dead-letter queue (p.495); late events are
 counted (p.520). Analytics is a derived system too: warehouse or lake fed by CDC/ETL, never queries on
 the OLTP store (p.7-10); ML models are derived data and inherit the deletion obligation (p.552, p.24).
+
+**Batch jobs (ch.11 pp.466-481, ch.12 pp.526-528).** A derived dataset with `mechanism: batch` is produced by a deterministic, idempotent job: the same input yields the same output, so a failed or partial run is simply re-run and the rebuild must equal the live copy (`DATA_RECONCILE`). Joins and grouping co-partition their inputs; the hot-key skew they create is the Tier B shard-skew metric. Which engine runs the job is the stack's decision.
 
 ### 2.8 `retention` — personal data, deletion, minimization (DDIA2 ch.1, ch.14)
 Inventory every field or table about people with its **purpose** and **retention**; collect only for a
