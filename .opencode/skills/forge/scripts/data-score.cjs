@@ -227,16 +227,22 @@ function parseSamples(txt) {
       n: reqs.count === undefined ? NaN : Number(reqs.count),
       errors: failed ? Number(failed.rate !== undefined ? failed.rate : failed.value) : NaN, dropped: dropped.count === undefined ? 0 : Number(dropped.count) };
   }
-  const vals = [], flags = [];
+  const vals = [], flags = []; let model = 'unknown', dropped = 0;
   const src = t.startsWith('[') ? JSON.parse(t).map(x => (typeof x === 'object' && x ? `${x.ms ?? x.latency_ms ?? x.duration_ms}\t${x.ok === false || x.status === 'err' || Number(x.status) >= 400 ? 'err' : 'ok'}` : String(x))) : t.split(/\r?\n/);
   for (const line of src) {
-    const c = String(line).trim(); if (!c || c.startsWith('#')) continue;
+    const c = String(line).trim(); if (!c) continue;
+    if (c.startsWith('#')) {                                   // an open-model generator (data-load.cjs) declares itself in-band, like k6's executors
+      let h = /^#\s*(?:load_)?model\s*:\s*(open|closed)\b/i.exec(c); if (h) model = (model === 'closed' || h[1].toLowerCase() === 'closed') ? 'closed' : 'open';
+      h = /^#\s*dropped\s*:\s*(\d+)/i.exec(c); if (h) dropped += Number(h[1]);   // concatenated runs: every stream's drops count
+      continue;
+    }
+    if (/^ms\b/i.test(c)) continue;                            // column header
     const [a, b] = c.split(/[\t,;]\s*|\s+/), n = num(a);
     if (!Number.isFinite(n) || n < 0) throw new Error('sample is not a non-negative number: ' + c);
-    vals.push(n); flags.push(b !== undefined && (/^(err|error|fail|failed|false)$/i.test(b) || (/^\d{3}$/.test(b) && Number(b) >= 400)));
+    vals.push(n); flags.push(b !== undefined && (/^(err|error|fail|failed|false)$/i.test(b) || (/^\d{1,3}$/.test(b) && (Number(b) >= 400 || Number(b) === 0))));
   }
   const sorted = [...vals].sort((x, y) => x - y);
-  return { kind: 'samples', model: 'unknown', p50: percentile(sorted, 0.5), p95: percentile(sorted, 0.95), p99: percentile(sorted, 0.99), n: vals.length, errors: vals.length ? flags.filter(Boolean).length / vals.length : NaN, dropped: 0 };
+  return { kind: 'samples', model, p50: percentile(sorted, 0.5), p95: percentile(sorted, 0.95), p99: percentile(sorted, 0.99), n: vals.length, errors: vals.length ? flags.filter(Boolean).length / vals.length : NaN, dropped };
 }
 function sloVerdict(m, t) {
   const reasons = [];

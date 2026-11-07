@@ -62,6 +62,19 @@ with a fixed set of mechanical metrics.
   (Data dimension, DATA.md, system of record / derived data), `acceptance-evidence.md`,
   `handoff-schema.md`, and the "six dimensions" mentions in the game, integrations and migration
   protocols updated.
+- `scripts/data-load.cjs` — an open-model (arrival-rate) load generator for when k6 is absent:
+  requests start on a fixed schedule regardless of completion, client-side timing, `# load_model:
+  open` / `# dropped: N` declared in-band for `data-score.cjs slo`.
+- `tests/data-e2e.test.cjs` + `tests/fixtures/data/app/` — a real POS service on `node:sqlite`
+  (system of record, outbox consumer → `product_search`/`customer_search`, batch
+  `daily_sales_report`, idempotency key, CHECK/UNIQUE invariants, expand/contract migrations,
+  erasure path), booted as two processes on one database and driven through every gate: lint, the
+  open-model load at the pinned peak, real `EXPLAIN QUERY PLAN` output (and the failure when the
+  index is dropped), 20 concurrent checkouts of 5 units across processes, idempotent retries, a
+  SIGKILLed process restarted, the migrations lint, a restore drill, three reconciliations (and
+  injected drift caught), erasure checked in every export — then `score-build.sh pass-rate
+  --strict-evidence` → `PASS_RATE: 1.00`, `data_gate=PASS`, `DATA_COVERAGE: 1.00` and
+  `REQUIRE_DATA=1 … validate` → `VALID` on the app's spec. Runs inside `tests/test-data.sh`.
 - `tests/test-data.sh` (new suite: the seam's verdict lines, the gate math, `DATA_COVERAGE`,
   `REQUIRE_DATA`, the contracts, protocol and seam parity across the trees) + `tests/data-score.test.cjs`
   (19 checks); fixtures `tests/fixtures/data/` (the sari-sari POS `DATA.md` and its careless twin,

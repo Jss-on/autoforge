@@ -385,6 +385,18 @@ receipt (`verification.cjs run`), teed into `<run-dir>/evidence/data/`; `score-b
 | `migrations <dir\|file.sql…> [--dialect postgres\|mysql\|sqlite]` | SQL migrations (Prisma `migration.sql` trees are found) | `MIGRATION_SAFETY: PASS\|FAIL files= statements= unsafe= annotated= dialect=` | 0 / 1 / 2 |
 | `explain <plan.json\|plan.txt…> [--max-seq-rows 1000]` | PostgreSQL `EXPLAIN (FORMAT JSON)` / text, SQLite `EXPLAIN QUERY PLAN` | `DATA_INDEXES: PASS\|FAIL plans= seq_scans= max_seq_rows=` | 0 / 1 / 2 |
 
+When k6 is not installed, `node scripts/data-load.cjs run <url> --rate <peak/s> --duration 60s --out
+samples.tsv` is the open-model generator: it starts requests on a fixed schedule whether or not
+earlier ones finished, measures client side, and declares `# load_model: open` and `# dropped: N`
+in-band so `slo` needs no `--model` flag (`dropped` = requests the generator itself could not start
+within one interval of their planned time, the analogue of k6's `dropped_iterations`).
+`tests/data-e2e.test.cjs` is the worked example: a real POS service on `node:sqlite`
+(`tests/fixtures/data/app/`, two processes on one database) driven through every gate — lint, the
+open-model load, real `EXPLAIN QUERY PLAN` output, cross-process lost-update and uniqueness,
+idempotent retries, a killed-and-restarted process, the migrations lint, a restore drill, three
+derived datasets reconciled (and drift caught), erasure checked in every export — ending in
+`score-build.sh pass-rate --strict-evidence` → `data_gate=PASS` and `DATA_COVERAGE: 1.00`.
+
 `scripts/score-build.sh coverage <results.tsv> <requirements.md> <DATA.md>` prints `DATA_COVERAGE`
 after `REQ_COVERAGE` and `DESIGN_COVERAGE` (or `BUILD_DATA_MD` names the record); `pass-rate` prints
 `data_gate=PASS|CAPPED@0.50|n/a`. `REQUIRE_DATA=1 scripts/score-requirements.sh validate <spec>`

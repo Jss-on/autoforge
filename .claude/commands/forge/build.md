@@ -558,7 +558,10 @@ IEEE-829-style incident report, right-sized to its `iterations.tsv` line.
 - **Performance** — run a **load test** under an **open arrival-rate model** at the `DATA.md` peak
   (k6 `constant-arrival-rate`, `summaryTrendStats` incl. `p(99)`; `dropped_iterations` must be 0) and
   score it: `node scripts/data-score.cjs slo k6-summary.json --data DATA.md` → `DATA_SLO: PASS`
-  (p50/p95/p99 and the error ratio within the SLO, n ≥ `samples_min`); **zero N+1** on the primary
+  (p50/p95/p99 and the error ratio within the SLO, n ≥ `samples_min`); without k6,
+  `node scripts/data-load.cjs run <url> --rate <peak/s> --duration 60s --out samples.tsv` is the
+  open-model generator (latency from the planned arrival; `# load_model` and `# dropped` declared
+  in-band) and `slo samples.tsv --data DATA.md` scores it; **zero N+1** on the primary
   flows; check frontend bundle budget + Core Web Vitals via Playwright.
 - **Data (the data-intensive protocol §5 metrics)** — the `data` rows run and leave evidence under
   `evidence/data/`: `DATA_INDEXES: PASS` over `EXPLAIN` plans of every `model.indexes` query; the

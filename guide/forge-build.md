@@ -52,6 +52,9 @@ writer, the deletion path. Phase 6 measures it:
 ```text
 node scripts/data-score.cjs slo evidence/data/k6-summary.json --data DATA.md
 DATA_SLO: PASS p50=98.40 p95=312.70 p99=702.30 n=4812 errors=0.0004 dropped=0 model=open source=k6
+node scripts/data-load.cjs run http://localhost:3000/sales/1 --rate 50 --duration 60s --out evidence/data/samples.tsv   # no k6: the open-model generator
+node scripts/data-score.cjs slo evidence/data/samples.tsv --data DATA.md
+DATA_SLO: PASS p50=9.97 p95=17.30 p99=20.84 n=3000 errors=0.0000 dropped=0 model=open source=samples
 node scripts/data-score.cjs explain evidence/data/plans.json
 DATA_INDEXES: PASS plans=3 seq_scans=0 max_seq_rows=1000
 node scripts/data-score.cjs migrations prisma/migrations

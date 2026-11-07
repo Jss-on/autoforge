@@ -119,6 +119,9 @@ test('slo: raw samples pass against DATA.md thresholds only with --model open', 
   const noerr = run('slo', f, '--p50', '200', '--p95', '400', '--p99', '900', '--model', 'open'); assert.equal(noerr.code, 1); assert.match(noerr.err, /error-rate threshold missing/, 'an error threshold is as mandatory as the percentiles');
   const nanmin = run('slo', put('few2.txt', '10\n20\n30\n'), '--p50', '100', '--p95', '200', '--p99', '300', '--errors', '0.01', '--model', 'open', '--min-samples', 'abc'); assert.equal(nanmin.code, 1); assert.match(nanmin.err, /keeping 300/); assert.match(nanmin.err, /n=3 < samples_min 300/);
   const status = ds.parseSamples('12\t200\n15\t500\n18\t404\n'); assert.equal(status.errors, 2 / 3, 'HTTP status codes >= 400 in the second column count as errors');
+  const cat = ds.parseSamples('# load_model: open\n# dropped: 2\nms\tstatus\n10\t200\n# load_model: open\n# dropped: 3\n12\t201\n9\t0\n');
+  assert.deepEqual([cat.model, cat.dropped, cat.n, cat.errors], ['open', 5, 3, 1 / 3], 'concatenated data-load runs: the model is read in-band, drops sum, column headers skip, status 0 (no response) is an error');
+  assert.equal(ds.parseSamples('# load_model: open\n5\n# load_model: closed\n6\n').model, 'closed', 'one closed-loop stream makes the whole file closed');
   const legacy = ds.parseSamples(JSON.stringify({ metrics: { http_req_duration: { med: 90, 'p(95)': 300, 'p(99)': 650 }, http_reqs: { count: 2000, rate: 33 }, http_req_failed: { value: 0.001, passes: 2, fails: 1998 } } }));
   assert.equal(legacy.kind, 'k6'); assert.equal(legacy.p99, 650); assert.equal(legacy.n, 2000); assert.equal(legacy.errors, 0.001); assert.equal(legacy.model, 'unknown', 'the legacy --summary-export shape parses; its model must be declared');
   assert.equal(Number.isFinite(ds.percentile([1, 2, 3], 0.5)) && ds.parseSamples('1\n2\n').p50, 1);

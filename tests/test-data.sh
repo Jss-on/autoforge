@@ -37,6 +37,15 @@ else
 fi
 
 # ============================================================================
+printf '\n--- end to end: the gates against a running data-keeping service (node:sqlite POS, two processes) ---\n'
+# ============================================================================
+if node "$REPO_ROOT/tests/data-e2e.test.cjs" "$REPO_ROOT" > "$T/data-e2e.txt" 2>&1; then
+  pass "data-e2e: $(tail -n 1 "$T/data-e2e.txt")"
+else
+  fail "data-e2e: $(tail -n 1 "$T/data-e2e.txt")"; grep -A8 '^FAIL' "$T/data-e2e.txt" | sed 's/^/    /' | head -60
+fi
+
+# ============================================================================
 printf '\n--- data-score.cjs: verdict lines are one-line contracts ---\n'
 # ============================================================================
 OUT=$(node "$SEAM" lint "$FIX/DATA.md" 2>/dev/null); RC=$?
@@ -166,7 +175,7 @@ for m in "$REPO_ROOT/.claude/skills/forge/references/data-intensive-protocol.md"
   if [[ -f "$m" ]] && diff -q "$PROTO" "$m" >/dev/null 2>&1; then pass "protocol parity: ${m#$REPO_ROOT/}"; else fail "protocol parity: ${m#$REPO_ROOT/} (missing or diverged)"; fi
 done
 for d in .claude/skills/forge claude-plugin/skills/forge .agents/skills/forge plugins/forge/skills/forge .opencode/skills/forge .cursor/skills/forge; do
-  for s in data-score.cjs score-build.sh score-requirements.sh acceptance.cjs validate-handoff.sh; do
+  for s in data-score.cjs data-load.cjs score-build.sh score-requirements.sh acceptance.cjs validate-handoff.sh; do
     if diff -q "$REPO_ROOT/scripts/$s" "$REPO_ROOT/$d/scripts/$s" >/dev/null 2>&1; then pass "seam parity: $d/scripts/$s"; else fail "seam parity: $d/scripts/$s (missing or diverged)"; fi
   done
 done
