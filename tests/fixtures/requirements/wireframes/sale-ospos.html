@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="screen" content="sale">
+<meta name="lineage" content="opensourcepos:sales">
+<meta name="sc" content="SC-1,SC-2">
+<title>Sale — variant A (top bar + cart table + customer card)</title>
+<!-- THROWAWAY elicitation mockup. Layout re-expressed from opensourcepos/opensourcepos "Sales" (top icon bar · register toolbar · cart table with an empty-state banner · customer + totals card at right). No code, CSS, icons or copy taken from the reference. Never product code. -->
+<style>
+*{box-sizing:border-box}body{margin:0;font:14px/1.4 system-ui,sans-serif;color:#222;background:#f4f5f7}
+.banner{background:#ffe08a;color:#5a4300;padding:6px 12px;font-weight:600;text-align:center}
+nav{background:#2b2f36;color:#e8eaee;display:flex;align-items:center;gap:4px;padding:0 16px;height:64px}
+nav .brand{font-weight:700;font-size:18px;margin-right:24px}
+nav a{color:inherit;text-decoration:none;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 10px;font-size:12px}
+nav a i{width:26px;height:26px;border-radius:50%;background:#5c6470;display:block}
+nav a[aria-current]{background:#f4f5f7;color:#222}nav a[aria-current] i{background:#c9a227}
+main{display:grid;grid-template-columns:1fr 340px;gap:16px;padding:16px 48px}
+.panel{background:#fff;border:1px solid #dfe3e8}
+.toolbar{display:flex;align-items:center;gap:12px;padding:10px 12px;border-bottom:1px solid #dfe3e8}
+.toolbar label{font-weight:600}.toolbar select,.toolbar input{padding:6px 8px;border:1px solid #c4c9d0;background:#fff}
+.toolbar .spacer{flex:1}
+.btn{border:0;padding:8px 14px;font-weight:600;background:#e9ecf0;color:#222;cursor:pointer}
+.btn.blue{background:#2f80ed;color:#fff}.btn.dark{background:#1f2328;color:#fff}.btn.accent{background:#7b4fb3;color:#fff}
+table{width:100%;border-collapse:collapse}th{text-align:left;font-weight:600;padding:8px 12px}td{padding:8px 12px;border-top:1px solid #eef0f3}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.empty{margin:0 12px 12px;padding:18px;text-align:center;background:#e9e2f5;color:#3b2a5c;font-weight:600}
+.error{margin:0 12px 12px;padding:12px;background:#fde8e8;color:#7a1f1f;border-left:4px solid #c62828}
+.customer{padding:12px}.customer h2{font-size:14px;margin:0 0 8px}.customer input{width:100%;padding:8px;border:1px solid #c4c9d0}
+.customer .row{display:flex;gap:8px;margin:8px 0}
+.totals{margin-top:12px;border-top:1px solid #dfe3e8;padding-top:8px}.totals div{display:flex;justify-content:space-between;padding:3px 0}
+.totals .grand{font-size:22px;font-weight:700;margin-top:6px}
+button[data-primary]{width:100%;margin-top:12px;padding:14px;font-size:16px;font-weight:700;background:#2f80ed;color:#fff;border:0}
+footer{text-align:center;color:#6b7280;padding:24px;font-size:12px}
+@media (max-width:900px){main{grid-template-columns:1fr;padding:12px}nav{overflow-x:auto}}
+</style>
+</head>
+<body>
+<div class="banner">THROWAWAY — elicitation mockup, variant A. React to it; it is never product code.</div>
+<nav aria-label="Primary">
+  <span class="brand">Tindahan ni Aling Nena</span>
+  <a href="#customers"><i></i>Customers</a>
+  <a href="#items"><i></i>Items</a>
+  <a href="#suppliers"><i></i>Suppliers</a>
+  <a href="#reports"><i></i>Reports</a>
+  <a href="#receiving"><i></i>Receiving</a>
+  <a href="#sale" aria-current="page"><i></i>Sale</a>
+  <a href="#utang"><i></i>Utang (credit)</a>
+  <a href="#expenses"><i></i>Expenses</a>
+  <a href="#settings"><i></i>Settings</a>
+</nav>
+<main>
+  <section class="panel" aria-label="Cart">
+    <div class="toolbar">
+      <label>Mode</label><select><option>Sale receipt</option><option>Return</option><option>Quote</option></select>
+      <label>Shift</label><select><option>Morning — Nena</option></select>
+      <span class="spacer"></span>
+      <button class="btn blue">Today's sales</button>
+      <button class="btn dark">Suspended (2)</button>
+    </div>
+    <div class="toolbar">
+      <label for="scan">Scan or search item / receipt</label>
+      <input id="scan" style="flex:1" placeholder="e.g. 4800016644290 or “Rice 5kg”">
+      <button class="btn accent">+ New item</button>
+    </div>
+    <table>
+      <thead><tr><th>Remove</th><th>Item #</th><th>Item</th><th class="num">Price</th><th class="num">Qty</th><th class="num">Disc.</th><th class="num">Total</th><th>Update</th></tr></thead>
+      <tbody>
+        <tr><td>✕</td><td>0001</td><td>Rice 5kg (Sinandomeng)</td><td class="num">₱ 280.00</td><td class="num">1</td><td class="num">0%</td><td class="num">₱ 280.00</td><td>↻</td></tr>
+        <tr><td>✕</td><td>0042</td><td>Coke 1.5L</td><td class="num">₱ 85.00</td><td class="num">2</td><td class="num">0%</td><td class="num">₱ 170.00</td><td>↻</td></tr>
+        <tr><td>✕</td><td>0107</td><td>Lucky Me Pancit Canton</td><td class="num">₱ 15.00</td><td class="num">6</td><td class="num">0%</td><td class="num">₱ 90.00</td><td>↻</td></tr>
+      </tbody>
+    </table>
+    <p class="empty" data-state="empty" hidden>Walang laman ang cart. Scan an item or search above to start a sale.</p>
+    <p class="error" data-state="error" hidden>Sale not saved — the receipt printer is offline. Retry, or save as suspended and print later.</p>
+  </section>
+  <aside class="panel customer" aria-label="Customer and totals">
+    <h2>Customer (required for utang)</h2>
+    <input placeholder="Start typing a name or phone…">
+    <div class="row"><button class="btn accent">+ New customer</button><button class="btn dark">Shortcuts</button></div>
+    <div class="totals">
+      <div><span>Items</span><span>9</span></div>
+      <div><span>Subtotal</span><span>₱ 540.00</span></div>
+      <div><span>Discount</span><span>₱ 0.00</span></div>
+      <div class="grand"><span>Total</span><span>₱ 540.00</span></div>
+    </div>
+    <button data-primary>Charge ₱ 540.00</button>
+  </aside>
+</main>
+<footer>Sari-sari POS · wireframe A · reacts to: what is missing, what is noise, what would you tap first?</footer>
+</body>
+</html>

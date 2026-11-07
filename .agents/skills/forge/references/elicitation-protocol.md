@@ -258,19 +258,56 @@ remaining risks. New data, roles, integrations or deployment exposure reopen thi
 ## 5. Artifact-reaction loop (design & UX intent)
 
 Clients specify taste by **selection and correction, never by description**. So put artifacts in
-front of them:
+front of them — and build those artifacts from designs that already won, not from the
+interviewer's imagination:
 
-- **Reference triage:** show 3–5 named design directions (catalog slugs / live products) and ask
-  which feels right and — more informative — **what they dislike** in each.
-- **Throwaway wireframes:** generate 2–3 disposable static HTML mockups of the 1–2 highest-traffic
-  screens (list + primary workflow), screenshot them via Playwright, and present the PNGs. Ask for
-  reactions per screen: what's missing, what's noise, what would you tap first. **These mockups are
-  elicitation instruments, not product code** — they live in the run dir, are never reused by
-  `build`, and carry a THROWAWAY banner in the file. (This is the pipeline's structural advantage:
-  a disposable prototype costs minutes here, so use prototyping as an interview technique, not a
+- **Reference sweep (the outside view):** name the product category in the client's words and
+  the generic one ("sari-sari POS" → `point of sale`; "clinic queueing" → `appointment scheduling`),
+  then `node scripts/wireframes-score.cjs sweep "<category>"` lists the most-starred GitHub
+  projects of the same kind that are **popular (≥500 stars) and alive (pushed within 24 months)**
+  with their license and last push — run it for each wording and keep the union. Look at 3–5 of
+  them (README galleries, docs, a public demo) and capture the 1–2 screens that match the client's
+  highest-traffic scenarios into `wireframes/refs/<slug>-<screen>.png`. Record every reference
+  in `wireframes/references.tsv` (slug · repo · stars · license · pushed · category · screen ·
+  capture · notes — navigation placement, density, primary action, what the screen gets right).
+  A reference without a captured screen was not looked at and does not count. Thousands of users
+  already corrected these layouts; that is cheaper evidence than any interview question.
+- **Reference triage:** show the captured reference screens as the 3–5 named directions (catalog
+  slugs or live products may join them) and ask which feels right and — more informative — **what
+  they dislike** in each.
+- **Throwaway wireframes — cloned, not invented:** for each of the 1–2 highest-traffic screens
+  (list + primary workflow), write 2–3 disposable static HTML mockups, **each a re-expression of a
+  different reference's layout** — its navigation placement, information hierarchy, density and
+  primary action — in the client's objects and vocabulary. Copy the structure, **never their code,
+  CSS, icons, logos or copy**: layout is not protected, their assets are, and the ledger records
+  the license either way. Each file declares its contract (the seam checks it): a THROWAWAY banner,
+  `<meta name="screen">`, `<meta name="lineage" content="<slug>:<screen>">` resolving to a ledger
+  row, `<meta name="sc" content="SC-n,…">`, a viewport meta, `<nav>`, `<main>`, one
+  `[data-primary]` action, an element each for `data-state="empty"` and `data-state="error"`,
+  self-contained (nothing fetched) and ≤ 64 KiB. Render them via Playwright
+  (`wireframes-score.cjs score <dir> --capture` does it from a project that has Playwright),
+  present the PNGs, and ask per screen: what's missing, what's noise, what would you tap first.
+  **These mockups are elicitation instruments, not product code** — they live in the run dir, are
+  never reused by `build`, and carry the banner. (This is the pipeline's structural advantage: a
+  disposable prototype costs minutes here, so use prototyping as an interview technique, not a
   milestone.)
+- **The wireframe gate:** `scripts/score-design.sh wireframes <run-dir>/wireframes --require
+  SC-a,SC-b` → `WIREFRAMES: PASS|FAIL wqd=N/M coverage=F diversity=F refs=N bytes_max=K`, run
+  before the reaction round is logged. The headline is a **quality–diversity score** (MAP-Elites'
+  QD-score, Mouret & Clune 2015): each wireframe's *quality* is the share of its contract it meets
+  (functional completeness, the states, offline + small = fast; a failed hard check is 0);
+  wireframes of the same screen whose renders are < 32 bits apart under a 192-bit perceptual
+  fingerprint (average hash + horizontal and vertical difference hashes of a 9×9 luminance grid;
+  calibrated on real renders: recolour 0, copy-only change 17, different layouts 72–100) are the
+  **same niche** and only the best one counts — three recolours of one layout score ≈ 1, not 3.
+  *Diversity* is the mean pairwise distance inside a screen group (novelty, Lehman & Stanley
+  2011). PASS needs ≥ 3 live references with captures, every required SC-n on a wireframe, every
+  screen with ≥ 2 variants from ≥ 2 lineages that are genuinely different layouts, and
+  `wqd ≥ 0.8 × count`. The number guarantees the client is choosing between real, complete
+  alternatives; creativity beyond that is the client's call in the reaction round, not a score.
 - Capture the outcome as **tokens + patterns** (`DESIGN.md` source, density, navigation shape,
-  the states that matter), each traced to a client reaction, not to taste of the interviewer.
+  the states that matter), each traced to a client reaction **and** to the reference lineage it
+  came from, not to taste of the interviewer.
 
 ## 6. Ambiguity audit (adversarial self-review before playback)
 

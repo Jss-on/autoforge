@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="screen" content="sale">
+<meta name="lineage" content="laravel-pos:sale">
+<meta name="sc" content="SC-1,SC-2">
+<title>Sale — variant B (sidebar + cart left + product grid right)</title>
+<!-- THROWAWAY elicitation mockup. Layout re-expressed from angkosal/laravel-pos "POS" (dark left sidebar · top bar · cart column at left with scan + customer, qty inputs, total, Cancel/Submit · product image grid at right with search). No code, CSS, icons or copy taken from the reference. Never product code. -->
+<style>
+*{box-sizing:border-box}body{margin:0;font:14px/1.4 system-ui,sans-serif;color:#222;background:#f1f3f6}
+.banner{background:#ffe08a;color:#5a4300;padding:6px 12px;font-weight:600;text-align:center}
+.shell{display:grid;grid-template-columns:240px 1fr;min-height:760px}
+nav{background:#2d3440;color:#d6dae1;padding:0}
+nav .brand{display:flex;align-items:center;gap:10px;padding:16px;font-size:18px;font-weight:700;color:#fff;border-bottom:1px solid #3b4350}
+nav .brand i{width:28px;height:28px;border-radius:50%;background:#fff;display:block}
+nav .user{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid #3b4350}nav .user i{width:32px;height:32px;border-radius:50%;background:#8a93a2;display:block}
+nav a{display:flex;align-items:center;gap:10px;padding:12px 16px;color:inherit;text-decoration:none}nav a i{width:16px;height:16px;background:#8a93a2;display:block;border-radius:3px}
+nav a[aria-current]{background:#2f80ed;color:#fff;margin:4px 8px;border-radius:4px}nav a[aria-current] i{background:#fff}
+.topbar{background:#fff;border-bottom:1px solid #dfe3e8;height:56px;display:flex;align-items:center;padding:0 16px;gap:12px}.topbar .spacer{flex:1}.topbar .pill{background:#ffd54a;border-radius:10px;padding:2px 6px;font-size:12px}
+main{display:grid;grid-template-columns:420px 1fr;gap:20px;padding:20px 16px}
+.field{display:flex;gap:10px;margin-bottom:12px}.field input,.field select{flex:1;padding:10px;border:1px solid #c4c9d0;background:#fff;font-size:14px}
+.card{background:#fff;border:1px solid #dfe3e8}
+table{width:100%;border-collapse:collapse}th{text-align:left;font-weight:600;padding:10px 12px;border-bottom:1px solid #dfe3e8}td{padding:10px 12px;border-bottom:1px solid #eef0f3}
+tr:nth-child(even) td{background:#f7f8fa}td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.qty{display:inline-flex}.qty input{width:48px;padding:6px;border:1px solid #c4c9d0}.qty button{border:0;background:#e53935;color:#fff;width:34px}
+.total{display:flex;justify-content:space-between;padding:12px 2px;font-size:16px}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:12px}.actions button{padding:12px;border:0;font-size:16px;color:#fff}
+.actions .cancel{background:#e53935}button[data-primary]{background:#2f80ed;font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px;margin-top:12px}
+.product{background:#fff;border:1px solid #dfe3e8;padding:8px;text-align:center}.product i{display:block;height:100px;background:#e5e8ec;border-radius:4px;margin-bottom:6px}
+.empty{padding:18px;text-align:center;color:#555;background:#fff;border:1px dashed #c4c9d0}
+.error{margin-top:12px;padding:12px;background:#fde8e8;color:#7a1f1f;border-left:4px solid #c62828}
+footer{display:flex;justify-content:space-between;color:#6b7280;padding:16px;font-size:12px;border-top:1px solid #dfe3e8;background:#fff}
+@media (max-width:900px){.shell{grid-template-columns:1fr}nav{display:flex;overflow-x:auto}nav .brand,nav .user{display:none}main{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="banner">THROWAWAY — elicitation mockup, variant B. React to it; it is never product code.</div>
+<div class="shell">
+<nav aria-label="Primary">
+  <div class="brand"><i></i>Tindahan POS</div>
+  <div class="user"><i></i>Aling Nena</div>
+  <a href="#dashboard"><i></i>Dashboard</a>
+  <a href="#products"><i></i>Products</a>
+  <a href="#sale" aria-current="page"><i></i>Open POS</a>
+  <a href="#orders"><i></i>Orders</a>
+  <a href="#customers"><i></i>Customers &amp; utang</a>
+  <a href="#settings"><i></i>Settings</a>
+  <a href="#logout"><i></i>Log out</a>
+</nav>
+<div>
+  <div class="topbar"><span>☰</span><span class="spacer"></span><span class="pill">15 low stock</span><span>▦</span></div>
+  <main>
+    <section aria-label="Cart">
+      <div class="field"><input placeholder="Scan barcode…"><select><option>Walk-in customer</option><option>Mang Tonyo (utang)</option><option>+ New customer</option></select></div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Product</th><th>Quantity</th><th class="num">Price</th></tr></thead>
+          <tbody>
+            <tr><td>Rice 5kg (Sinandomeng)</td><td><span class="qty"><input value="1"><button>🗑</button></span></td><td class="num">₱ 280.00</td></tr>
+            <tr><td>Coke 1.5L</td><td><span class="qty"><input value="2"><button>🗑</button></span></td><td class="num">₱ 170.00</td></tr>
+            <tr><td>Lucky Me Pancit Canton</td><td><span class="qty"><input value="6"><button>🗑</button></span></td><td class="num">₱ 90.00</td></tr>
+            <tr><td>Safeguard 90g</td><td><span class="qty"><input value="1"><button>🗑</button></span></td><td class="num">₱ 42.00</td></tr>
+          </tbody>
+        </table>
+        <p class="empty" data-state="empty" hidden>Cart is empty — scan a barcode or tap a product on the right.</p>
+      </div>
+      <div class="total"><span>Total:</span><strong>₱ 582.00</strong></div>
+      <div class="actions"><button class="cancel">Cancel</button><button data-primary>Submit ₱ 582.00</button></div>
+      <p class="error" data-state="error" hidden>Could not submit — no internet. The sale is kept on this device and will sync when back online.</p>
+    </section>
+    <section aria-label="Products">
+      <div class="field"><input placeholder="Search product…"></div>
+      <div class="grid">
+        <div class="product"><i></i>Rice 5kg</div><div class="product"><i></i>Coke 1.5L</div><div class="product"><i></i>Pancit Canton</div><div class="product"><i></i>Safeguard</div><div class="product"><i></i>Eggs (1 pc)</div><div class="product"><i></i>Milo sachet</div><div class="product"><i></i>Kopiko</div><div class="product"><i></i>Load ₱50</div><div class="product"><i></i>Sardines</div><div class="product"><i></i>Sugar 1kg</div><div class="product"><i></i>Cooking oil</div><div class="product"><i></i>Ice candy</div>
+      </div>
+    </section>
+  </main>
+  <footer><span>Sari-sari POS · wireframe B</span><span>reacts to: what is missing, what is noise, what would you tap first?</span></footer>
+</div>
+</div>
+</body>
+</html>
