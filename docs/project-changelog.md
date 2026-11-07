@@ -2,6 +2,11 @@
 
 All notable changes to the forge project are documented here.
 
+## v3.7.7 — the research ledger's quotes are verified against the fetched sources (2026-11-08)
+
+- **`tests/book-research-verify.cjs`.** Fetches every source the metrics research ledger cites, whole (a GitHub repository page also brings its README through the API), saves the text, and locates every passage the ledger puts in quotes verbatim — whitespace-, quote- and emphasis-insensitive — in a fetched text or in the book's page text. `--write-log` generates the ledger's "Source reading log" (URL, HTTP status, text size, fragments located) from the fetch manifest; nothing in the log is written by hand. Run by `tests/test-data.sh` when `DDIA_SOURCES_DIR` and `DDIA_PAGES_JSON` are set.
+- **Five paraphrases corrected to the sources' wording** (the first run of the verifier found them): the book's load-description sentence, the strong_migrations table-rewrite and renaming sentences, the SRE Workbook's auditing sentence, the book's p.42 SLO example. The Elle README is now cited by URL. The v3.7.6 reading log, which had been written from memory, is replaced by the generated one: 16 sources fetched, 62 of 62 quoted fragments located.
+
 ## v3.7.6 — concept terms versus proper nouns; the source reading log (2026-11-08)
 
 - **Substance measured on concept terms.** `tests/book-substance-verify.cjs` now sets a section's proper nouns aside mechanically (a stem whose cased occurrences in the section are mostly capitalized: the products, people and places of the book's worked examples) and ranks the remaining stems by tf × idf; it prints the raw figure beside the concept figure instead of attributing the gap in prose. Gate restored to the original: every section ≥ 30 % of its concept terms inside its own artifacts, concept mean ≥ 60 %. Measured: concept mean 60 %, raw mean 60 %, no section under 30 %.

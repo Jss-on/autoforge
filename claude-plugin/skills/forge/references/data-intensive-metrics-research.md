@@ -24,7 +24,7 @@ alternatives were rejected. Book pages are *Designing Data-Intensive Application
 | Mean response time | SRE book, *Service Level Objectives*: "averaging request latencies may seem attractive, but obscures an important detail … A simple average can obscure these tail latencies, as well as changes in them." Book pp.40-42: the response time is a distribution; the mean says nothing about how many users waited. | rejected |
 | Percentiles (p50/p95/p99) | SRE book: "Using percentiles for indicators allows you to consider the shape of the distribution and its differing attributes." Book p.41: p99 is what the slowest 1 in 100 requests experience; p.42 the SLO is stated per percentile. | **kept** — p50, p95, p99 pinned in `slo.response_time_ms` |
 | Averaged percentiles across runs or shards | Book p.42: percentiles cannot be averaged; HdrHistogram README: the histogram is the unit that can be merged. | rejected — raw samples or merged histograms only (`data-score.cjs slo` reads samples or a k6 summary, never an average of percentiles) |
-| Closed-loop load (fixed virtual users) | k6, *Open and closed models*: "In a closed model, the execution time of each iteration dictates the number of iterations executed in your test … a closed model load test will wait, resulting in increased iteration durations … In some testing literature, this problem is known as coordinated omission." HdrHistogram README: a system that responds in 1 ms for 100 s then stalls 100 s with one sample recorded "would show ~99.99% of results at 1 msec or below, which is obviously not right." | rejected as the headline — the tail is hidden exactly when the system degrades |
+| Closed-loop load (fixed virtual users) | k6, *Open and closed models*: "In a closed model, the execution time of each iteration dictates the number of iterations executed in your test … a closed model load test will wait, resulting in increased iteration durations … In some testing literature, this problem is known as coordinated omission." HdrHistogram README: a system that responds in 1 ms for 100 s then stalls 100 s with one sample recorded "would show ~99.99% of results at 1 msec or below, which is obviously ‘not right’." | rejected as the headline — the tail is hidden exactly when the system degrades |
 | Open arrival-rate load | k6, *constant-arrival-rate*: "It is an open-model executor, meaning iterations start independently of system response … continues to start iterations at the given rate as long as VUs are available." HdrHistogram: `recordValueWithExpectedInterval` fills the stall "linearly decreasing in steps" of the expected interval so the histogram "will correctly represent the response time distribution." | **kept** — `slo.load_model: open`; `data-load.cjs` measures latency from the *planned* arrival time, which is the same correction applied at the source |
 | Dropped arrivals | k6 metrics reference, `dropped_iterations`: "The number of iterations that weren't started due to lack of VUs (for the arrival-rate executors) or lack of time (expired maxDuration in the iteration-based executors)." A non-zero count means the measured percentiles exclude the requests that were never sent, so the tail is understated exactly as in the closed model. | **kept** — `dropped = 0` is part of the verdict, declared in-band by `data-load.cjs` and read from the k6 summary |
 | Server-side service time only | SRE book: "not measuring behavior at the client can miss a range of problems that affect users." Book p.37-39: response time includes queueing and network; service time does not. | rejected — `slo.measured_at` is client-side |
@@ -34,14 +34,14 @@ alternatives were rejected. Book pages are *Designing Data-Intensive Application
 
 | Candidate | Source statement | Verdict |
 |---|---|---|
-| Error ratio = failed ÷ total in the same run | Book p.42 (the SLO example couples "99.9 % of requests" with the percentile); SRE book: "Have as few SLOs as possible … Choose just enough SLOs to provide good coverage." | **kept** — one ratio per run, `slo.error_rate_max` |
+| Error ratio = failed ÷ total in the same run | Book p.42 (the SLO example couples "99.9% of valid requests result" with the percentile); SRE book: "Have as few SLOs as possible … Choose just enough SLOs to provide good coverage." | **kept** — one ratio per run, `slo.error_rate_max` |
 | Availability "nines" from a short pilot | SRE book: windows matter; a week of uptime cannot establish 99.95 %. Book p.43-47: reliability is about faults tolerated, not an uptime number. | rejected as evidence of availability; kept only as the *target* `slo.availability` measured by a probe over `slo.window` |
 
 ## Row 3 · Load model pinned and reached
 
 | Candidate | Source statement | Verdict |
 |---|---|---|
-| Describe load before scaling | Book p.50-52: "describe the current load … then discuss growth"; design for one order of magnitude ahead, not more. | **kept** — `workload` lint: peak reads/s, writes/s, concurrency, volume, growth, hot keys; the load test must run at ≥ the pinned peak |
+| Describe load before scaling | Book p.50-52: "a clear understanding of the current load on the system. Only then can you discuss growth questions"; design for one order of magnitude ahead, not more. | **kept** — `workload` lint: peak reads/s, writes/s, concurrency, volume, growth, hot keys; the load test must run at ≥ the pinned peak |
 | Throughput alone | Book p.50: load parameters are chosen per system; throughput without the response-time distribution at that throughput proves nothing. | rejected as a verdict; it is the *input* to row 1 |
 
 ## Row 4 · Index coverage of the hot paths
@@ -65,7 +65,7 @@ alternatives were rejected. Book pages are *Designing Data-Intensive Application
 
 | Candidate | Source statement | Verdict |
 |---|---|---|
-| Lint of destructive or lock-taking DDL | strong_migrations README: adding a column with a volatile default "rewrites the whole table. Reads and writes are blocked"; a non-concurrent index "blocks writes"; changing a type or renaming "breaks the running application"; the safe pattern is expand (new column, dual write, backfill, move reads) then contract. Squawk rule list: `adding-not-nullable-field`, `changing-column-type`, `renaming-column`, `renaming-table`, `require-concurrent-index-creation`. | **kept** — `data-score.cjs migrations` flags these unless annotated as a contract step |
+| Lint of destructive or lock-taking DDL | strong_migrations README: adding a column with a volatile default "causes the entire table to be rewritten. During this time, reads and writes are blocked"; a non-concurrent index "blocks writes"; changing a type "causes the entire table to be rewritten"; renaming a column "that’s in use will cause errors in your application"; the safe pattern is expand (new column, dual write, backfill, move reads) then contract. Squawk rule list: `adding-not-nullable-field`, `changing-column-type`, `renaming-column`, `renaming-table`, `require-concurrent-index-creation`. | **kept** — `data-score.cjs migrations` flags these unless annotated as a contract step |
 | Compatibility both ways | Book pp.161-162, 179: rolling upgrades need backward and forward compatibility; data outlives code. | **kept** — old code reads new data, new code reads old (`data-till-compat`) |
 | Down migrations as the safety net | not reversible once data was written in the new shape; the book's answer is compatibility, not rollback of schema | rejected as a requirement |
 
@@ -83,7 +83,7 @@ alternatives were rejected. Book pages are *Designing Data-Intensive Application
 | Candidate | Source statement | Verdict |
 |---|---|---|
 | Row counts as reconciliation | Equal counts hide swapped or corrupted rows; book pp.575-578 "trust, but verify" asks for auditing the data itself. | rejected — digests, not counts |
-| Reconcile against the source with digests | Book pp.501-506 (dual writes drift; CDC and the single writer), p.541, p.577. SRE Workbook, *Data Processing Pipelines*: correctness "compare expected and actual output"; completeness "the percentage of events that are delivered after they are successfully published"; "a daily internal auditing system compares counts of published and delivered events"; skew "the maximal percentage of data that can be misplaced." UK Data Quality Framework dimensions: accuracy, completeness, uniqueness, consistency, timeliness, validity. | **kept** — `DATA_RECONCILE` per derived dataset: missing = extra = mismatched = 0; rebuild equals live |
+| Reconcile against the source with digests | Book pp.501-506 (dual writes drift; CDC and the single writer), p.541, p.577. SRE Workbook, *Data Processing Pipelines*: correctness "compare expected and actual output"; completeness "the percentage of events that are delivered after they are successfully published"; "we use an internal auditing system that compares the counts for all published and delivered events"; skew "the maximal percentage of data that can be misplaced." UK Data Quality Framework dimensions: accuracy, completeness, uniqueness, consistency, timeliness, validity. | **kept** — `DATA_RECONCILE` per derived dataset: missing = extra = mismatched = 0; rebuild equals live |
 | Freshness | SRE Workbook: freshness as "X% of data processed in Y [seconds, days, minutes]" measured from "the earliest theoretical time the bucket could have been closed." Book p.571 timeliness versus integrity. | **kept** — write-to-visible latency or consumer lag ≤ `freshness_s` |
 | Single writer | Book pp.501-506: dual writes are the root of drift. | **kept** — a derived store has exactly one writer (the consumer/job), proven by a test that the app has no other path |
 
@@ -105,34 +105,36 @@ indicator (book p.50: it is a resource metric, not a load parameter the user fee
 
 ## How the sources were read
 
-Each page was fetched in full on 2026-11-08 and the statements above are verbatim unless marked as a
-paraphrase. The two pages longer than one fetch (PostgreSQL's statistics chapter, OpenTelemetry's database
-metrics) were read to their end in a second fetch: the remainder of the PostgreSQL page holds no further
-lag statement; the remainder of the OpenTelemetry page defines `db.client.connection.wait_time` and
-`db.client.connection.use_time` ("The time it took to obtain an open connection from the pool"; "The time
-between borrowing a connection and returning it to the pool"), both histograms in seconds — pool waits are
-part of the client-side response time row 1 measures, which is why forge measures at the client and not
-at the engine.
+Mechanically, by `tests/book-research-verify.cjs`: every URL cited below is fetched whole (a GitHub repository
+page also brings its README through the API), the text is saved, and every passage the rows above put in quotes
+is located verbatim — whitespace-, quote- and emphasis-insensitive — in a fetched text or in the book's page text.
+A passage that is not found fails the check; the log below is generated from that run, not written by hand.
+The OpenTelemetry page also defines `db.client.connection.wait_time` ("The time it took to obtain an open
+connection from the pool") — pool waits are part of the client-side response time row 1 measures, which is why
+forge measures at the client and not at the engine.
 
-## Source reading log (what was read, how, on 2026-11-08)
+## Source reading log
 
-| Source | How it was read | Passages used above |
-|---|---|---|
-| SRE book, "Service Level Objectives" | full page, one fetch | percentiles over averages; client-side measurement; "as few SLOs as possible" |
-| SRE Workbook, "Data Processing Pipelines" | full page, one fetch | freshness format and Spotify's timeliness SLO; correctness via golden data; completeness definition and the daily audit; skew definition |
-| k6, "Open and closed models" | full page, one fetch | closed-model definition; "a closed model load test will wait"; coordinated omission named |
-| k6, "constant-arrival-rate" | full page, one fetch | "iterations start independently of system response"; preAllocatedVUs/maxVUs |
-| k6, metrics reference | full page, one fetch | `dropped_iterations` definition verbatim |
-| HdrHistogram README | full page, one fetch (short page) | corrected versus raw recording; the 1 ms/100 s stall example; `recordValueWithExpectedInterval` |
-| Elle, arXiv 2003.10554 | abstract page, one fetch | Adya-style dependency graph; sound and efficient checker definition |
-| Elle README (jepsen-io/elle) | full page, one fetch | the anomaly classes G0, G1a, G1b, G1c, G-Single, G2 and the checker-specific ones; the soundness statement; Jepsen history format |
-| strong_migrations README | full page, one fetch | the dangerous-operation table with reasons and safe alternatives |
-| Squawk rules | full page, one fetch | rule names (adding-not-nullable-field, changing-column-type, renaming-column, renaming-table, require-concurrent-index-creation) |
-| PostgreSQL, "The Cumulative Statistics System" | two fetches (page longer than one read); remainder holds no further lag statement | `write_lag`, `flush_lag`, `replay_lag`, `sent_lsn`, `replay_lsn` definitions |
-| AWS Well-Architected REL09-BP04 | full page, one fetch | the practice statement, anti-patterns, validation and timing steps |
-| OpenTelemetry database metrics | two fetches; remainder adds connection wait/use-time histograms | `db.client.operation.duration` histogram, unit, buckets, required attribute |
-| GDPR Article 17 and Article 12 | full pages, one fetch each | 17(1), 17(2); 12(3) one month, extendable by two |
-| UK Data Quality Framework | full page, one fetch | the six dimensions with definitions |
+Generated by `tests/book-research-verify.cjs --fetch --write-log` on 2026-11-07T17:54:14.353Z: every source below was fetched whole (no summarization) and saved; every quoted passage in the rows above was then located verbatim — whitespace-, quote- and emphasis-insensitive — in a fetched text or in the book's page text (62/62 fragments; book: 6). A source with 0 fragments is cited for a rule name or a definition rather than quoted. Re-run the command to refresh this table.
+
+| Source | HTTP | Text chars | Quoted fragments located here |
+|---|---|---|---|
+| https://sre.google/sre-book/service-level-objectives/ | 200 | 33282 | 7 |
+| https://sre.google/workbook/data-processing/ | 200 | 92639 | 6 |
+| https://grafana.com/docs/k6/latest/using-k6/scenarios/concepts/open-vs-closed/ | 200 | 35090 | 3 |
+| https://grafana.com/docs/k6/latest/using-k6/scenarios/executors/constant-arrival-rate/ | 200 | 35083 | 2 |
+| https://grafana.com/docs/k6/latest/using-k6/metrics/reference/ | 200 | 37092 | 1 |
+| https://github.com/HdrHistogram/HdrHistogram | 200 (README via API 200) | 38402 | 3 |
+| https://arxiv.org/abs/2003.10554 | 200 | 10526 | 3 |
+| https://github.com/jepsen-io/elle | 200 (README via API 200) | 33189 | 14 |
+| https://github.com/ankane/strong_migrations | 200 (README via API 200) | 67065 | 4 |
+| https://squawkhq.com/docs/rules | 200 | 5254 | 0 |
+| https://www.postgresql.org/docs/current/monitoring-stats.html | 200 | 167795 | 1 |
+| https://docs.aws.amazon.com/wellarchitected/latest/framework/rel_backing_up_data_periodic_recovery_testing_data.html | 200 | 11538 | 9 |
+| https://opentelemetry.io/docs/specs/semconv/database/database-metrics/ | 200 | 75673 | 0 |
+| https://gdpr-info.eu/art-17-gdpr/ | 200 | 10561 | 2 |
+| https://gdpr-info.eu/art-12-gdpr/ | 200 | 11910 | 1 |
+| https://www.gov.uk/government/news/meet-the-data-quality-dimensions | 200 | 17543 | 0 |
 
 ## Sources quoted here
 
@@ -140,7 +142,7 @@ at the engine.
 - Beyer et al., *The Site Reliability Workbook*, "Data Processing Pipelines" — https://sre.google/workbook/data-processing/
 - Grafana k6, "Open and closed models" — https://grafana.com/docs/k6/latest/using-k6/scenarios/concepts/open-vs-closed/ · "constant-arrival-rate" — https://grafana.com/docs/k6/latest/using-k6/scenarios/executors/constant-arrival-rate/ · metrics reference — https://grafana.com/docs/k6/latest/using-k6/metrics/reference/
 - HdrHistogram README (corrected versus raw recording) — https://github.com/HdrHistogram/HdrHistogram
-- Kingsbury, K. & Alvaro, P., "Elle: Inferring Isolation Anomalies from Experimental Observations" (2020) — https://arxiv.org/abs/2003.10554
+- Kingsbury, K. & Alvaro, P., "Elle: Inferring Isolation Anomalies from Experimental Observations" (2020) — https://arxiv.org/abs/2003.10554 · Elle README (anomaly classes, soundness) — https://github.com/jepsen-io/elle
 - Kane, A., strong_migrations README — https://github.com/ankane/strong_migrations · Squawk rules — https://squawkhq.com/docs/rules
 - PostgreSQL, "The Cumulative Statistics System", `pg_stat_replication` — https://www.postgresql.org/docs/current/monitoring-stats.html
 - AWS Well-Architected, REL09-BP04 — https://docs.aws.amazon.com/wellarchitected/latest/framework/rel_backing_up_data_periodic_recovery_testing_data.html
