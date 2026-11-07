@@ -361,7 +361,7 @@ for sk in .claude/skills/forge/SKILL.md claude-plugin/skills/forge/SKILL.md \
           .agents/skills/forge/SKILL.md plugins/forge/skills/forge/SKILL.md \
           .opencode/skills/forge/SKILL.md; do
   grep -q 'research' "$REPO_ROOT/$sk" && pass "router lists research: $sk" || fail "router lists research: $sk"
-  grep -q 'version: 3.7.2' "$REPO_ROOT/$sk" && pass "router at 3.7.2: $sk" || fail "router at 3.7.2: $sk"
+  grep -q 'version: 3.7.3' "$REPO_ROOT/$sk" && pass "router at 3.7.3: $sk" || fail "router at 3.7.3: $sk"
 done
 
 grep -q 'forge_research' "$REPO_ROOT/.opencode/skills/forge/SKILL.md" \

@@ -1,6 +1,6 @@
 {
   "name": "forge",
-  "version": "3.7.2-codex.0+codex.20261107170000",
+  "version": "3.7.3-codex.0+codex.20261108000000",
   "description": "Autonomous improvement engine for Codex. 26 commands: iterate, plan, debug, investigate, fix, security, ship, scenario, predict, learn, reason, probe, improve, evals, regression, build, requirements, feature, test, design, research, android, backlog, review, semver, migrate.",
   "author": {
     "name": "Jss-on",
