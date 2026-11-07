@@ -41,6 +41,7 @@ const LEDGER = [
   'opensourcepos\thttps://github.com/opensourcepos/opensourcepos\t4505\tother\t2026-11-06\tpoint of sale\tsales\trefs/opensourcepos-sales.png\tleft sidebar, dense table, total pinned right',
   'store-pos\thttps://github.com/tngoman/Store-POS\t1054\tnone\t2026-10-25\tpoint of sale\ttill\trefs/store-pos-till.png\tproduct grid left, cart right, big pay button',
   'laravel-pos\thttps://github.com/angkosal/laravel-pos\t508\tmit\t2026-10-23\tpoint of sale\tsale\trefs/laravel-pos-sale.png\ttop nav, search-first, cart below',
+  'shopify-point-of-sale-pos\thttps://apps.apple.com/us/app/shopify-point-of-sale-pos/id686830644\t7470\tproprietary\t2026-10-26\tpoint of sale\tnew-order\trefs/shopify-point-of-sale-pos-new-order.png\tApp Store: icon rail left, tile grid centre, cart panel right with a pinned Checkout',
   'tiny-pos\thttps://github.com/example/tiny-pos\t12\tmit\t2026-10-01\tpoint of sale\tsale\trefs/tiny-pos-sale.png\ttoo small to be evidence',
 ].join('\n');
 const html = ({ lineage = 'opensourcepos:sales', sc = 'SC-1,SC-2', banner = true, extra = '', screen = 'sale', nav = true, main = true } = {}) => `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -54,7 +55,7 @@ ${main ? '<main>' : '<div>'}<h1>New sale</h1><table><tr><th>Item</th><th>Qty</th
 function runDir(name, files) {
   const d = path.join(scratch, name);
   put(d, 'references.tsv', LEDGER);
-  for (const slug of ['opensourcepos-sales', 'store-pos-till', 'laravel-pos-sale', 'tiny-pos-sale']) put(d, `refs/${slug}.png`, png(16, 16, sidebar));
+  for (const slug of ['opensourcepos-sales', 'store-pos-till', 'laravel-pos-sale', 'shopify-point-of-sale-pos-new-order', 'tiny-pos-sale']) put(d, `refs/${slug}.png`, png(16, 16, sidebar));
   for (const [f, data] of Object.entries(files)) put(d, f, data);
   return d;
 }
@@ -81,7 +82,8 @@ test('dhash: identical renders are 0 bits apart, a recolour or rescale stays ins
 test('readLedger: popular + alive + captured rows are valid, the rest are named', () => {
   const d = runDir('ledger', {});
   const { rows, errs } = ws.readLedger(d, { asof: '2026-11-07', months: 24, minStars: 500 });
-  assert.equal(rows.filter(r => r.ok).length, 3); assert.equal(rows.length, 4);
+  assert.equal(rows.filter(r => r.ok).length, 4); assert.equal(rows.length, 5);
+  assert.deepEqual(rows.filter(r => r.ok && r.premium).map(r => r.slug), ['shopify-point-of-sale-pos'], 'license "proprietary" marks the paid/premium rows');
   assert.ok(errs.some(e => /tiny-pos.*stars 12 < 500/.test(e)), errs.join('\n'));
   const stale = ws.readLedger(d, { asof: '2029-01-01', months: 24, minStars: 500 });
   assert.equal(stale.rows.filter(r => r.ok).length, 0, 'the liveness clock is --asof');
@@ -99,9 +101,13 @@ test('checkHtml: the contract — hard checks zero the quality, soft checks are 
 });
 test('score: two distinct lineages of the highest-traffic screen → PASS with the verdict line', () => {
   const r = run(runDir('pass', good()), '--require', 'SC-1,SC-2');
-  assert.equal(r.code, 0, r.err); assert.match(r.out, /^WIREFRAMES: PASS wqd=2\.00\/2 coverage=1\.00 diversity=0\.\d\d refs=3 bytes_max=1k$/);
+  assert.equal(r.code, 0, r.err); assert.match(r.out, /^WIREFRAMES: PASS wqd=2\.00\/2 coverage=1\.00 diversity=0\.\d\d refs=4 premium=1 bytes_max=1k$/);
   assert.ok(+/diversity=([\d.]+)/.exec(r.out)[1] >= ws.NICHE_BITS / ws.HASH_BITS, r.out);
-  assert.match(r.err, /screen sale: variants=2 lineages=2 niches=2/); assert.match(r.err, /asof=2026-11-07 refs_valid=3\/4/); assert.match(r.err, /hash=[0-9a-f]{48}/);
+  assert.match(r.err, /screen sale: variants=2 lineages=2 niches=2/); assert.match(r.err, /asof=2026-11-07 refs_valid=4\/5/); assert.match(r.err, /hash=[0-9a-f]{48}/);
+});
+test('score: no paid/premium reference → FAIL naming the missing App Store half of the sweep', () => {
+  const d = runDir('nopremium', good()); fs.writeFileSync(path.join(d, 'references.tsv'), LEDGER.split('\n').filter(l => !l.startsWith('shopify')).join('\n'));
+  const r = run(d); assert.equal(r.code, 1); assert.match(r.out, /^WIREFRAMES: FAIL .* refs=3 premium=0 /); assert.match(r.err, /references: 0 paid\/premium \(need ≥ 1/);
 });
 test('score: a third variant that is the same layout again collapses into one niche → wqd 2/3 → FAIL', () => {
   const r = run(runDir('dup', { ...good(), 'sale-c.html': html({ lineage: 'laravel-pos:sale' }), 'sale-c.png': png(144, 72, sidebar) }), '--require', 'SC-1');
@@ -127,25 +133,34 @@ test('filterCandidates: gh rows → ledger rows, popular + alive only, slug from
   ], { asof: '2026-11-07', months: 24, minStars: 500 });
   assert.deepEqual(rows, [{ slug: 'opensourcepos', repo: 'https://github.com/opensourcepos/opensourcepos', stars: 4505, license: 'other', pushed: '2026-11-06', notes: 'Open Source Point of Sale' }]);
 });
-test('--capture on the POS fixture: three layouts cloned from three real references land in three niches (skipped without Playwright)', async () => {
+test('appCandidates: App Store rows → ledger rows, ratings as stars, release as push, proprietary, iPad shots first', () => {
+  const rows = ws.appCandidates([
+    { trackName: 'Square Point of Sale (POS)', sellerName: 'Block, Inc.', userRatingCount: 607433, averageUserRating: 4.81, currentVersionReleaseDate: '2026-11-06T08:00:00Z', formattedPrice: 'Free', trackViewUrl: 'https://apps.apple.com/us/app/square-point-of-sale-pos/id335393788?uo=4', description: 'Sell  anywhere.', screenshotUrls: ['https://x/phone/1.png/392x696bb.png'], ipadScreenshotUrls: ['https://x/ipad/1.png/360x480bb.jpg', 'https://x/ipad/2.png/360x480bb.jpg'] },
+    { trackName: 'Old Till', userRatingCount: 9000, currentVersionReleaseDate: '2023-01-01T00:00:00Z', trackViewUrl: 'u', screenshotUrls: [] },
+    { trackName: 'Tiny Till', userRatingCount: 40, currentVersionReleaseDate: '2026-10-01T00:00:00Z', trackViewUrl: 'u', screenshotUrls: [] },
+  ], { asof: '2026-11-07', months: 24, minStars: 500 });
+  assert.deepEqual(rows, [{ slug: 'square-point-of-sale-pos', repo: 'https://apps.apple.com/us/app/square-point-of-sale-pos/id335393788', stars: 607433, license: 'proprietary', pushed: '2026-11-06', shots: ['https://x/ipad/1.png/1024x0w.png', 'https://x/ipad/2.png/1024x0w.png'], notes: 'Block, Inc. · Free · 4.8★ · Sell anywhere.' }]);
+});
+test('--capture on the POS fixture: four layouts cloned from four real references (one premium) land in four niches (skipped without Playwright)', async () => {
   let pw = null;
   for (const c of [repo, process.env.AR_PLAYWRIGHT_CWD].filter(Boolean)) { try { pw = require.resolve('playwright', { paths: [c] }); break; } catch { /* next */ } }
   if (!pw) { console.log('SKIP: playwright not resolvable (set AR_PLAYWRIGHT_CWD to a project that has it)'); return; }
   // tests/fixtures/requirements/wireframes: sale-ospos (opensourcepos "Sales"), sale-laravel (laravel-pos "POS"),
-  // sale-flutter (flutter-pos-system "order") + the ledger whose nexopos and store-pos rows have no capture.
+  // sale-flutter (flutter-pos-system "order"), sale-shopify (Shopify POS "New order" from its App Store listing) + the
+  // ledger with Square POS recorded (its reports screen; nothing to clone) and nexopos / store-pos rows without a capture.
   const fix = path.join(repo, 'tests/fixtures/requirements/wireframes'), d = path.join(scratch, 'fixture');
   fs.mkdirSync(path.join(d, 'refs'), { recursive: true });
   for (const f of fs.readdirSync(fix)) fs.copyFileSync(path.join(fix, f), path.join(d, f));
-  for (const f of ['opensourcepos-sales', 'laravel-pos-sale', 'flutter-pos-system-order']) put(d, `refs/${f}.png`, png(16, 16, sidebar));
+  for (const f of ['opensourcepos-sales', 'laravel-pos-sale', 'flutter-pos-system-order', 'square-point-of-sale-pos-reports', 'shopify-point-of-sale-pos-new-order']) put(d, `refs/${f}.png`, png(16, 16, sidebar));
   const r = cp.spawnSync(process.execPath, [seam, 'score', d, '--asof', '2026-11-07', '--require', 'SC-1,SC-2', '--capture'], { encoding: 'utf8', env: { ...process.env, AR_PLAYWRIGHT_CWD: process.env.AR_PLAYWRIGHT_CWD || repo } });
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout.trim(), /^WIREFRAMES: PASS wqd=3\.00\/3 coverage=1\.00 diversity=0\.\d\d refs=3 bytes_max=\d+k$/);
-  assert.match(r.stderr, /screen sale: variants=3 lineages=3 niches=3/); assert.match(r.stderr, /excluded: references\.tsv row 5 \(nexopos\)/); assert.match(r.stderr, /hash=[0-9a-f]{48}/);
+  assert.match(r.stdout.trim(), /^WIREFRAMES: PASS wqd=4\.00\/4 coverage=1\.00 diversity=0\.\d\d refs=5 premium=2 bytes_max=\d+k$/);
+  assert.match(r.stderr, /screen sale: variants=4 lineages=4 niches=4/); assert.match(r.stderr, /excluded: references\.tsv row 7 \(nexopos\)/); assert.match(r.stderr, /hash=[0-9a-f]{48}/);
   assert.equal(ws.decodePng(fs.readFileSync(path.join(d, 'sale-ospos.png'))).w, 1280);
-  // a recolour of one variant is the same niche: wqd stays 3 of 4 and the gate refuses it
+  // a recolour of one variant is the same niche: wqd stays 4 of 5 and the gate refuses it
   fs.writeFileSync(path.join(d, 'sale-ospos-red.html'), fs.readFileSync(path.join(d, 'sale-ospos.html'), 'utf8').replace(/#2f80ed/g, '#c0392b'));
   const r2 = cp.spawnSync(process.execPath, [seam, 'score', d, '--asof', '2026-11-07', '--require', 'SC-1,SC-2', '--capture'], { encoding: 'utf8', env: { ...process.env, AR_PLAYWRIGHT_CWD: process.env.AR_PLAYWRIGHT_CWD || repo } });
-  assert.equal(r2.status, 1); assert.match(r2.stdout, /^WIREFRAMES: FAIL wqd=3\.00\/4 /); assert.match(r2.stderr, /sale-ospos-red\.html and sale-ospos\.html render \d+ bits apart \(< 32\)/);
+  assert.equal(r2.status, 1); assert.match(r2.stdout, /^WIREFRAMES: FAIL wqd=4\.00\/5 /); assert.match(r2.stderr, /sale-ospos-red\.html and sale-ospos\.html render \d+ bits apart \(< 32\)/);
 });
 
 (async () => {

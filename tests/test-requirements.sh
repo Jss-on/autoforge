@@ -632,7 +632,7 @@ for d in .claude/skills/forge claude-plugin/skills/forge .agents/skills/forge pl
 done
 
 # ============================================================================
-printf '\n--- wireframes: cloned from popular open-source peers, gated by a quality–diversity score ---\n'
+printf '\n--- wireframes: cloned from popular open-source and premium peers, gated by a quality–diversity score ---\n'
 # ============================================================================
 spec_has "wireframes-score\.cjs sweep"       "spec: the reference sweep is wired"
 spec_has "references\.tsv"                   "spec: the reference ledger is named"
@@ -640,9 +640,11 @@ spec_has "score-design\.sh wireframes"       "spec: the wireframe gate is wired"
 spec_has "WIREFRAMES: PASS"                  "spec: the gate verdict token is named"
 spec_has "lineage"                           "spec: every wireframe names the reference it was cloned from"
 spec_has "never their code"                  "spec: layout is borrowed, code/assets/brand are not"
+spec_has "paid/premium"                      "spec: the sweep covers paid/premium products, not only open source"
 ELICIT="$REPO_ROOT/claude-plugin/skills/forge/references/elicitation-protocol.md"
 grep -qiE "reference sweep" "$ELICIT"            && pass "protocol: reference sweep step"   || fail "protocol: reference sweep step"
 grep -qiE "quality.diversity|QD-score" "$ELICIT" && pass "protocol: the metric is named"    || fail "protocol: the metric is named"
+grep -qiE "App Store" "$ELICIT"                 && pass "protocol: the premium sweep source is named" || fail "protocol: the premium sweep source is named"
 grep -qiE "wireframes-score\.cjs" "$REPO_ROOT/scripts/score-design.sh" && pass "score-design: wireframes subcommand dispatches to the seam" || fail "score-design: wireframes subcommand"
 if node "$REPO_ROOT/tests/wireframes-score.test.cjs" "$REPO_ROOT" > "$T/wireframes-score.txt" 2>&1; then
   pass "wireframes-score: $(tail -n 1 "$T/wireframes-score.txt")"; grep -E '^(SKIP|NOTE)' "$T/wireframes-score.txt" | sed 's/^/    /'

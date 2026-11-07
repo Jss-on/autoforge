@@ -263,15 +263,20 @@ interviewer's imagination:
 
 - **Reference sweep (the outside view):** name the product category in the client's words and
   the generic one ("sari-sari POS" → `point of sale`; "clinic queueing" → `appointment scheduling`),
-  then `node scripts/wireframes-score.cjs sweep "<category>"` lists the most-starred GitHub
-  projects of the same kind that are **popular (≥500 stars) and alive (pushed within 24 months)**
-  with their license and last push — run it for each wording and keep the union. Look at 3–5 of
-  them (README galleries, docs, a public demo) and capture the 1–2 screens that match the client's
+  then `node scripts/wireframes-score.cjs sweep "<category>" --shots wireframes/refs` lists, from
+  two sources, the products of the same kind that are **popular and alive**: the most-starred
+  open-source projects on GitHub (≥500 stars, pushed within 24 months, license recorded) **and the
+  paid/premium products on the App Store** (≥500 ratings, a release within 24 months, license
+  `proprietary`; their iPad or iPhone screenshots are downloaded as `refs/<slug>-shot<i>.png`) —
+  run it for each wording and keep the union. Look at 3–5 of them (README galleries, docs, a
+  public demo, the downloaded screenshots) and capture the 1–2 screens that match the client's
   highest-traffic scenarios into `wireframes/refs/<slug>-<screen>.png`. Record every reference
   in `wireframes/references.tsv` (slug · repo · stars · license · pushed · category · screen ·
   capture · notes — navigation placement, density, primary action, what the screen gets right).
-  A reference without a captured screen was not looked at and does not count. Thousands of users
-  already corrected these layouts; that is cheaper evidence than any interview question.
+  A reference without a captured screen was not looked at and does not count, and at least one
+  counted reference must be a paid/premium product — the layouts people pay for are the strongest
+  evidence of what the category expects. Thousands of users already corrected these layouts; that
+  is cheaper evidence than any interview question.
 - **Reference triage:** show the captured reference screens as the 3–5 named directions (catalog
   slugs or live products may join them) and ask which feels right and — more informative — **what
   they dislike** in each.
@@ -292,7 +297,8 @@ interviewer's imagination:
   disposable prototype costs minutes here, so use prototyping as an interview technique, not a
   milestone.)
 - **The wireframe gate:** `scripts/score-design.sh wireframes <run-dir>/wireframes --require
-  SC-a,SC-b` → `WIREFRAMES: PASS|FAIL wqd=N/M coverage=F diversity=F refs=N bytes_max=K`, run
+  SC-a,SC-b` → `WIREFRAMES: PASS|FAIL wqd=N/M coverage=F diversity=F refs=N premium=P
+  bytes_max=K`, run
   before the reaction round is logged. The headline is a **quality–diversity score** (MAP-Elites'
   QD-score, Mouret & Clune 2015): each wireframe's *quality* is the share of its contract it meets
   (functional completeness, the states, offline + small = fast; a failed hard check is 0);
@@ -301,8 +307,9 @@ interviewer's imagination:
   calibrated on real renders: recolour 0, copy-only change 17, different layouts 72–100) are the
   **same niche** and only the best one counts — three recolours of one layout score ≈ 1, not 3.
   *Diversity* is the mean pairwise distance inside a screen group (novelty, Lehman & Stanley
-  2011). PASS needs ≥ 3 live references with captures, every required SC-n on a wireframe, every
-  screen with ≥ 2 variants from ≥ 2 lineages that are genuinely different layouts, and
+  2011). PASS needs ≥ 3 live references with captures (≥ 1 of them paid/premium), every required
+  SC-n on a wireframe, every screen with ≥ 2 variants from ≥ 2 lineages that are genuinely
+  different layouts, and
   `wqd ≥ 0.8 × count`. The number guarantees the client is choosing between real, complete
   alternatives; creativity beyond that is the client's call in the reaction round, not a score.
 - Capture the outcome as **tokens + patterns** (`DESIGN.md` source, density, navigation shape,

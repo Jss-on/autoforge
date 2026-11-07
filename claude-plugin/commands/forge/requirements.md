@@ -132,9 +132,11 @@ retain unchanged confirmations. Preserve decision history and the review revisio
   expectations, and the juice bar ("game feel" is a requirement — name it). Asset licensing and the
   size budget land in the spec's `hardening`/`devops` rows.
 - **Artifact-reaction loop (protocol §5) for design intent — clone what already won:** first the
-  **reference sweep**: `node scripts/wireframes-score.cjs sweep "<category>"` lists the most-starred
-  open-source projects of the same kind that are popular (≥500 stars) and alive (pushed within 24
-  months); look at 3–5, capture the screens matching the highest-traffic scenarios into
+  **reference sweep**: `node scripts/wireframes-score.cjs sweep "<category>" --shots wireframes/refs`
+  lists the popular, alive products of the same kind from two sources — the most-starred open-source
+  projects on GitHub (≥500 stars, pushed within 24 months) and the paid/premium products on the App
+  Store (≥500 ratings, released within 24 months, their screenshots downloaded); look at 3–5, at
+  least one of them premium, capture the screens matching the highest-traffic scenarios into
   `wireframes/refs/`, and record each in `wireframes/references.tsv` (slug · repo · stars · license ·
   pushed · category · screen · capture · notes). Show those captures as the 3–5 named directions and
   collect what they **dislike**. Then 2–3 **throwaway static HTML wireframes** per highest-traffic
@@ -143,7 +145,8 @@ retain unchanged confirmations. Preserve decision history and the review revisio
   (THROWAWAY banner, `lineage`/`screen`/`sc` metas, self-contained, never reused by `build`),
   rendered via Playwright (`wireframes-score.cjs score <dir> --capture`), the PNGs presented,
   reactions captured per screen. The gate `scripts/score-design.sh wireframes <run-dir>/wireframes
-  --require <SC-ids>` must print `WIREFRAMES: PASS` (the quality–diversity score: ≥3 live references,
+  --require <SC-ids>` must print `WIREFRAMES: PASS` (the quality–diversity score: ≥3 live references
+  with ≥1 paid/premium among them,
   every required SC-n on a wireframe, ≥2 lineages per screen whose renders are genuinely different
   layouts, `wqd ≥ 0.8 × count`) before the reaction round is logged. With native imagegen
   or a matching media MCP (`references/integrations-protocol.md` §1), ≤4 generated **moodboard images** (one per
