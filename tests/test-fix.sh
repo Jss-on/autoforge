@@ -109,7 +109,7 @@ for mf in "$REPO_ROOT/.claude-plugin/marketplace.json" \
           "$REPO_ROOT/claude-plugin/.claude-plugin/plugin.json" \
           "$REPO_ROOT/plugins/forge/.codex-plugin/plugin.json"; do
   name="${mf#$REPO_ROOT/}"
-  grep -q "25 commands" "$mf" && pass "manifest count 25: $name" || fail "manifest count 25: $name"
+  grep -q "26 commands" "$mf" && pass "manifest count 26: $name" || fail "manifest count 26: $name"
   grep -q "fix" "$mf" && pass "manifest lists fix: $name" || fail "manifest lists fix: $name"
 done
 

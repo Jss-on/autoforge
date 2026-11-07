@@ -54,9 +54,10 @@ Requires access to the private repo [Jss-on/autoforge](https://github.com/Jss-on
 | [/forge:research](forge-research.md) | Deep research engagement — scholarly + web sweep, primary-literature reading, source-anchored claims ledger, cited dossier with `DOSSIER_READY|DOSSIER_BLOCKED` verdict |
 | [/forge:android](forge-android.md) | Web app → Android app (Trusted Web Activity) — PWA-ify, Digital Asset Links trust, Bubblewrap-signed AAB/APK, emulator gate in CI, release workflow + store pack, `STORE_READY|BLOCKED` |
 | [/forge:review](forge-review.md) | Review a merge request the way the repository's reviewers do and prove whether it is safe to merge — seven gates, findings in their format, evidence as a Google Doc with images; posts only on your word |
+| [/forge:semver](forge-semver.md) | Semantic versioning for a repository you own — the history semantic-release would have released, backfilled as tags, `CHANGELOG.md` sections and GitHub Releases; then semantic-release versions every push CI passes |
 | [/forge:backlog](forge-backlog.md) | Someone else's backlog on GitLab or GitHub — issue intake, triage, one merge request per item, their pipeline green, review handoff; contributor rules (no self-merge, their conventions, nothing leaves their host) |
 | [/forge:migrate](forge-migrate.md) | Replace a language/framework with a frozen behavior inventory, verified slices, target-only acceptance and explicit cutover handoff |
-| [Chains & Combinations](chains-and-combinations.md) | Multi-command pipelines with all 25 commands |
+| [Chains & Combinations](chains-and-combinations.md) | Multi-command pipelines with all 26 commands |
 | [Examples by Domain](examples-by-domain.md) | Real-world examples: software, sales, marketing, DevOps, ML, HR |
 | [Advanced Patterns](advanced-patterns.md) | Guards, MCP, CI/CD, evals checkpoints, transform.sh |
 | [Hooks Reference](hooks.md) | 9 auto-firing hooks: safety gates, context injection, notifications |

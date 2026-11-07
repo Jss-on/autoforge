@@ -79,6 +79,7 @@ answer). It prints one JSON line:
 | CI secret — owner only | `gh secret set NAME` | `glab variable set NAME --masked` (value on stdin) |
 | Create the repo — owner only | `gh repo create A/S --private` | `glab repo create A/S --private` |
 | Release — `ship`, human-gated | `gh release create TAG --notes-file F [--prerelease]` | `glab release create TAG --notes-file F` (GitLab has no pre-release flag) |
+| Versioning — owner only | semantic-release in `.github/workflows/release.yml` after CI (`scripts/semver.cjs init`); `/forge:semver` backfills | not wired — see §2 |
 | Raw API | `gh api <endpoint>` | `glab api <endpoint>` — REST v4, e.g. `projects/:fullpath/merge_requests` |
 | Their templates and rules | `.github/PULL_REQUEST_TEMPLATE.md`, `.github/CODEOWNERS` | `.gitlab/merge_request_templates/`, `.gitlab/issue_templates/`, `CODEOWNERS` |
 
@@ -104,11 +105,15 @@ GitLab working notes:
   page is not a replacement.
 - The Vercel pilot workflows and `forge:android`'s device-gate and release workflows are GitHub
   Actions files. They do not run on GitLab CI; `android` on a GitLab remote is `BLOCKED`.
+- Release automation is GitHub Actions: `semver.cjs init` writes a `release.yml` workflow, and
+  `/forge:semver`'s remote steps (tags pushed beside an adoption PR, GitHub Releases, the squash-merge
+  title setting) call `gh`. On GitLab, `scan` and `plan` still run and the plan is the deliverable;
+  wiring `@semantic-release/gitlab` with a project token is the owner's call, not a silent substitute.
 - A GitHub Environment with required reviewers and a GitLab protected environment serve the same
   purpose through different settings; either one is the repository owner's to configure.
 - Greenfield `build` output repos default to GitHub. `Host: gitlab` creates the private project with
   `glab repo create` and the `devops` CI assertion is met by a **pipeline run** on it (generated
-  `.gitlab-ci.yml`); the three items above stay blocked there.
+  `.gitlab-ci.yml`); the four items above stay blocked there.
 
 ## 3. Contributor role — a repository that is not yours
 

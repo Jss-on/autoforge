@@ -120,7 +120,7 @@ The build pipeline adds two software-specific properties on top:
 
 ## 4. The command suite at a glance
 
-AutoForge ships 25 commands. For building software you mostly use the **build pipeline** (bold),
+AutoForge ships 26 commands. For building software you mostly use the **build pipeline** (bold),
 with the others as supporting tools.
 
 | Command | Role in building software |
@@ -137,6 +137,7 @@ with the others as supporting tools.
 | `/forge:design` | UI/UX designer + design QA — direction protocol → machine-readable `DESIGN.md` (`system`); independent design audit of a running app with the mechanical anti-slop floor, heuristic critique, personas, defect ledger and a `SHIP|FIX|REBUILD` verdict (`audit`); bounded `--fix` remediation. |
 | `/forge:security` | STRIDE + OWASP red-team audit (deepens the hardening dimension). |
 | `/forge:ship` | 8-phase shipping workflow. Human-gated. |
+| `/forge:semver` | Version a project built before forge installed semantic-release: its history backfilled as tags, changelog and GitHub Releases. New builds are versioned from their first `feat`. |
 | `/forge:scenario` | Generate edge cases across 12 dimensions (feeds acceptance). |
 | `/forge:predict` | 5-expert pre-mortem before building. |
 | `/forge:probe` | 8-persona requirement interrogation (reused by requirements). |

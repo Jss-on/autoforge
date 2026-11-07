@@ -297,7 +297,7 @@ fi
 
 # The core loop currently emits "loop"; retain it as the documented forge alias.
 case "$SOURCE" in
-  ""|forge|loop|build|feature|migrate|requirements|regression|fix|test|design|research|android|backlog|review|debug|investigate|security|ship|plan|scenario|predict|learn|reason|probe|improve|evals) ;;
+  ""|forge|loop|build|feature|migrate|requirements|regression|fix|test|design|research|android|backlog|review|semver|debug|investigate|security|ship|plan|scenario|predict|learn|reason|probe|improve|evals) ;;
   *) err "source not in enum: $SOURCE" ;;
 esac
 
@@ -419,6 +419,36 @@ case "$SOURCE" in
       [[ "$ACTUAL" == "$VERDICT" ]] || err "verdict $VERDICT is not what review.cjs verdict says for this run (${ACTUAL:-unreadable})"
     else
       err "missing: review.json beside the handoff (the review verdict is recomputed from it)"
+    fi
+    ;;
+  semver)
+    case "$VERDICT" in
+      ADOPTED|PLANNED|BLOCKED) ;;
+      "") err "missing: verdict (ADOPTED|PLANNED|BLOCKED) — required for semver" ;;
+      *)  err "verdict not in enum for semver: $VERDICT (ADOPTED|PLANNED|BLOCKED)" ;;
+    esac
+    has_field results_tsv || err "missing: results_tsv (semver.tsv — required for semver)"
+    # Every ADOPTED row is re-checked against the run's clone and plan; the handoff verdict is the weakest row.
+    SEMVER_RUN="$(dirname "$FILE")"; SEMVER_WEAKEST=""
+    if [[ -f "$SEMVER_RUN/semver.tsv" ]]; then
+      while IFS=$'\t' read -r S_REPO S_DIR S_VERDICT _ || [[ -n "${S_REPO:-}" ]]; do
+        S_VERDICT="${S_VERDICT%$'\r'}"
+        [[ "$S_REPO" == "repo" || -z "$S_REPO" ]] && continue
+        case "$S_VERDICT" in
+          BLOCKED) SEMVER_WEAKEST="BLOCKED" ;;
+          PLANNED) [[ "$SEMVER_WEAKEST" == "BLOCKED" ]] || SEMVER_WEAKEST="PLANNED" ;;
+          ADOPTED) [[ -n "$SEMVER_WEAKEST" ]] || SEMVER_WEAKEST="ADOPTED"
+            if [[ ! "$S_DIR" =~ ^[A-Za-z0-9._-]+$ || "$S_DIR" == "." || "$S_DIR" == ".." ]]; then err "semver.tsv: dir must be a plain directory name inside the run (got: $S_DIR)"; continue; fi
+            S_PLAN=(); [[ -f "$SEMVER_RUN/$S_DIR/plan.json" ]] && S_PLAN=("$SEMVER_RUN/$S_DIR/plan.json")
+            node "$SCRIPT_DIR/semver.cjs" check "$SEMVER_RUN/$S_DIR/repo" ${S_PLAN[@]+"${S_PLAN[@]}"} >/dev/null 2>&1 \
+              || err "semver.cjs check is not ADOPTED for $S_REPO ($S_DIR/repo)" ;;
+          *) err "semver.tsv: verdict not in enum for $S_REPO: $S_VERDICT" ;;
+        esac
+      done < "$SEMVER_RUN/semver.tsv"
+      [[ -n "$SEMVER_WEAKEST" ]] || err "semver.tsv lists no target"
+      [[ -z "$SEMVER_WEAKEST" || "$SEMVER_WEAKEST" == "$VERDICT" ]] || err "verdict $VERDICT is not the weakest row of semver.tsv ($SEMVER_WEAKEST)"
+    else
+      err "missing: semver.tsv beside the handoff (every ADOPTED row is re-checked from it)"
     fi
     ;;
 esac

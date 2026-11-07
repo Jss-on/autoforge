@@ -113,9 +113,13 @@ instead. The app's private output repo (`build` created it; if forge built the a
 missing, create it now per `build`'s "Output repository" section — existing code forge did not
 build gets a remote only on the user's explicit instruction) is where this feature is visible
 end-to-end: work on a
-`feat/<slug>` branch, push it, **open a PR** with the delta acceptance rows in the description,
-let the repo's CI run, and merge only after Phase 4's ratchet is STABLE and CI is green. Deferred
-findings become issues on that repo. Record the PR URL in `handoff.json`.
+`feat/<slug>` branch, push it, **open a PR** titled as a Conventional Commit (`feat: <feature>`;
+`feat!:` only for a breaking change) with the delta acceptance rows in the description, let the
+repo's CI run, and squash-merge it only after Phase 4's ratchet is STABLE and CI is green — the
+repo's semantic-release job then releases the minor version from that title. A repo forge built
+that has no `.releaserc.json` yet → run `/forge:semver` on it first: it backfills the history,
+where `semver.cjs init` alone would release all of it as `1.0.0`. Deferred findings become issues
+on that repo. Record the PR URL in `handoff.json`.
 
 ## Phase 4 — Regression ratchet (HARD gate)
 Every iteration, after the feature verify, run the floor:

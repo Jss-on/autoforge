@@ -323,8 +323,14 @@ jobs:
         run: npm ci && cd android && npx @bubblewrap/cli update --skipVersionUpgrade && npx @bubblewrap/cli build --skipPwaValidation
       - uses: actions/upload-artifact@v4
         with: { name: android-artifacts, path: 'android/app-release-*' }
+      # semantic-release already published this tag's GitHub Release (its release.yml dispatched this run): attach.
       - if: startsWith(github.ref, 'refs/tags/')
-        run: gh release create "${GITHUB_REF_NAME}" android/app-release-bundle.aab android/app-release-signed.apk --generate-notes
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" android/app-release-bundle.aab android/app-release-signed.apk --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" android/app-release-bundle.aab android/app-release-signed.apk --generate-notes
+          fi
         env: { GH_TOKEN: '${{ github.token }}' }
   play-internal:
     needs: bundle
