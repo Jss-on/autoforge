@@ -3,11 +3,13 @@
  * wireframes-score.cjs — the throwaway-wireframe seam for /forge:requirements
  * (elicitation-protocol §5: reference sweep → wireframes cloned from popular peers → reaction loop).
  *
- *   sweep "<category>" [--min-stars 500] [--months 24] [--limit 10] [--asof YYYY-MM-DD]
- *         → TSV rows for wireframes/references.tsv from `gh search repos` — popular + alive only;
- *           look at each one, then fill screen · capture · notes
+ *   sweep "<category>" [--source both|gh|apps] [--shots <dir>] [--min-stars 500] [--months 24] [--limit 10] [--asof YYYY-MM-DD]
+ *         → TSV rows for wireframes/references.tsv — popular + alive only — from `gh search repos`
+ *           (open source: stars, license, last push) and the App Store search API (paid/premium
+ *           products: rating count as stars, release date as push, license "proprietary"; --shots
+ *           downloads their screenshots); look at each one, then fill screen · capture · notes
  *   score <wireframes-dir> [--require SC-1,SC-2] [--capture] [--asof YYYY-MM-DD]
- *         → WIREFRAMES: PASS|FAIL wqd=N/M coverage=F diversity=F refs=N bytes_max=K
+ *         → WIREFRAMES: PASS|FAIL wqd=N/M coverage=F diversity=F refs=N premium=P bytes_max=K
  *
  * Layout of <run-dir>/wireframes/:
  *   references.tsv            slug  repo  stars  license  pushed  category  screen  capture  notes
@@ -28,8 +30,9 @@
  * of a 9×9 luminance grid; Krawetz 2011/2013) share a niche and only the best one counts, so three
  * recolours of one layout score ≈ 1, not 3. diversity = mean pairwise fingerprint distance / 192
  * inside a screen group (novelty, Lehman & Stanley 2011), reported as the minimum over groups.
- * PASS iff ≥ 3 valid references (stars ≥ 500, pushed within 24 months before --asof, a license and
- * an existing capture), every hard check holds, coverage = 1.00 for --require, every screen has
+ * PASS iff ≥ 3 valid references (stars or ratings ≥ 500, pushed/released within 24 months before
+ * --asof, a license and an existing capture) of which ≥ 1 is paid/premium (license proprietary),
+ * every hard check holds, coverage = 1.00 for --require, every screen has
  * ≥ 2 variants from ≥ 2 lineages and ≥ 32 bits apart, and wqd ≥ 0.8 × wireframe count.
  *
  * Deterministic: the PNGs are inputs, no browser is needed to score; --asof pins the liveness clock.
@@ -40,16 +43,18 @@ const fs = require('fs'), path = require('path'), zlib = require('zlib'), cp = r
 
 // NICHE_BITS calibrated on Playwright renders of real wireframes: recolour 0 · copy-only change 17 ·
 // different layouts 72–100 of 192 bits — one sixth sits between "same layout" and "a real choice".
-const MIN_STARS = 500, MAX_MONTHS = 24, MAX_BYTES = 64 * 1024, HASH_BITS = 192, NICHE_BITS = 32, WQD_FLOOR = 0.8, MIN_REFS = 3;
+const MIN_STARS = 500, MAX_MONTHS = 24, MAX_BYTES = 64 * 1024, HASH_BITS = 192, NICHE_BITS = 32, WQD_FLOOR = 0.8, MIN_REFS = 3, MIN_PREMIUM = 1, SHOTS = 4;
 const SOFT = ['screen', 'sc', 'viewport', 'nav', 'main', 'primary', 'empty', 'error', 'bytes'];
 const COLS = ['slug', 'repo', 'stars', 'license', 'pushed', 'category', 'screen', 'capture', 'notes'];
 
 function parseArgs(argv) {
-  const o = { _: [], require: [], capture: false, asof: new Date().toISOString().slice(0, 10), minStars: MIN_STARS, months: MAX_MONTHS, limit: 10 };
+  const o = { _: [], require: [], capture: false, asof: new Date().toISOString().slice(0, 10), minStars: MIN_STARS, months: MAX_MONTHS, limit: 10, source: 'both', shots: '' };
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i], v = argv[i + 1];
     if (k === '--require') { o.require.push(...String(v).split(',').map(s => s.trim()).filter(Boolean)); i++; }
     else if (k === '--capture') o.capture = true;
+    else if (k === '--source') { if (!['both', 'gh', 'apps'].includes(v)) throw new Error('--source must be both, gh or apps'); o.source = v; i++; }
+    else if (k === '--shots') { o.shots = v; i++; }
     else if (k === '--asof') { o.asof = v; i++; }
     else if (k === '--min-stars') { o.minStars = +v; i++; }
     else if (k === '--months') { o.months = +v; i++; }
@@ -60,7 +65,7 @@ function parseArgs(argv) {
   }
   return o;
 }
-function usage() { console.error(fs.readFileSync(__filename, 'utf8').split('\n').slice(1, 11).map(l => l.replace(/^ \* ?/, '')).join('\n')); }
+function usage() { console.error(fs.readFileSync(__filename, 'utf8').split('\n').slice(1, 13).map(l => l.replace(/^ \* ?/, '')).join('\n')); }
 function cutoffDate(asof, months) { const d = new Date(asof); if (isNaN(d)) throw new Error('--asof must be YYYY-MM-DD'); d.setMonth(d.getMonth() - months); return d; }
 
 // ---------------------------------------------------------------------------
@@ -133,7 +138,7 @@ function readLedger(dir, o) {
     const n = i + 1;
     if (c.length < 8) { errs.push(`references.tsv row ${n}: expected 9 columns (${COLS.join(' ')}), got ${c.length}`); return; }
     const [slug, repo, stars, license, pushed, category, screen, capture] = c;
-    const r = { slug, repo, stars: +stars, license, pushed, category, screen, capture, ok: true };
+    const r = { slug, repo, stars: +stars, license, pushed, category, screen, capture, premium: /^proprietary$/i.test(license), ok: true };
     const bad = m => { errs.push(`references.tsv row ${n} (${slug || '?'}): ${m}`); r.ok = false; };
     if (!/^[a-z0-9][a-z0-9._-]*$/.test(slug)) bad('slug must be lowercase [a-z0-9._-]');
     if (!/^https?:\/\//.test(repo)) bad('repo must be a URL');
@@ -200,7 +205,7 @@ async function score(o) {
   const files = fs.readdirSync(dir).filter(f => /\.html$/i.test(f)).sort();
   if (!files.length) { console.log('WIREFRAMES: FAIL'); console.error(`no *.html wireframes in ${dir}`); return 2; }
   const { rows, errs: excluded } = readLedger(dir, o), errs = [];
-  const okRefs = rows.filter(r => r.ok);
+  const okRefs = rows.filter(r => r.ok), premium = okRefs.filter(r => r.premium).length;
   if (o.capture) await capture(dir, files);
   const wf = files.map(f => checkHtml(dir, f, okRefs));
   for (const w of wf) {
@@ -235,18 +240,22 @@ async function score(o) {
   const coverage = req.length ? req.filter(s => covered.has(s)).length / req.length : 0;
   if (!req.length) errs.push('no scenario ids on any wireframe (<meta name="sc" content="SC-n,…">)');
   if (okRefs.length < MIN_REFS) errs.push(`references: ${okRefs.length} valid (need ≥ ${MIN_REFS} popular, alive, captured)`);
+  if (premium < MIN_PREMIUM) errs.push(`references: ${premium} paid/premium (need ≥ ${MIN_PREMIUM} with license "proprietary" — the App Store half of the sweep)`);
   if (wqd < WQD_FLOOR * wf.length) errs.push(`wqd ${wqd.toFixed(2)} < ${WQD_FLOOR} × ${wf.length} wireframes`);
   for (const w of wf) console.error(`${w.file}: quality=${w.quality.toFixed(2)} lineage=${w.lineage || '-'} sc=${w.sc.join(',') || '-'} bytes=${w.bytes} hash=${w.hash ? hex(w.hash) : '-'}${w.missing.length ? ' missing=' + w.missing.join(',') : ''}`);
   for (const e of excluded) console.error('  excluded: ' + e);
   for (const e of errs) console.error('  ' + e);
   console.error(`asof=${o.asof} refs_valid=${okRefs.length}/${rows.length}`);
   const bytesMax = Math.max(...wf.map(w => w.bytes));
-  console.log(`WIREFRAMES: ${errs.length ? 'FAIL' : 'PASS'} wqd=${wqd.toFixed(2)}/${wf.length} coverage=${coverage.toFixed(2)} diversity=${divMin === null ? 'n/a' : divMin.toFixed(2)} refs=${okRefs.length} bytes_max=${Math.ceil(bytesMax / 1024)}k`);
+  console.log(`WIREFRAMES: ${errs.length ? 'FAIL' : 'PASS'} wqd=${wqd.toFixed(2)}/${wf.length} coverage=${coverage.toFixed(2)} diversity=${divMin === null ? 'n/a' : divMin.toFixed(2)} refs=${okRefs.length} premium=${premium} bytes_max=${Math.ceil(bytesMax / 1024)}k`);
   return errs.length ? 1 : 0;
 }
 
 // ---------------------------------------------------------------------------
-// sweep — `gh search repos` → ledger rows (popular + alive), the agent fills the rest after looking
+// sweep — popular + alive candidates → ledger rows; the agent fills screen · capture · notes after
+// looking. Two sources: `gh search repos` (open source) and the App Store search API (paid/premium
+// products, no key needed: rating count stands in for stars, the current version's release date for
+// the last push, license is "proprietary"; iPad screenshots first, rewritten to 1024-px PNG).
 // ---------------------------------------------------------------------------
 function filterCandidates(list, o) {
   const cutoff = cutoffDate(o.asof, o.months);
@@ -256,14 +265,44 @@ function filterCandidates(list, o) {
     pushed: String(r.pushedAt).slice(0, 10), notes: String(r.description || '').replace(/\s+/g, ' ').trim().slice(0, 120),
   }));
 }
-function sweep(o) {
+function appCandidates(list, o) {
+  const cutoff = cutoffDate(o.asof, o.months);
+  return list.filter(r => r.userRatingCount >= o.minStars && new Date(r.currentVersionReleaseDate) >= cutoff).map(r => ({
+    slug: String(r.trackName).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+    repo: String(r.trackViewUrl).replace(/\?.*$/, ''), stars: r.userRatingCount, license: 'proprietary',
+    pushed: String(r.currentVersionReleaseDate).slice(0, 10),
+    shots: ((r.ipadScreenshotUrls || []).length ? r.ipadScreenshotUrls : r.screenshotUrls || []).slice(0, SHOTS).map(u => String(u).replace(/[^/]+$/, '1024x0w.png')),
+    notes: [r.sellerName, r.formattedPrice, r.averageUserRating ? r.averageUserRating.toFixed(1) + '★' : '', String(r.description || '').replace(/\s+/g, ' ').trim().slice(0, 100)].filter(Boolean).join(' · '),
+  }));
+}
+async function sweep(o) {
   const q = o._[0];
-  if (!q) { console.error('usage: sweep "<category>" [--min-stars 500] [--months 24] [--limit 10]'); return 2; }
-  const out = cp.execFileSync('gh', ['search', 'repos', q, '--sort', 'stars', '--order', 'desc', '--limit', String(o.limit), '--json', 'fullName,stargazersCount,license,pushedAt,url,description'], { encoding: 'utf8' });
-  const all = JSON.parse(out), rows = filterCandidates(all, o);
+  if (!q) { console.error('usage: sweep "<category>" [--source both|gh|apps] [--shots <dir>] [--min-stars 500] [--months 24] [--limit 10]'); return 2; }
+  const rows = [], tally = [];
+  if (o.source !== 'apps') {
+    try {
+      const all = JSON.parse(cp.execFileSync('gh', ['search', 'repos', q, '--sort', 'stars', '--order', 'desc', '--limit', String(o.limit), '--json', 'fullName,stargazersCount,license,pushedAt,url,description'], { encoding: 'utf8' })), gh = filterCandidates(all, o);
+      rows.push(...gh); tally.push(`gh ${gh.length}/${all.length}`);
+    } catch (e) { console.error(`gh search repos failed (${String(e.message).split('\n')[0]}) — open-source rows skipped`); }
+  }
+  if (o.source !== 'gh') {
+    try {
+      const res = await fetch(`https://itunes.apple.com/search?entity=software&country=us&limit=${o.limit}&term=${encodeURIComponent(q)}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const all = (await res.json()).results || [], apps = appCandidates(all, o);
+      for (const r of apps) {
+        if (!o.shots) { r.notes += ' · shots: ' + r.shots.join(' '); continue; }
+        fs.mkdirSync(o.shots, { recursive: true });
+        const files = [];
+        for (let i = 0; i < r.shots.length; i++) { const f = `${r.slug}-shot${i + 1}.png`; fs.writeFileSync(path.join(o.shots, f), Buffer.from(await (await fetch(r.shots[i])).arrayBuffer())); files.push(f); }
+        r.notes += ' · shots: ' + files.join(' ');
+      }
+      rows.push(...apps); tally.push(`apps ${apps.length}/${all.length}`);
+    } catch (e) { console.error(`App Store search failed (${e.message}) — paid/premium rows skipped`); }
+  }
   console.log(COLS.join('\t'));
   for (const r of rows) console.log([r.slug, r.repo, r.stars, r.license, r.pushed, q, '', '', r.notes].join('\t'));
-  console.error(`sweep "${q}": ${rows.length} of ${all.length} candidates are popular (>= ${o.minStars} stars) and alive (pushed within ${o.months} months of ${o.asof}); fill screen · capture · notes after looking at each`);
+  console.error(`sweep "${q}": ${rows.length} candidates (${tally.join(', ') || 'no source answered'}) are popular (>= ${o.minStars} stars or ratings) and alive (pushed/released within ${o.months} months of ${o.asof}); fill screen · capture · notes after looking at each`);
   return rows.length ? 0 : 1;
 }
 
@@ -275,4 +314,4 @@ async function main() {
   usage(); return sub ? 64 : 2;
 }
 if (require.main === module) main().then(c => process.exit(c)).catch(e => { console.error(e.message); process.exit(2); });
-module.exports = { decodePng, dhash, hamming, hex, readLedger, checkHtml, filterCandidates, score, parseArgs, HASH_BITS, NICHE_BITS, SOFT };
+module.exports = { decodePng, dhash, hamming, hex, readLedger, checkHtml, filterCandidates, appCandidates, score, parseArgs, HASH_BITS, NICHE_BITS, MIN_PREMIUM, SOFT };

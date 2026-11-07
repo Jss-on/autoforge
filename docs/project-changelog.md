@@ -2,19 +2,22 @@
 
 All notable changes to the forge project are documented here.
 
-## Unreleased — /forge:requirements: wireframes cloned from popular open-source peers, gated by a quality–diversity score (2026-11-07)
+## Unreleased — /forge:requirements: wireframes cloned from popular open-source and premium peers, gated by a quality–diversity score (2026-11-07)
 
 **Theme:** the artifact-reaction loop invented its throwaway wireframes from scratch. Now it sweeps
-GitHub for the most-starred live projects of the same kind, clones their layouts (never their code
-or assets) into the variants the client reacts to, and a mechanical gate refuses a set that is not
-a real choice.
+GitHub for the most-starred live projects of the same kind and the App Store for the popular
+paid/premium products of the same kind, clones their layouts (never their code or assets) into the
+variants the client reacts to, and a mechanical gate refuses a set that is not a real choice or
+that ignored the paid products.
 
 **Added:**
 
-- `scripts/wireframes-score.cjs` — `sweep "<category>"` (`gh search repos` → `wireframes/references.tsv`
-  rows: popular ≥500 stars, pushed within 24 months, license recorded) and `score <dir>
-  [--require SC-n,…] [--capture] [--asof YYYY-MM-DD]` → `WIREFRAMES: PASS|FAIL wqd=N/M coverage=F
-  diversity=F refs=N bytes_max=K`. Quality per wireframe = its contract (THROWAWAY banner, `lineage`
+- `scripts/wireframes-score.cjs` — `sweep "<category>" [--source both|gh|apps] [--shots <dir>]`
+  (`gh search repos` and the key-less App Store search API → `wireframes/references.tsv` rows:
+  popular ≥500 stars or ratings, pushed or released within 24 months, license recorded —
+  `proprietary` marks a paid/premium product, `--shots` downloads its iPad/iPhone screenshots) and
+  `score <dir> [--require SC-n,…] [--capture] [--asof YYYY-MM-DD]` → `WIREFRAMES: PASS|FAIL wqd=N/M
+  coverage=F diversity=F refs=N premium=P bytes_max=K` (PASS needs ≥1 premium reference). Quality per wireframe = its contract (THROWAWAY banner, `lineage`
   resolving to a ledger row and self-contained are hard; `screen`/`sc`/viewport metas, nav, main,
   `[data-primary]`, empty + error states, ≤64 KiB are the nine soft checks). Renders are
   fingerprinted (192-bit average hash + horizontal/vertical difference hashes of a 9×9 luminance
@@ -27,11 +30,12 @@ a real choice.
   code/CSS/icons/logos/copy), the wireframe contract and the gate; `commands/forge/requirements.md`
   Phase 1 bullet, Phase 4 playback (captures with lineage), Safety and Summary (`WIREFRAMES:` line);
   `design-protocol.md` §3 reads the chosen lineage; `guide/forge-requirements.md` explains the score.
-- `tests/fixtures/requirements/wireframes/` — the worked POS example: three wireframes cloned from
-  opensourcepos, laravel-pos and flutter-pos-system plus the ledger with two excluded references;
-  `tests/wireframes-score.test.cjs` (PNG decoder across all five filters, fingerprint niche rule,
-  ledger, contract, verdicts, gh row filter) renders it through Playwright when one resolves and
-  expects three niches, then one recolour more to fail at `wqd=3.00/4`; rows in `tests/test-requirements.sh`.
+- `tests/fixtures/requirements/wireframes/` — the worked POS example: four wireframes cloned from
+  opensourcepos, laravel-pos, flutter-pos-system and Shopify POS (App Store) plus the ledger with
+  Square POS recorded and two excluded references; `tests/wireframes-score.test.cjs` (PNG decoder
+  across all five filters, fingerprint niche rule, ledger incl. the premium rule, contract, verdicts,
+  gh and App Store row filters) renders it through Playwright when one resolves and expects four
+  niches, then one recolour more to fail at `wqd=4.00/5`; rows in `tests/test-requirements.sh`.
 
 ## Unreleased — /forge:requirements: the SRS as a designed PDF (2026-10-07)
 
