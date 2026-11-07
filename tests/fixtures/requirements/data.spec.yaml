@@ -1,0 +1,79 @@
+name: sari-sari-pos
+summary: a generated build spec for a data-intensive target — all seven dimensions, data rows tracing every DATA.md group
+stack:
+  language: typescript
+  framework: fastify
+  datastore: postgres@16
+data:
+  source: file
+  ref: forge/requirements-261107-1400/DATA.md
+  kind: operational
+acceptance:
+  logic:
+    - id: golden-total
+      assert: "3 x 280.00 + 1 x 95.00 -> sale total 935.00"
+      weight: 2
+      traces: FR-1
+      gate: true
+  functional:
+    - id: boots
+      assert: app boots and binds port
+      weight: 1
+      traces: FR-2
+  ux:
+    - id: a11y
+      assert: axe scan zero serious/critical
+      weight: 1
+      traces: NFR-10
+  devops:
+    - id: dockerfile
+      assert: multi-stage Dockerfile non-root HEALTHCHECK
+      weight: 1
+      traces: NFR-11
+  monitoring:
+    - id: healthz
+      assert: GET /healthz 200; /metrics exposes a request-duration histogram and replication lag
+      weight: 1
+      traces: NFR-12
+  hardening:
+    - id: headers
+      assert: security headers present
+      weight: 1
+      traces: NFR-13
+  data:
+    - id: data-workload-pinned
+      assert: DATA.md lints VALID and the load test runs at >= the pinned peak arrival rate
+      weight: 1
+      traces: "NFR-1,data:workload"
+    - id: data-slo-open-load
+      assert: "DATA_SLO: PASS under an open arrival-rate run (p50 120 / p95 400 / p99 900 ms, errors <= 0.1%)"
+      weight: 2
+      traces: "NFR-2,data:slo"
+    - id: data-hot-paths-indexed
+      assert: "DATA_INDEXES: PASS for the three model.indexes queries; sale list statement count constant"
+      weight: 1
+      traces: "NFR-3,data:model"
+    - id: data-no-lost-update
+      assert: "20 concurrent checkouts of the last 5 units oversell nothing; concurrent receipt numbers unique"
+      weight: 2
+      traces: "NFR-4,data:integrity"
+    - id: data-idempotent-retry
+      assert: "POST /sales twice with one Idempotency-Key -> one sale"
+      weight: 2
+      traces: "NFR-4,data:integrity"
+    - id: data-migrations-safe
+      assert: "MIGRATION_SAFETY: PASS over prisma/migrations"
+      weight: 1
+      traces: "NFR-6,data:evolution"
+    - id: data-restore-drill
+      assert: "operational.cjs recovery -> RECOVERED within rpo 300 s / rto 1800 s"
+      weight: 2
+      traces: "NFR-7,data:durability"
+    - id: data-derived-reconciles
+      assert: "DATA_RECONCILE: PASS for product_search and daily_sales_report against their sources"
+      weight: 2
+      traces: "NFR-8,data:derived"
+    - id: data-erasure-complete
+      assert: "deleting a customer leaves zero references in sales, the search index and the report cache within 30 days"
+      weight: 2
+      traces: "NFR-9,data:retention"

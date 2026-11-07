@@ -1,0 +1,20 @@
+[
+  {
+    "Query": "SC-3 end-of-day report",
+    "Plan": {
+      "Node Type": "Aggregate",
+      "Plan Rows": 1,
+      "Plans": [
+        { "Node Type": "Index Scan", "Relation Name": "sales", "Index Name": "sales_store_day_idx", "Plan Rows": 612, "Actual Rows": 598 }
+      ]
+    }
+  },
+  {
+    "Query": "SC-1 scan product by barcode",
+    "Plan": { "Node Type": "Index Scan", "Relation Name": "products", "Index Name": "products_barcode_idx", "Plan Rows": 1, "Actual Rows": 1 }
+  },
+  {
+    "Query": "small lookup table",
+    "Plan": { "Node Type": "Seq Scan", "Relation Name": "stores", "Plan Rows": 12, "Actual Rows": 12 }
+  }
+]

@@ -1,0 +1,83 @@
+name: sari-sari-pos-sqlite
+summary: the sample data-keeping service the end-to-end data test boots and measures (tests/fixtures/data/app)
+stack:
+  language: javascript
+  framework: node:http
+  datastore: sqlite@3 (node:sqlite)
+data:
+  source: file
+  ref: tests/fixtures/data/app/DATA.md
+  kind: operational
+acceptance:
+  logic:
+    - id: golden-total
+      assert: "2 x Cooking oil 1L at 95.00 -> sale total 190.00 (19000 cents)"
+      weight: 2
+      traces: FR-1
+      gate: true
+  functional:
+    - id: sale-recorded
+      assert: POST /sales records a sale, decrements stock and issues a receipt number
+      weight: 1
+      traces: FR-1
+  ux:
+    - id: n-a-api-only
+      assert: API-only sample; no UI surface
+      weight: 1
+      traces: FR-2
+  devops:
+    - id: boots-from-clean
+      assert: the service boots from a clean directory and applies its migrations
+      weight: 1
+      traces: NFR-6
+  monitoring:
+    - id: healthz
+      assert: GET /healthz 200
+      weight: 1
+      traces: FR-2
+  hardening:
+    - id: bounded-body
+      assert: request bodies over 1 MB are refused
+      weight: 1
+      traces: FR-1
+  data:
+    - id: data-workload-pinned
+      assert: DATA.md lints VALID and data-load.cjs runs at >= the pinned peak arrival rate
+      weight: 1
+      traces: "NFR-1,data:workload"
+    - id: data-slo-open-load
+      assert: "DATA_SLO: PASS under an open arrival-rate run (p50 50 / p95 200 / p99 500 ms, errors <= 1%)"
+      weight: 2
+      traces: "NFR-2,data:slo"
+    - id: data-hot-paths-indexed
+      assert: "DATA_INDEXES: PASS for the sales-of-a-day, lines-of-a-sale and pending-outbox queries"
+      weight: 1
+      traces: "NFR-3,data:model"
+    - id: data-no-lost-update
+      assert: "20 concurrent checkouts across two processes sell exactly the 5 units in stock; receipt numbers unique"
+      weight: 2
+      traces: "NFR-4,data:integrity"
+    - id: data-idempotent-retry
+      assert: "the same Idempotency-Key twice, sequentially and concurrently, records one sale"
+      weight: 2
+      traces: "NFR-4,data:integrity"
+    - id: data-durable-ack
+      assert: "an acknowledged sale is readable after the server process is killed and restarted"
+      weight: 2
+      traces: "NFR-5,data:integrity"
+    - id: data-migrations-safe
+      assert: "MIGRATION_SAFETY: PASS over migrations/ (sqlite dialect)"
+      weight: 1
+      traces: "NFR-6,data:evolution"
+    - id: data-restore-drill
+      assert: "a copy of the database restored into a fresh directory boots and answers the recorded sale"
+      weight: 2
+      traces: "NFR-7,data:durability"
+    - id: data-derived-reconciles
+      assert: "DATA_RECONCILE: PASS for product_search, customer_search and daily_sales_report against their sources"
+      weight: 2
+      traces: "NFR-8,data:derived"
+    - id: data-erasure-complete
+      assert: "after DELETE /customers/:id and the consumer run, the phone appears in no export"
+      weight: 2
+      traces: "NFR-9,data:retention"

@@ -1,0 +1,13 @@
+{
+  "options": {
+    "summaryTrendStats": ["avg", "med", "p(95)", "max"],
+    "scenarios": {
+      "default": { "executor": "constant-vus", "vus": 10, "duration": "1m" }
+    }
+  },
+  "metrics": {
+    "http_reqs": { "type": "counter", "values": { "count": 1200, "rate": 20.0 } },
+    "http_req_duration": { "type": "trend", "values": { "avg": 95.0, "med": 80.0, "p(95)": 210.0, "max": 400.0 } },
+    "http_req_failed": { "type": "rate", "values": { "rate": 0.0, "passes": 0, "fails": 1200 } }
+  }
+}

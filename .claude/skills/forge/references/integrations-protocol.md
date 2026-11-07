@@ -194,7 +194,7 @@ changes invalidate cached evidence. The optional fifth verdict argument reruns t
 requires both motion profiles with matching manifest evidence at every scanned applicable viewport.
 Existing projects without a scoped manifest retain the legacy command forms and gates.
 
-Map proof into the existing six dimensions: `ux` for images/icons/motion and task outcomes,
+Map proof into the existing seven dimensions: `ux` for images/icons/motion and task outcomes,
 `hardening` for provenance, `devops` for file and payload budgets. Retain all seven design coverage
 tags, SLOP_GATE, lint, axe and regression checks. Tool outage or a pending job never turns a required
 row green. Record providers, attempts/cap, kept assets, failed/optional slots and proof paths in the

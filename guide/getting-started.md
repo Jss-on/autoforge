@@ -86,7 +86,7 @@ lists all 26 commands. The orchestrator is a mode of the root command, not an ad
 | `/forge` | Iterate against metric (classic) or autonomous orchestrator (free-form goal) | 25 / goal-bounded |
 | `/forge:plan` | Goal → config wizard (also run internally by orchestrator for `optimize-metric` goals) | one-shot |
 | `/forge:requirements` | Client brief → validated build spec (interview, no assumptions) | one-shot |
-| `/forge:build` | Greenfield full-stack build via the full SDLC (6 weighted dims, logic-gated) | 40 |
+| `/forge:build` | Greenfield full-stack build via the full SDLC (7 weighted dims, logic- and data-gated) | 40 |
 | `/forge:feature` | Add a feature to an existing app — delta acceptance + non-regression ratchet | 25 |
 | `/forge:migrate` | Migrate a language/framework with pinned behavior, target-only acceptance and cutover handoff | 25 |
 | `/forge:test` | Full QA engagement on existing software — risk-based plan, RTM, formal test design, execution + defect ledger, exit-criteria verdict (ISO 29119/ISTQB-aligned) | 20 |

@@ -2,6 +2,99 @@
 
 All notable changes to the forge project are documented here.
 
+## v3.7.0 — forge designs and builds data-intensive systems: the data-intensive protocol, `DATA.md` and the gated `data` dimension (2026-11-07)
+
+**Release note:** v3.7.0 also ships every entry below marked *Unreleased* down to and including
+"/forge:review: is this merge request safe to merge? (2026-10-06)" — the generated-CI speedup, the
+premium wireframe sweep, semantic-release for every project, the fix-loop rules, the designed SRS PDF
+and the review command. After merging, `/plugin marketplace update autoforge` then update `forge`.
+
+**Theme:** forge's mission is software + data, but the pipeline measured the UI (`DESIGN.md`, `ux`),
+the domain math (`logic`) and the shell; the data side of every build was one bullet ("schema +
+forward-only migrations"). Kleppmann & Riccomini's *Designing Data-Intensive Applications*, 2nd ed.
+(O'Reilly 2026) is now the source of truth for the data side: its decision procedure is a reference,
+its decisions are a machine-readable record, and its properties are a seventh acceptance dimension
+with a fixed set of mechanical metrics.
+
+**Added:**
+
+- `references/data-intensive-protocol.md` — the book made mechanical, cited by page: §0 premises
+  (trade-offs; systems of record vs derived data; describe load before growth; response time as a
+  distribution; integrity before timeliness; trust-but-verify; personal data as a toxic asset); §1 where
+  it runs; §2 the **eight decisions** every data system makes — workload · slo · model · integrity ·
+  evolution · durability · derived · retention — each with the book's rule; §3 the **data & scale**
+  elicitation round in client language; §4 the `DATA.md` schema; §5 the **mechanical metrics,
+  researched and decided** (response-time percentiles under an *open* arrival-rate load, error ratio,
+  load model reached, index coverage of hot paths, concurrency anomalies + idempotent retry + durable
+  acks, migration safety + compatibility, measured RPO/RTO + replica lag + read-your-writes,
+  derived-data reconciliation + freshness, erasure + retention; Tier B for sharding, tenancy,
+  pipelines, overload, clocks, decisions about people; and what is deliberately **not** used — means,
+  averaged percentiles, p9999, closed-loop load tests, "ACID compliant" claims, short-pilot nines);
+  §6 the canonical `data` acceptance rows; §7 the seam; §8 the anti-patterns the book names; §9 sources
+  (the book, Google SRE book and workbook, Tene/HdrHistogram, k6 open vs closed models, Jepsen/Elle,
+  Squawk and strong_migrations, PostgreSQL `pg_stat_replication`, AWS REL09-BP04, DAMA dimensions,
+  OpenTelemetry db metrics, GDPR Art. 12/17).
+- `scripts/data-score.cjs` — `lint <DATA.md>` → `DATA_LINT: VALID|INVALID groups=N/8 na=K` (a closed
+  load model, a mean, a dual-write mechanism, a 90-day erasure SLA or a missing invariant fails);
+  `coverage <DATA.md> <results.tsv>` → `DATA_COVERAGE: N.NN` (every applicable group traced by a `data`
+  row; traces to n/a groups are orphans); `slo <k6-summary|samples> [--data DATA.md]` → `DATA_SLO:
+  PASS|FAIL p50= p95= p99= n= errors= dropped= model=` (nearest-rank percentiles, k6 arrival-rate
+  executors recognised as the open model, closed/unknown models and dropped iterations fail);
+  `reconcile <source> <derived…> --key` → `DATA_RECONCILE: PASS|FAIL missing= extra= mismatched=`;
+  `migrations <dir> [--dialect]` → `MIGRATION_SAFETY: PASS|FAIL unsafe= annotated=` (expand/contract
+  lint: drop/rename/type change/truncate, NOT NULL without default, non-concurrent index, constraint
+  without NOT VALID, SET NOT NULL — allowed only under a `-- contract-step:` annotation);
+  `explain <plans>` → `DATA_INDEXES: PASS|FAIL seq_scans=` (PostgreSQL JSON/text and SQLite plans;
+  rows *read* = rows returned + rows removed by the filter, × loops, so a filtered full scan is
+  caught). The SQL splitter honours quotes, dollar-quoted bodies and comments, judges `ALTER TABLE`
+  actions one by one, and an annotation covers only the statement it precedes. Node builtins only;
+  the frontmatter parser is `design-scan.cjs`'s, whose flow maps/lists now keep commas inside
+  quotes and nested brackets.
+- The **`data` dimension** (weight 0.20, `BUILD_W_DATA`) in `score-build.sh pass-rate`, **gated like
+  `logic`** (`data_gate=PASS|CAPPED@0.50|n/a`); `score-build.sh coverage … DATA.md` (or
+  `BUILD_DATA_MD`) prints `DATA_COVERAGE`; `acceptance.cjs` accepts `data` rows and requires every
+  applicable one; `score-requirements.sh validate` reports `data=present(groups_traced=N)|absent` and
+  `REQUIRE_DATA=1` makes a traced `data` block mandatory; `validate-handoff.sh` accepts an optional
+  `coverage.data` (1 when CONVERGED). Legacy specs without `data` rows score exactly as before.
+- `commands/forge/requirements.md` — the **data & scale** round in Phase 1, the `data` NFR mapping in
+  Phase 2, the `DATA.md` draft in the SRS (`DATA_LINT: VALID` before sign-off), the data decisions in
+  the Phase 4 playback, the `data:` block + `acceptance.data` rows + `REQUIRE_DATA=1` in Phase 5, the
+  data line in the Summary. `commands/forge/build.md` — `Data:` argument, Phase 4 **data architecture**
+  (`DATA.md`, `DATA_LINT`, `DATA_COVERAGE`), a **Data** implementation slice before Functional, the
+  open-model load test and the data metrics in Phase 6, data dashboards and drills in the runbook, the
+  `data_gate`/`DATA_COVERAGE` convergence conditions, the phase-gate table, a new principle and the
+  seven-dimension metric mapping. `fullstack-hardening-checklist.md` §5 Data; `SKILL.md`, `CONTEXT.md`
+  (Data dimension, DATA.md, system of record / derived data), `acceptance-evidence.md`,
+  `handoff-schema.md`, and the "six dimensions" mentions in the game, integrations and migration
+  protocols updated.
+- `references/data-intensive-book-map.md` — every section of the book's table of contents mapped to
+  its home in forge (gate · `DATA.md` decision · guidance · stack decision · reasoned "not
+  mechanized"), so "did chapter X land?" has a lookup answer. Closing the map added to the protocol:
+  sharded secondary indexes (local vs global, §2.1), star/snowflake schemas, materialized views and
+  vector indexes as derived data (§2.3), id generation never from wall clocks (§2.4), durable
+  execution / workflow steps as idempotent effects (§2.5), local-first and sync engines as multi-leader
+  with an explicit merge rule (§2.6), the optional legal `basis` per personal-data item and purpose
+  limitation (§2.8), randomized / fault-injection testing of the distributed paths (§5), and §10.
+- `scripts/data-load.cjs` — an open-model (arrival-rate) load generator for when k6 is absent:
+  requests start on a fixed schedule regardless of completion, client-side timing, `# load_model:
+  open` / `# dropped: N` declared in-band for `data-score.cjs slo`.
+- `tests/data-e2e.test.cjs` + `tests/fixtures/data/app/` — a real POS service on `node:sqlite`
+  (system of record, outbox consumer → `product_search`/`customer_search`, batch
+  `daily_sales_report`, idempotency key, CHECK/UNIQUE invariants, expand/contract migrations,
+  erasure path), booted as two processes on one database and driven through every gate: lint, the
+  open-model load at the pinned peak, real `EXPLAIN QUERY PLAN` output (and the failure when the
+  index is dropped), 20 concurrent checkouts of 5 units across processes, idempotent retries, a
+  SIGKILLed process restarted, the migrations lint, a restore drill, three reconciliations (and
+  injected drift caught), erasure checked in every export — then `score-build.sh pass-rate
+  --strict-evidence` → `PASS_RATE: 1.00`, `data_gate=PASS`, `DATA_COVERAGE: 1.00` and
+  `REQUIRE_DATA=1 … validate` → `VALID` on the app's spec. Runs inside `tests/test-data.sh`.
+- `tests/test-data.sh` (new suite: the seam's verdict lines, the gate math, `DATA_COVERAGE`,
+  `REQUIRE_DATA`, the contracts, protocol and seam parity across the trees) + `tests/data-score.test.cjs`
+  (19 checks); fixtures `tests/fixtures/data/` (the sari-sari POS `DATA.md` and its careless twin,
+  k6 open/closed summaries, expand/contract and careless migrations, reconcile pairs, EXPLAIN plans, a
+  results TSV tracing all eight groups), `tests/fixtures/build/data-gate-{pass,fail}.tsv`,
+  `tests/fixtures/requirements/data.spec.yaml` (a seven-dimension spec).
+
 ## Unreleased — generated CI finishes in minutes (2026-11-07)
 
 **Theme:** every forge-built repo shipped one serial CI job (lint → unit → build → browser download →

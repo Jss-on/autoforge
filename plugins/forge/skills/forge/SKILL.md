@@ -2,7 +2,7 @@
 name: forge
 description: "Autonomous iteration loop: modify, verify, keep/discard against any metric"
 metadata:
-  version: 3.6.0
+  version: 3.7.0
 ---
 
 # AutoForge — Autonomous Goal-directed Iteration
@@ -53,7 +53,7 @@ Print a banner on every invocation: `[forge] mode: classic | orchestrator | wiza
 | `$forge` | Iterate against a metric: modify → verify → keep/discard | 25 |
 | `$forge plan` | Convert a goal into validated Scope, Metric, Verify config | N/A |
 | `$forge requirements` | Turn client requirements into a validated SRS + a ready `build` spec (standard RE process) | N/A |
-| `$forge build` | Build greenfield full-stack apps + harden (DevOps, monitoring, security) to passing acceptance | 40 |
+| `$forge build` | Build greenfield full-stack apps + harden (DevOps, monitoring, security) + the data architecture (`DATA.md`, gated `data` dimension: SLO under open load, no lost update, safe migrations, measured restore, reconciled derived data, complete erasure) to passing acceptance | 40 |
 | `$forge feature` | Add a feature to existing software — delta acceptance + hard non-regression ratchet, conforms to DESIGN.md | 25 |
 | `$forge migrate` | Migrate a language, framework or platform with a frozen behavior inventory, differential verification, data rehearsal and checked retirement; explicit readiness and cutover status | 25 |
 | `$forge debug` | Hunt bugs: hypothesize → test → falsify → repeat | 15 |

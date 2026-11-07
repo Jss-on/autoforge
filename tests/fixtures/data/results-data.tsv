@@ -1,0 +1,12 @@
+# metric_direction: higher_is_better
+spec	dimension	assertion	weight	status	detail	traces
+pos	logic	golden-total	2	pass	evidence:logic.txt	FR-1
+pos	functional	crud	1	pass	evidence:crud.txt	FR-2
+pos	data	workload-model-pinned	1	pass	evidence:data/lint.txt	NFR-1,data:workload
+pos	data	slo-p99-under-open-load	2	pass	evidence:data/slo.txt	NFR-2,data:slo
+pos	data	hot-queries-indexed	1	pass	evidence:data/explain.txt	NFR-3,data:model
+pos	data	checkout-no-lost-update	2	pass	evidence:data/concurrency.txt	NFR-4,data:integrity
+pos	data	migrations-expand-contract	1	pass	evidence:data/migrations.txt	NFR-5,data:evolution
+pos	data	restore-drill-rpo-rto	2	pass	evidence:data/restore.txt	NFR-6,data:durability
+pos	data	search-index-reconciles	1	pass	evidence:data/reconcile.txt	NFR-7,data:derived
+pos	data	deletion-purges-derived	1	pass	evidence:data/deletion.txt	NFR-8,data:retention

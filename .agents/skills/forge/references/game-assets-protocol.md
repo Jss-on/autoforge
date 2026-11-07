@@ -74,7 +74,7 @@ in from slice one:
   at wave 10, 200 entities). Headless-specific: software-GL fps is dominated by MSAA — disable
   `antialias` and cap `devicePixelRatio` in the perf profile before believing a number.
 
-## 4. Acceptance mapping (what the six dimensions mean for a game)
+## 4. Acceptance mapping (what the seven dimensions mean for a game)
 
 | Dimension | For a game means |
 |---|---|

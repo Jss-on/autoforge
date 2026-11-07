@@ -242,10 +242,12 @@ PARSED="$(node -e '
     else if (k === "coverage") {
       // Historical 2.x handoffs may omit design coverage; current writers may not.
       const legacy = /^2\./.test(s("version"));
+      // `data` coverage (DATA.md groups traced by `data` rows) is optional and additive; a CONVERGED run that reports it must report 1.
       valid = object(v) && fraction(v.requirements) &&
         ((legacy && !("design" in v)) || fraction(v.design)) &&
+        (!("data" in v) || fraction(v.data)) &&
         (s("status") !== "CONVERGED" || (v.requirements === 1 &&
-          ((legacy && !("design" in v)) || v.design === 1)));
+          ((legacy && !("design" in v)) || v.design === 1) && (!("data" in v) || v.data === 1)));
     } else if (k === "errors_remaining") valid = Number.isSafeInteger(v) && v >= 0;
     else if (k === "investigation") valid = text(s("case_file")) && text(s("report")) &&
       ["demonstrated", "supported", "unresolved"].includes(s("conclusion")) &&

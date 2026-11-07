@@ -226,7 +226,7 @@ receipt's stdout directly. There is no separate observation-file freshness claim
    mismatch cannot turn a regression into parity. Intentional differences carry a decision and
    their own required assertions; never require parity with a known vulnerability.
 4. Define `checks.json` with the shared acceptance fields and an `execution` object per applicable
-   check. Use the existing six dimensions, not new dimension labels. The migration domains map
+   check. Use the existing seven dimensions, not new dimension labels. The migration domains map
    to these checks. The same check may cover multiple related inventory items if its verifier
    actually exercises them; a single generic success command does not establish completeness.
 5. Pin immutable source expectations, comparator and verifier/config files in the snapshot:

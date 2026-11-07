@@ -46,7 +46,7 @@ All 26 commands follow the same pattern: `$forge <command> [flags]`.
 | `$forge` | 25 | Core metric optimization loop |
 | `$forge plan` | one-shot | Structured planning wizard |
 | `$forge requirements` | one-shot | Client brief → validated build spec |
-| `$forge build` | 40 | Greenfield full-stack build via the full SDLC (6 weighted dims, logic-gated) |
+| `$forge build` | 40 | Greenfield full-stack build via the full SDLC (7 weighted dims, logic- and data-gated) |
 | `$forge feature` | 25 | Feature addition — delta acceptance + non-regression ratchet |
 | `$forge test` | 20 | Full QA engagement on existing software — risk-based plan, RTM, formal test design, execution + defect ledger, exit-criteria verdict (ISO 29119/ISTQB-aligned) |
 | `$forge debug` | 15 | Root cause investigation |

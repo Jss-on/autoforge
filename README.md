@@ -12,7 +12,7 @@ An autonomous iteration engine for Claude Code, OpenCode, OpenAI Codex, and Curs
 [![OpenCode](https://img.shields.io/badge/OpenCode-Skill-purple)](https://opencode.ai)
 [![Codex](https://img.shields.io/badge/Codex-Plugin-green?logo=openai&logoColor=white)](https://developers.openai.com/codex)
 [![Cursor](https://img.shields.io/badge/Cursor-Skill-black)](https://cursor.com/docs/skills)
-![Version](https://img.shields.io/badge/version-3.6.0-blue.svg)
+![Version](https://img.shields.io/badge/version-3.7.0-blue.svg)
 [![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 
 **26 commands · 4 agent platforms · bounded iteration · evidence-backed gates**
@@ -472,10 +472,10 @@ flowchart TD
     G --> S[Authorized shipment and live verification]
 ```
 
-### The six acceptance dimensions
+### The seven acceptance dimensions
 
 Every app is graded by one mechanical metric — `fullstack_pass_rate` (`scripts/score-build.sh`) — a
-weighted sum over six dimensions:
+weighted sum over seven dimensions:
 
 | Dimension | Weight | Gates |
 |---|---|---|
@@ -483,11 +483,15 @@ weighted sum over six dimensions:
 | functional | 0.30 | it works — CRUD, endpoints, tests, coverage ≥ 80% |
 | **ux** | 0.20 | responsive · WCAG AA (axe) · e2e flow · loading/empty/error states · **DESIGN.md conformance** |
 | devops | 0.15 | Docker / build · CI (lint+test+build+scan) · compose / IaC · migrations |
-| monitoring | 0.15 | health / readiness · metrics · structured logs · tracing |
+| monitoring | 0.15 | health / readiness · metrics (request-duration histogram, replication / consumer lag, freshness) · structured logs · tracing |
 | hardening | 0.20 | no secrets · security headers · input validation · rate-limit · authz · dep-scan |
+| **data** | 0.20 | the data architecture holds — **`DATA.md`** (`references/data-intensive-protocol.md`, after Kleppmann & Riccomini's *Designing Data-Intensive Applications*, 2nd ed.): response-time percentiles under an **open** load, hot paths indexed, no lost update, idempotent retries, durable acks, expand/contract migrations, a measured restore, derived data that reconciles with its system of record, erasure that reaches every copy (gating; see below) |
 
-Declared weights sum to 1.30 and are **renormalized over the dimensions present in a run** — with all
-six declared, the effective weights are ≈ 0.231 / 0.231 / 0.154 / 0.115 / 0.115 / 0.154.
+Declared weights sum to 1.50 and are **renormalized over the dimensions present in a run** — with all
+seven declared, the effective weights are ≈ 0.200 / 0.200 / 0.133 / 0.100 / 0.100 / 0.133 / 0.133. A
+legacy spec without `data` rows scores exactly as before. The `data` dimension is **gated like
+`logic`**: while any of its rows is red the headline is capped at 0.50 — software + data means an app
+that can lose, corrupt or leak data is never "done".
 
 A working-but-ugly or insecure app is **capped**, never "done". Acceptance is verified by *running it*
 (build, boot, probe, the test pyramid, Playwright e2e + axe) — never self-reported.
@@ -957,8 +961,9 @@ See the [requirements guide](guide/forge-requirements.md) for a booking example 
 Builds new software via the **standard SDLC** — plan → feasibility → requirements → design
 (HLD/LLD + `DESIGN.md`) → implement (TDD, with a root-cause defect loop) → comprehensive test →
 deploy → operate/maintain — every phase gated with its named deliverable (project charter, SRS + RTM,
-test summary, release notes, runbook) — to **passing acceptance across six weighted
-dimensions** with the gating `logic` golden vectors, verified live in a real browser with Playwright.
+test summary, release notes, runbook) — to **passing acceptance across seven weighted
+dimensions** with the gating `logic` golden vectors and the gating `data` architecture rows
+(`DATA.md`), verified live in a real browser with Playwright and under an open-model load test.
 
 ```
 /forge:build Spec: evals/fullstack/<name>.spec.yaml Iterations: 40
@@ -2090,7 +2095,7 @@ autoforge/
 A: Run `/forge:plan` — it analyzes your codebase, suggests metrics, and dry-runs the verify command before you launch.
 
 **Q: How do I build a whole app, not just optimize one metric?**
-A: Use the build pipeline — `/forge:requirements` (brief → validated spec via the latent-intent elicitation protocol) → `/forge:build` (greenfield, full SDLC, six weighted acceptance dimensions with the gating `logic` golden vectors, `DESIGN.md`, verified live with Playwright) → `/forge:feature` to add features under a hard non-regression ratchet → `/forge:test --chain fix` (independent QA engagement ↔ defect remediation, PRs auto-merged on green CI) → `/forge:regression` → `/forge:ship` (human-gated). See [Building Complex Software](#building-complex-software).
+A: Use the build pipeline — `/forge:requirements` (brief → validated spec via the latent-intent elicitation protocol) → `/forge:build` (greenfield, full SDLC, seven weighted acceptance dimensions with the gating `logic` golden vectors and the gating `data` rows, `DESIGN.md` + `DATA.md`, verified live with Playwright) → `/forge:feature` to add features under a hard non-regression ratchet → `/forge:test --chain fix` (independent QA engagement ↔ defect remediation, PRs auto-merged on green CI) → `/forge:regression` → `/forge:ship` (human-gated). See [Building Complex Software](#building-complex-software).
 
 **Q: Will Forge choose a technology stack without me?**
 A: Requirements compares real options, explains the evidence, tradeoffs and recommendation, and
