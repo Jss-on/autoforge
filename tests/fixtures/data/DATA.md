@@ -44,6 +44,8 @@ integrity:
   idempotency:
     key: "Idempotency-Key header on POST /sales, stored with the sale for 24h"
   constraints: [unique(barcode), unique(store_id, receipt_no), check(stock_on_hand >= 0)]
+  trust_model: trusted-deployment
+  weak_lies: [input-validation, restore-digests, multiple-time-sources]
 evolution:
   encoding: json
   compatibility: both
@@ -56,6 +58,8 @@ durability:
   replica_reads: read-your-writes
   reason: "reports may read the replica; the cashier's own sale is read from the leader"
   failover: manual
+  fault_model: partial-failure
+  replication_log: logical
   backup:
     frequency: "daily base + continuous WAL"
     rpo_s: 300
@@ -65,11 +69,13 @@ derived:
   daily_sales_report:
     source: sales
     mechanism: batch
+    rerun: idempotent
     freshness_s: 3600
     reconcile: "node scripts/reconcile-report.cjs <day> compares report totals with SUM(sales) for that day"
   product_search:
     source: products
     mechanism: outbox
+    rerun: idempotent
     freshness_s: 10
     reconcile: "npm run reconcile:search exports products and the index by id and diffs name/price"
 retention:

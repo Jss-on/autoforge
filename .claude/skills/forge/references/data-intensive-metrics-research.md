@@ -103,6 +103,17 @@ percentiles at that throughput; row counts as reconciliation; an isolation level
 compliant" as proof; uptime nines from a short pilot; vendor benchmarks; CPU utilization as a user-facing
 indicator (book p.50: it is a resource metric, not a load parameter the user feels).
 
+## How the sources were read
+
+Each page was fetched in full on 2026-11-08 and the statements above are verbatim unless marked as a
+paraphrase. The two pages longer than one fetch (PostgreSQL's statistics chapter, OpenTelemetry's database
+metrics) were read to their end in a second fetch: the remainder of the PostgreSQL page holds no further
+lag statement; the remainder of the OpenTelemetry page defines `db.client.connection.wait_time` and
+`db.client.connection.use_time` ("The time it took to obtain an open connection from the pool"; "The time
+between borrowing a connection and returning it to the pool"), both histograms in seconds — pool waits are
+part of the client-side response time row 1 measures, which is why forge measures at the client and not
+at the engine.
+
 ## Sources quoted here
 
 - Beyer et al., *Site Reliability Engineering*, "Service Level Objectives" — https://sre.google/sre-book/service-level-objectives/

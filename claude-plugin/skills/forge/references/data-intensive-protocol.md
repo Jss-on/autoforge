@@ -102,6 +102,19 @@ secondary index on sharded data is either local (every shard indexes its own row
 gather) or global (sharded by the indexed value; updated asynchronously) — `model.indexes` names which
 when the store is sharded (p.268-271).
 
+**Operational versus analytical, and what load means (ch.1 pp.3-11, ch.2 pp.34-52).** An operational (OLTP) system
+serves backend and frontend engineers' application code: many small keyed reads and writes, the latest
+state of a record, users waiting. An analytical (OLAP) system serves data scientists and business analysts:
+few queries that aggregate over terabytes of history for a brand, a region or a quarter. The two have
+different access patterns, different indexes and usually different stores, which is why `workload.kind`
+comes first. The book's running example — a social network's home timeline, where a post by a user with
+millions of followers must reach every follower's timeline — shows the fan-out trade-off: materialize the
+timeline on write (cheap reads, expensive writes for celebrities) or compute it on read; the read/write
+ratio, the average number of follows and the hot users decide. Scalability is a question, not a label:
+how does the system cope when load grows by an order of magnitude, and which parameter grows — users,
+requests per second, data volume, followers per user. A system that scales to a million users may not
+scale to ten million; design for the next step, not for all of them, and re-measure at each.
+
 ### 2.2 `slo` — response time, errors, availability (DDIA2 ch.2)
 `response_time_ms: { p50, p95, p99 }` measured **client side** under an **open (arrival-rate) load
 model** at the pinned peak, `error_rate_max`, `availability`, the `window`, `samples_min`. The mean is
@@ -132,6 +145,16 @@ defect: statement count must not grow with list length (p.68-69).
 
 **Storage engines (ch.4 pp.116-134).** Whether the store is log-structured (LSM-tree: memtable, SSTables, compaction, Bloom filters) or page-oriented (B-tree: in-place pages, write-ahead log) is the stack record's choice; what forge pins is the application-visible effect. An LSM store trades write amplification for compaction stalls that appear as p99 spikes under sustained writes; a B-tree store pays on every write but reads with fewer surprises. The SLO run (§5 row 1) at the pinned write rate, with `dropped = 0`, is where that effect shows; a tail that breaches the budget under compaction is a stack finding, not a tuning note. In-memory stores (p.133) still owe durability: their write-ahead log or snapshot cadence sets the RPO in `durability.backup`.
 
+**Relationships and query languages (ch.3 pp.75-100).** Many-to-one and many-to-many relationships (a
+person's school and employer, a post's author, a region's people) need shared entities with identifiers
+and joins; documents hydrated with copies of them become denormalized data that must be kept in sync
+(§2.7). Graph models (vertices, edges, properties) suit highly connected data; Cypher expresses a
+traversal as a pattern and lets the optimizer choose the order, SPARQL queries triples (subject,
+predicate, object) over RDF, Datalog derives relations from small recursive rules, and recursive CTEs in
+SQL can express the same traversal verbosely. GraphQL is a client-shaped API language over the
+application, not a database language: resolvers that fetch per field produce the N+1 pattern unless they
+batch — the §5 row 4 statement-count check applies to API endpoints as much as to pages.
+
 ### 2.4 `integrity` — transactions, constraints, idempotency (DDIA2 ch.8, ch.10, ch.13)
 Declare the isolation level actually in force (the default in PostgreSQL, Oracle and SQL Server is
 read committed, p.292; "repeatable read" means different things per vendor, p.298). Name every
@@ -150,7 +173,12 @@ come from the database's sequence, a single decider or a logical clock — never
 timestamps, which skew and collide (p.363-364, p.417-424). Hard invariants vs apology workflows is an
 owner decision recorded here (p.573-574).
 
-**Trust model (ch.9 pp.377-380).** Nodes inside the deployment are assumed honest but fallible; Byzantine fault tolerance is not designed for, on the book's own advice. The "weak forms of lying" it does guard against are gates here: digests compared on every restore drill (`operational.cjs recovery`), input validation at every trust boundary (the `hardening` rows), and more than one time source for clocks (§2.6).
+**Trust model (ch.9 pp.377-380).** `integrity.trust_model` is a linted decision (`DATA_LINT`): `trusted-deployment` requires `integrity.weak_lies` to list input-validation, restore-digests and multiple-time-sources; `byzantine-tolerant` is the stack's claim to prove. Nodes inside the deployment are assumed honest but fallible; Byzantine fault tolerance is not designed for, on the book's own advice. The "weak forms of lying" it does guard against are gates here: digests compared on every restore drill (`operational.cjs recovery`), input validation at every trust boundary (the `hardening` rows), and more than one time source for clocks (§2.6).
+
+**Actual serial execution (ch.8 pp.309-312).** One way to get serializability is to run every transaction
+on a single thread, in memory, as a stored procedure with no interactive round trips (VoltDB- and
+Redis-style engines); it works when the active data fits in memory and each transaction is short, and it
+is recorded as the technique of the `integrity.transactions` entries it protects.
 
 **Atomic commit across systems (ch.8 pp.323-335).** Two-phase commit (a coordinator asks every participant to prepare, then commits or aborts all of them) is sound inside one database and fragile across heterogeneous systems: XA transactions block on a crashed coordinator, hold locks meanwhile and are rarely well supported. forge therefore does not accept an XA transaction as the technique for a cross-system invariant in `integrity.transactions`; the accepted techniques are the end-to-end idempotency key, the transactional outbox or change-data-capture feeding an idempotent consumer, and a compensating action where the business can apologize (pp.333-335, 562-566). A database-internal distributed transaction is the stack's business and is cited, not re-argued.
 
@@ -168,6 +196,18 @@ kept indefinitely (p.186). Durable-execution / workflow engines replay a workflo
 crash, so every step with an external side effect (a charge, an email, a shipment) is idempotent and
 keyed — the §2.4 idempotency rule applied to orchestration (p.187-189).
 
+**Encodings, services and durable execution (ch.5 pp.163-191).** Data in memory (objects, structs, lists)
+must be encoded to a byte sequence to be stored or sent and decoded back; the encoding (JSON, XML,
+Protocol Buffers, Avro, Thrift) decides how old and new code coexist. Language-specific serialization (Java
+`Serializable`, Python pickle) ties the bytes to one language and lets a decoder instantiate arbitrary
+classes from attacker-controlled bytes — a security hole, which is why §8 forbids it and `hardening`
+validates at every boundary. Dataflow through services — REST and RPC between clients and servers, with
+service discovery and load balancing — means the two sides upgrade independently, so the API keeps
+backward and forward compatibility and `evolution.compatibility: both` is the default. Durable-execution
+frameworks (Temporal-class workflow engines) persist the result of each step so a crashed workflow resumes
+deterministically; the book's payment example (charge the card, record the deposit, flag fraud) works only
+because every step is idempotent — the same rule as `integrity.idempotency` and `derived.*.rerun`.
+
 ### 2.6 `durability` — replication, failover, backup (DDIA2 ch.2, ch.6, ch.9-10)
 Keep backups even when replicating — replicas replicate deletions (p.198); acknowledged writes
 survive a crash (fsync + WAL; p.120, p.282-284). Asynchronous replication is fast but a confirmed
@@ -184,7 +224,14 @@ clocks (p.220-229, p.237-243). RPO/RTO are numbers a drill
 measures: restore into an isolated destination, time from incident to the service answering its
 journey, compare row counts and content digests (`operational.cjs recovery`).
 
-**Replication log type and the fault model (ch.6 pp.206-208, ch.1 pp.23-24).** Name the mechanism's log type in `durability.replication` (statement, WAL shipping, logical/row-based, trigger-based): WAL shipping pins leader and followers to one storage-engine version, so the rolling-upgrade plan in `evolution` must say how followers are upgraded first; a logical log decouples the two. forge targets cloud and commodity deployments that keep serving through partial failure: the failover and restore rows assume rolling node loss and replacement, never a whole-system checkpoint-restart.
+**Fault tolerance is exercised, not assumed (ch.2 pp.43-47).** A fault-tolerant system keeps working when
+a drive stops, a machine dies or a process is killed; the way to know is to trigger the faults on purpose —
+kill the process mid-write (`SIGKILL` test), stop a replica, restore from backup — rather than hope for
+their absence. Hardware faults are independent and frequent at scale; software bugs are correlated and
+fail everywhere at once; human error is the leading cause, which is why the runbook, the staged rollout and
+the restore drill exist.
+
+**Replication log type and the fault model (ch.6 pp.206-208, ch.1 pp.23-24).** Both are linted decisions (`DATA_LINT`): `durability.replication_log` is required whenever replication is not `none`, and `durability.fault_model` is required for every record (`checkpoint-restart` needs a reason and switches the failover and restore rows to n/a). Name the mechanism's log type in `durability.replication_log` (statement, WAL shipping, logical/row-based, trigger-based): WAL shipping pins leader and followers to one storage-engine version, so the rolling-upgrade plan in `evolution` must say how followers are upgraded first; a logical log decouples the two. forge targets cloud and commodity deployments that keep serving through partial failure: the failover and restore rows assume rolling node loss and replacement, never a whole-system checkpoint-restart.
 
 ### 2.7 `derived` — caches, indexes, views, exports, models (DDIA2 ch.1, ch.11-13)
 Every derived dataset names its system-of-record **source**, the **mechanism** that keeps it in sync
@@ -200,7 +247,24 @@ are exported and alerted (p.499); poison messages go to a dead-letter queue (p.4
 counted (p.520). Analytics is a derived system too: warehouse or lake fed by CDC/ETL, never queries on
 the OLTP store (p.7-10); ML models are derived data and inherit the deletion obligation (p.552, p.24).
 
-**Batch jobs (ch.11 pp.466-481, ch.12 pp.526-528).** A derived dataset with `mechanism: batch` is produced by a deterministic, idempotent job: the same input yields the same output, so a failed or partial run is simply re-run and the rebuild must equal the live copy (`DATA_RECONCILE`). Joins and grouping co-partition their inputs; the hot-key skew they create is the Tier B shard-skew metric. Which engine runs the job is the stack's decision.
+**Data integration, unbundling and correctness (ch.13 pp.539-578).** Data integration means deriving the
+specialized datasets — search index, cache, warehouse, model — from one system of record through its
+change log, by batch and by stream alike, instead of writing each from the application (dual writes).
+Unbundling the database means composing storage technologies (a store, an index, a cache, a queue) with
+dataflow between them, each maintained by exactly one consumer of the log, and designing the application
+itself as stream transformers whose state is derived and observable: reads are queries over derived state
+with a write-to-read latency the design chooses. Correctness then rests on end-to-end measures the book
+names: an operation identifier generated at the end (the client) and carried through every hop makes
+retries idempotent (the end-to-end argument); uniqueness and other constraints are enforced by routing all
+requests for one key through a single partition or log so they are totally ordered, and where the business
+can apologize a compensating action replaces a cross-system transaction; timeliness (how fresh) and
+integrity (no loss, no corruption, no double count) are separated and only integrity is non-negotiable;
+and integrity is audited continuously — trust, but verify — because data corruption is a matter of when,
+not whether. In forge: `derived.*` names source, mechanism, freshness and reconcile per dataset;
+`DATA_RECONCILE` is the audit; `integrity.idempotency` is the end-to-end identifier; `integrity.constraints`
+and the uniqueness burst test cover enforced constraints; the §8 anti-patterns name dual writes.
+
+**Batch jobs (ch.11 pp.466-481, ch.12 pp.526-528).** Every derived dataset whose mechanism is not `same-transaction` declares `rerun: idempotent` (linted, `DATA_LINT`; `non-idempotent` is an error). A derived dataset with `mechanism: batch` is produced by a deterministic, idempotent job: the same input yields the same output, so a failed or partial run is simply re-run and the rebuild must equal the live copy (`DATA_RECONCILE`). Joins and grouping co-partition their inputs; the hot-key skew they create is the Tier B shard-skew metric. Which engine runs the job is the stack's decision.
 
 ### 2.8 `retention` — personal data, deletion, minimization (DDIA2 ch.1, ch.14)
 Inventory every field or table about people with its **purpose** and **retention**; collect only for a
@@ -213,6 +277,113 @@ deliberately not stored (p.597). Each personal-data item may name its legal `bas
 contract | legal-obligation | legitimate-interest`); consent is not freely given when declining means
 losing the service, and data collected for one purpose is not reused for another (p.591-593). When the system decides about people, name the accountable human,
 the explanation path and the correction path, and watch for proxies of protected traits (p.586-588).
+
+### 2.9 The distributed, imperfect world — networks, clocks, pauses, quorums (DDIA2 ch.9-10; the Tier B rows)
+These are not a ninth `DATA.md` group: they are the rules every group above assumes once the system has
+more than one node, and the Tier B rows that measure them when the record declares the feature.
+
+**Faults and partial failures (pp.346-357).** A distributed system has partial failures: some nodes work
+while others are down or unreachable, and nothing says which. Networks lose, delay, duplicate and reorder
+packets; TCP hides loss but not delay, and an open connection proves nothing about the remote process. The
+only failure detector is a timeout, and timeouts trade false suspicion (a slow node declared dead, with
+cascading load on the rest) against detection delay. Queues — in switches, in the OS, in the application —
+make delay unbounded under load. Rules: every remote call has a timeout and a bounded retry with jitter
+(`Tier B` overload behaviour: timeouts, backoff with jitter, a circuit breaker that recovers without a
+restart); liveness is a probe (`/healthz`, `/readyz`), never connection state (`monitoring` rows); queue
+depth is bounded and exported (`Tier B` dead-letter depth); the SLO run of §5 row 1 is the measurement of
+tail latency these effects produce.
+
+**Clocks (pp.358-365).** Time-of-day clocks drift, jump on NTP correction and leap seconds, and disagree
+between machines; monotonic clocks measure elapsed time but mean nothing across nodes. Rules: durations
+(timeouts, latencies, the samples `data-load.cjs` records) use a monotonic clock; ordering writes by a
+wall-clock timestamp (last-write-wins) silently drops concurrent writes — §8 names it; a declared clock
+discipline (`Tier B`: more than one time source, skew monitored and alerted, confidence intervals where a
+database exposes them) is required whenever a record relies on timestamps for ordering or leases.
+
+**Process pauses, leases and fencing (pp.366-376).** Garbage collection, virtual-machine suspension,
+swapping and synchronous disk I/O can stop a process for seconds; a lease it held may have expired
+meanwhile, and the paused holder resumes believing it is still the leader. Rules: every lease-protected
+write carries a fencing token (a monotonically increasing number issued with the lease) that the storage
+rejects when stale — recorded as the technique of the `integrity.transactions` entry that depends on
+the lease; GC discipline (`Tier B`: pause monitoring, heap sizing, pre-emptive restarts for latency-critical
+nodes) is declared when a node's pause can exceed the lease timeout.
+
+**Truth by majority: quorums, consensus, coordination services (pp.371-376, pp.401-440).** A node
+cannot know the truth; the majority decides. Quorums (w + r > n) tolerate minority failure; consensus
+protocols (Raft, Paxos, Zab, Viewstamped Replication) give total order broadcast, leader election with
+epochs, linearizable registers and atomic commit — equivalent problems. Rules: consensus is bought, never
+built (stack-selection-protocol; §8 names hand-rolled consensus); leases, locks, membership and
+configuration live in a coordination service (ZooKeeper, etcd, Consul) that already runs consensus;
+`durability.replication` records the quorum or the leader protocol in force. Linearizability — the
+single-copy illusion where every read sees the latest write — is required for uniqueness constraints,
+leader election and locks and costs availability and latency; declare it per operation, and test
+read-your-writes and monotonic reads under lag (§5 row 7).
+
+**Byzantine faults (pp.377-380)** are declined on the book's own advice inside a trusted deployment;
+`integrity.trust_model` and `integrity.weak_lies` (§2.4) record the choice and the guards.
+
+**Formal methods and randomized testing (pp.384-388).** Model checking and fault-injection (Jepsen-style)
+find the bugs the system model hides; forge's concurrency tests (§5 row 5), the restore drill and the
+`SIGKILL` durability test are the application's share, and a store's own Jepsen or Elle results are cited
+from the stack record (`data-intensive-metrics-research` row 5).
+
+**Sharding and multitenancy (ch.7 pp.253-271).** Shard only when one node cannot carry the load; a
+tenant-per-shard layout isolates noisy neighbours and makes per-tenant deletion a drop. Key-range sharding
+keeps order for scans but concentrates hot ranges (a sensor's time series, a popular encyclopedia title);
+hash sharding spreads load and loses range scans; hot keys are split or spread by the application. Rules:
+`workload.hot_keys` names them; `Tier B` shard skew = max shard load ÷ mean shard load, with a budget;
+`Tier B` tenant isolation = one tenant's burst does not move another's p99; rebalancing is operator-
+approved, never automatic without a kill switch; local versus global secondary indexes are declared in
+`model.indexes` (a global index is a derived dataset with a freshness bound).
+
+**Batch infrastructure (ch.11 pp.454-481).** The Unix philosophy — immutable input files, small tools
+composed through pipes, `sort` that spills to disk, `uniq -c` over a sorted stream, outputs that can be
+re-run — is the model for every batch job. Distributed filesystems and object stores (buckets of immutable
+objects, no directories) hold the inputs; schedulers and orchestrators (YARN-class resource managers,
+workflow engines) retry failed tasks, which is only safe because tasks are deterministic and idempotent;
+MapReduce and dataflow engines (Spark, Flink, Daft-class dataframe APIs, SQL over the lake) repartition
+by key in a shuffle, join by co-partitioning or broadcast, and suffer when keys are skewed. Rules:
+`derived.*.rerun: idempotent` (linted); rebuild equals live (`DATA_RECONCILE`); shuffle and join skew is
+the `Tier B` shard-skew metric applied to job partitions; the engine, the filesystem and the scheduler are
+the stack's; the ETL, analytics, machine-learning and serving use cases each declare freshness,
+completeness and correctness SLIs (`Tier B` pipeline SLIs, from the SRE Workbook).
+
+**Analytics and machine learning on the batch substrate (ch.11 pp.473-481).** Query languages over the lake
+(Hive- and Spark-SQL-class, Presto/Trino-class engines) and cloud warehouses plan the shuffles and joins;
+graph processing frameworks run iterative algorithms in batch. Analytics is pipelines run by data
+engineers into OLAP cubes, dashboards and BI tools (Superset, Tableau) for analysts and management; machine
+learning is feature pipelines that transform the lake into training sets, model training, and prediction
+serving — every stage a derived dataset with lineage, freshness and a reconcile. The book's own log example
+— an nginx access log, each HTTP request on one line, the most-requested URLs counted with `awk`, `sort`
+and `uniq -c` — is the whole pattern in miniature.
+
+**Messaging and backpressure (ch.12 pp.488-500).** Producers can outrun consumers; the system must
+decide to drop, to buffer (bounded) or to apply backpressure. Log-based brokers (Kafka-class) keep an
+append-only partitioned log with consumer offsets, so consumers replay and lag is a number; message
+queues (AMQP/JMS-class) acknowledge and redeliver, so consumers must be idempotent and order per key is
+not guaranteed after redelivery. Rules: the choice is recorded in `derived.*.mechanism`; consumer lag is
+the freshness measure (§2.7); dead-letter depth and oldest unprocessed event age are `Tier B` SLIs;
+`derived.*.rerun: idempotent` covers redelivery.
+
+### 2.10 Decisions about people — predictive analytics, privacy, consent (DDIA2 ch.14; the accountability rows)
+When the system's output is a decision about a person — a loan, an insurance price, a fraud flag, a
+ranking, a feed — the data architecture carries ethical obligations the book spells out. **Predictive
+analytics and bias (pp.586-588):** a model learns the bias in its training data and can discriminate
+systematically on protected traits even without seeing them; a decision must be explainable and correctable
+by a human who is accountable for it; feedback loops (a credit score that lowers the chances that would
+have repaired it; an echo chamber in a feed) must be monitored as drift. Rules (`Tier B` accountability
+rows, required when the record declares decisions about people): an outcome-disparity metric per protected
+group with a budget; an explanation and a correction path exposed to the affected person; the inputs and
+model version logged with every decision (the audit table rule of §2.4); drift monitored against the
+training distribution. **Privacy, tracking, surveillance and consent (pp.589-597):** collecting behavioural
+data by default is surveillance; consent must be meaningful and specific, and a basis is recorded per item;
+data is used only for the purpose it was collected for; data hoarded is liability. Rules: `retention.personal_data`
+names purpose, basis and retention per item; `retention.minimization` names what is not collected;
+`retention.deletion.sla_days ≤ 30` is a hard lint; exports and screens follow allow-lists (`hardening`).
+The book's historical argument — governments regulated the industrial revolution only after its harms were
+visible (child labour, working hours, food safety, waste and pollution, the political power of factory
+owners), and data collection will be regulated the same way as its harms to people become visible — is the
+reason these rows exist before the law requires them.
 
 ## §3 Elicitation — the data & scale round (client language; each decides a group)
 
@@ -281,6 +452,8 @@ integrity:
   transactions:                # every read-modify-write / multi-object operation
     checkout: { invariant: "stock >= 0; total = sum(lines)", technique: "one tx; SELECT FOR UPDATE; CHECK" }
   idempotency: { key: "Idempotency-Key header on POST /sales, kept 24h" }   # or { na: <reason> }
+  trust_model: trusted-deployment | byzantine-tolerant                     # p.377-380; trusted-deployment requires weak_lies
+  weak_lies: [input-validation, restore-digests, multiple-time-sources]      # the lies a trusted deployment still guards against
   constraints: [unique(barcode), unique(store_id, receipt_no), check(stock_on_hand >= 0)]
 evolution:
   encoding: json | protobuf | avro
@@ -292,10 +465,12 @@ durability:
   lag_budget_s: 5              # required when replication != none
   replica_reads: none | leader-only | read-your-writes | eventual
   failover: automatic | manual | none
+  fault_model: partial-failure | checkpoint-restart                          # p.23; checkpoint-restart needs reason
+  replication_log: statement | wal-shipping | logical | trigger              # p.206-208; required when replication != none
   backup: { frequency: "daily base + WAL", rpo_s: 300, rto_s: 1800, drill: "quarterly, isolated db" }
 derived:                       # or { na: <reason> }
-  product_search: { source: products, mechanism: outbox, freshness_s: 10, reconcile: "npm run reconcile:search" }
-  daily_sales_report: { source: sales, mechanism: batch, freshness_s: 3600, reconcile: "node scripts/reconcile-report.cjs" }
+  product_search: { source: products, mechanism: outbox, rerun: idempotent, freshness_s: 10, reconcile: "npm run reconcile:search" }
+  daily_sales_report: { source: sales, mechanism: batch, rerun: idempotent, freshness_s: 3600, reconcile: "node scripts/reconcile-report.cjs" }   # rerun required for every mechanism but same-transaction (p.466-475, p.528)
 retention:
   personal_data:               # or `none`
     customer_phone: { purpose: "SMS receipt", retention: "2 years after last sale", basis: consent }   # basis optional
@@ -481,7 +656,8 @@ self-reported number — the receipts and the independent verify before converge
 
 ## §10 Coverage of the book
 
-The book lives in forge in four layers. `references/data-intensive-section-ledger.md` is the section
+The book lives in forge in four layers (§2.9 carries the distributed-systems rules of chapters 9-12 and the
+Tier B rows; §2.10 the decisions-about-people rows of chapter 14). `references/data-intensive-section-ledger.md` is the section
 layer: one row per section of the table of contents (216), the mechanism that section teaches and the
 forge artifact that encodes it; `tests/book-ledger-verify.cjs` checks, on every suite run and without
 the book, that every table-of-contents entry has a row and that every encoding names an artifact that
@@ -497,7 +673,10 @@ Both lower layers are verified against the book's text, not against its headings
 `tests/book-map-verify.cjs` checks that every map row's section titles occur on the pages it cites and
 that every table-of-contents entry is covered; `tests/book-concepts-verify.cjs` takes each section's
 most distinctive terms from the body text and requires them in this corpus (every section covered, by
-its terms or by a digest citing its pages; mean term coverage ≥ 90 %). The book is
+its terms or by a digest citing its pages; mean term coverage ≥ 90 %); `tests/book-substance-verify.cjs`
+asks the stricter question — are those terms inside the artifacts the section's ledger row itself names
+(the § anchor's text, the digest, the key's definition, the seam's source) — and requires every section
+above its floor. The book is
 copyrighted and stays out of the repository: `tests/test-data.sh` runs both checks when
 `DDIA_PAGES_JSON` points at a locally extracted page text and records the skip otherwise. Read the map
 when a review asks "where did the book's chapter on X go?"; read the digest when it asks "what exactly

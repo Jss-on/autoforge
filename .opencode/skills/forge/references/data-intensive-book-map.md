@@ -28,7 +28,7 @@ the book land?": each row names a home or says why the harness leaves it to the 
 | Operations in the cloud era (17) | `references/operational-recovery.md`, `RUNBOOK.md` (build Phase 8), monitoring rows | guide |
 | Distributed versus single-node systems; problems with distributed systems (19-21) | §0 "single machine first"; §2.1 shard only for volume or write throughput; Tier B5 | guide |
 | Microservices and serverless (21) | HLD module boundaries (build Phase 4); stack-selection "microservice/polyglot envy" failure-mode check | stack |
-| Cloud computing versus supercomputing (23) | the fault model forge assumes: commodity nodes that fail partially and are replaced while the system keeps serving, never a whole-job checkpoint-restart (§2.6 fault model; the failover and restore rows) | guide |
+| Cloud computing versus supercomputing (23) | `durability.fault_model` (linted): commodity nodes fail partially and are replaced while the system keeps serving; checkpoint-restart needs a reason (§2.6) | gate · record |
 | Data systems, law, and society (24) | §2.8 retention, erasure reaching derived data and models, decisions about people | record |
 | Summary (25) | the chapter's rules in one place; each is a row above, and §0 restates the premises in design order | guide |
 
@@ -96,7 +96,7 @@ the book land?": each row names a home or says why the harness leaves it to the 
 |---|---|---|
 | Single-leader replication; synchronous versus asynchronous (198-200) | `durability.replication`; §2.6 "a confirmed write can be lost on failover — decide the tolerance" | record |
 | Setting up new followers; handling node outages (201-205) | `durability.failover`; §2.6 fence the old leader; backups beside replication (p.198) | record |
-| Implementation of replication logs (206) | the stack record names the log type (statement / WAL shipping / logical / trigger); `durability.replication` cites it and `evolution` plans the rolling upgrade that log type allows (§2.6) | record · stack |
+| Implementation of replication logs (206) | `durability.replication_log` (linted whenever replication is not none): statement / wal-shipping / logical / trigger; `evolution` plans the rolling upgrade that log type allows (§2.6) | gate · record |
 | Problems with replication lag; solutions (209-214) | `durability.lag_budget_s`, `replica_reads: read-your-writes \| eventual`; row 7 (`replay_lag` exported and within budget) | gate |
 | Multi-leader replication; geographically distributed operation (215-219) | `durability.replication: multi-leader`; §3 "survive a whole region?" question; §2.6 cost of multi-region | record |
 | Sync engines and local-first software (220) | §3 "keep working with no internet and merge later?"; `multi-leader` with CRDT or application-level merge (§2.6) | record |
@@ -138,7 +138,7 @@ the book land?": each row names a home or says why the harness leaves it to the 
 | Unreliable clocks: monotonic versus time-of-day; synchronization and accuracy; relying on synchronized clocks (358-365) | Tier B5 (durations from a monotonic clock, offset exported); §8 "timestamp ordering of cross-node events" | gate (when distributed) |
 | Process pauses (366) | Tier B5 GC-pause budget; leases need fencing | guide |
 | Knowledge, truth, and lies: the majority rules; distributed locks and leases (371-376) | §0 "truth is a quorum; zombies are fenced with monotonic tokens"; `durability.failover` | guide |
-| Byzantine faults (377) | not tolerated inside the trusted deployment, as the book advises; the "weak forms of lying" it does guard against are mechanical: restore digests (`operational.cjs recovery`), input validation at every trust boundary (`hardening` rows), several time sources (§2.4, §2.6) | gate · guide |
+| Byzantine faults (377) | `integrity.trust_model` (linted): trusted-deployment must declare `integrity.weak_lies` input-validation, restore-digests, multiple-time-sources — each a gate (`hardening` rows, `operational.cjs recovery` digests, clock discipline) (§2.4, §2.6) | gate · record |
 | System model and reality; formal methods and randomized testing (380-388) | §5 research (Jepsen/Elle); randomized, property-based and fault-injection tests for the distributed paths | research |
 | Summary (388) | the chapter's rules in one place; each is a row above, and §0 restates the premises in design order | guide |
 
@@ -159,7 +159,7 @@ the book land?": each row names a home or says why the harness leaves it to the 
 |---|---|---|
 | Batch processing with Unix tools; log analysis; chain of commands; sorting versus in-memory aggregation (454-457) | `derived.mechanism: batch`; immutability of inputs; §2.7 | guide |
 | Distributed filesystems; object stores; distributed job orchestration (458-465) | the stack's (object storage as the lake, an orchestrator for jobs) | stack |
-| Batch processing models: MapReduce; dataflow engines; shuffling; joins and grouping; query languages; DataFrames (466-475) | the application's batch jobs are deterministic and idempotent, so a failure is a re-run and the rebuild must equal live (`DATA_RECONCILE`, §2.7); join and grouping skew is the Tier B shard-skew metric; the engines themselves are the stack's | guide · gate |
+| Batch processing models: MapReduce; dataflow engines; shuffling; joins and grouping; query languages; DataFrames (466-475) | `derived.*.rerun: idempotent` (linted for every batch or stream consumer): a failure is a re-run and the rebuild must equal live (`DATA_RECONCILE`, §2.7); join and grouping skew is the Tier B shard-skew metric; the engines themselves are the stack's | gate · record |
 | Batch use cases: analytics; machine learning; serving derived data (476-481) | §2.7 "a batch job writes nothing record-at-a-time into production — bulk load and swap"; ML models are derived data and inherit erasure (§2.8) | record |
 | Summary (481) | the chapter's rules in one place; each is a row above, and §0 restates the premises in design order | guide |
 

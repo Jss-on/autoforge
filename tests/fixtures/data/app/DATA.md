@@ -33,6 +33,8 @@ model:
       query: "POST /admin/outbox/drain — the unconsumed outbox rows in order"
 integrity:
   isolation: serializable
+  trust_model: trusted-deployment
+  weak_lies: [input-validation, restore-digests, multiple-time-sources]
   transactions:
     checkout:
       invariant: "stock_on_hand >= 0 for every line; receipt_no unique per store; total = sum(lines)"
@@ -50,6 +52,7 @@ evolution:
   tool: "migrations/*.sql applied in order at boot, recorded in schema_migrations"
 durability:
   replication: none
+  fault_model: partial-failure
   failover: none
   backup:
     frequency: "VACUUM INTO a dated copy after every end-of-day report (a consistent snapshot under WAL)"
@@ -60,16 +63,19 @@ derived:
   product_search:
     source: products
     mechanism: outbox
+    rerun: idempotent
     freshness_s: 60
     reconcile: "data-score.cjs reconcile <export products> <export product_search> --key id"
   customer_search:
     source: customers
     mechanism: outbox
+    rerun: idempotent
     freshness_s: 60
     reconcile: "data-score.cjs reconcile <export customers> <export customer_search> --key id"
   daily_sales_report:
     source: sales
     mechanism: batch
+    rerun: idempotent
     freshness_s: 3600
     reconcile: "data-score.cjs reconcile <export sales-by-day> <export daily_sales_report> --key day"
 retention:

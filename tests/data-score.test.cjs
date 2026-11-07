@@ -54,6 +54,16 @@ test('lint: integrity needs an isolation level, protected transactions and an id
   assert.match(errsOf(mutate('      technique: "compare-and-set on sale.status (open -> voided)"\n', '')).join('\n'), /transactions\.void_sale: needs invariant and technique/);
   assert.match(errsOf(mutate('    key: "Idempotency-Key header on POST /sales, stored with the sale for 24h"\n', '    scope: sales\n')).join('\n'), /idempotency\.key/);
 });
+test('lint: the four mechanism rules — trust model and its guards, fault model, replication log type, idempotent re-runs', () => {
+  assert.match(errsOf(mutate('  trust_model: trusted-deployment\n', '')).join('\n'), /integrity.trust_model: missing/);
+  assert.match(errsOf(mutate('  weak_lies: [input-validation, restore-digests, multiple-time-sources]', '  weak_lies: [input-validation]')).join('\n'), /weak_lies: must include restore-digests/);
+  assert.match(errsOf(mutate('  fault_model: partial-failure\n', '')).join('\n'), /durability.fault_model: missing/);
+  assert.match(errsOf(mutate('  fault_model: partial-failure\n', '  fault_model: checkpoint-restart\n').replace('  reason: "reports may read the replica; the cashier\'s own sale is read from the leader"\n', '')).join('\n'), /checkpoint-restart needs durability.reason/);
+  assert.match(errsOf(mutate('  replication_log: logical\n', '')).join('\n'), /durability.replication_log: missing/);
+  assert.deepEqual(errsOf(mutate('replication: single-leader-async\n  replicas: 1\n  lag_budget_s: 5\n  replica_reads: read-your-writes\n', 'replication: none\n').replace('  replication_log: logical\n', '')), [], 'no replication → no log type required');
+  assert.match(errsOf(mutate('    mechanism: batch\n    rerun: idempotent\n', '    mechanism: batch\n')).join('\n'), /derived.daily_sales_report.rerun: missing/);
+  assert.match(errsOf(mutate('    mechanism: batch\n    rerun: idempotent\n', '    mechanism: batch\n    rerun: non-idempotent\n')).join('\n'), /rerun: non-idempotent/);
+});
 test('lint: evolution and durability enums and the replica/backup numbers', () => {
   assert.match(errsOf(mutate('migrations: expand-contract', 'migrations: yolo')).join('\n'), /evolution\.migrations/);
   assert.match(errsOf(mutate('compatibility: both', 'compatibility: none')).join('\n'), /compatibility: none needs evolution\.reason/);
