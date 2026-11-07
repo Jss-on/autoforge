@@ -112,7 +112,7 @@ forge
 Goal: Increase test coverage from 72% to 90%
 Scope: src/**/*.test.ts, src/**/*.ts
 Metric: coverage % (higher is better)
-Verify: npm test -- --coverage | grep "All files"
+Verify: npm test -- --coverage | grep "All files" | awk -F'|' '{print $2}'
 Iterations: 50
 ```
 
@@ -250,6 +250,9 @@ Iterations: 8
 | `Guard` | No | Safety command that must always pass (prevents regressions) |
 | `Iterations` | No | Bounded run — stop after N iterations (default: 25; `unlimited` is explicit) |
 | `Direction` | No | `higher` or `lower` — which direction is better |
+| `Samples` | No | Verify runs per measurement; the median counts (default 3 at calibration, repeated per iteration while the metric is noisy) |
+| `MinDelta` | No | Smallest improvement that counts as a keep (default: twice the calibration spread) |
+| `Holdout` | No | Second command in the same direction, measured only at calibration and in the summary; metric moved while it stayed flat = `OVERFIT` |
 
 ---
 
@@ -354,9 +357,9 @@ forge:probe --chain reason             # interrogate → debate → converge
 1. **Loop until done** — unbounded: forever. Bounded: N times then summarize.
 2. **Read before write** — understand full context before modifying.
 3. **One change per iteration** — atomic changes. If it breaks, you know why.
-4. **Mechanical verification only** — no subjective "looks good." Use metrics.
-5. **Automatic rollback** — failed changes revert instantly via `git revert`.
-6. **Simplicity wins** — equal results + less code = KEEP.
+4. **Mechanical verification only** — no subjective "looks good." Use metrics. `scripts/loop.cjs` measures, decides, reverts and logs; the agent never computes a metric by hand.
+5. **Automatic rollback** — any status other than keep reverts instantly via `git revert`, whole experiment range.
+6. **Simplicity wins** — equal results (inside the noise floor) + less code = `keep (simpler)`.
 7. **Git is memory** — experiments committed with `experiment:` prefix, agent reads `git log` + `git diff` before each iteration. Commits carry the user's git identity only: no `Co-Authored-By` trailer or "Generated with" footer naming Claude, Fable, Opus or any other model.
 8. **When stuck, think harder** — re-read, combine near-misses, try radical changes.
 
@@ -367,12 +370,19 @@ forge:probe --chain reason             # interrogate → debate → converge
 Every iteration is logged in TSV format:
 
 ```tsv
-iteration  commit   metric  delta   status    description
-0          a1b2c3d  85.2    0.0     baseline  initial state
-1          b2c3d4e  87.1    +1.9    keep      add tests for auth edge cases
-2          -        86.5    -0.6    discard   refactor test helpers (broke 2 tests)
-3          c3d4e5f  88.3    +1.2    keep      add error handling tests
+# metric_direction: higher_is_better
+iteration  timestamp             commit   metric  delta   guard  guard-metric  status    description
+0          2026-10-09T08:00:11Z  a1b2c3d  85.2    0.0     pass   -             baseline  initial state
+1          2026-10-09T08:03:40Z  b2c3d4e  87.1    +1.9    pass   -             keep      add tests for auth edge cases
+2          2026-10-09T08:06:02Z  -        86.5    -0.6    -      -             discard   refactor test helpers (broke 2 tests)
+3          2026-10-09T08:09:55Z  c3d4e5f  88.3    +1.2    pass   -             keep      add error handling tests
 ```
+
+Every row is written by `scripts/loop.cjs` (`calibrate` → `decide` → `summary` → `check`) from measured
+samples and git, never by hand. Each row has a receipt (`receipts/NNN.json`: commits, every Verify
+sample's exit code and output hash, guard output, LOC delta, decision, revert). `check` recomputes the
+ledger from receipts and `git log`; `validate-handoff.sh <run>/handoff.json loop` refuses a loop result
+it cannot re-derive, so a chained command never consumes an unaudited number.
 
 ---
 

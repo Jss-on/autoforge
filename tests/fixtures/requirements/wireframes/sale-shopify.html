@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="screen" content="sale">
+<meta name="lineage" content="shopify-point-of-sale-pos:new-order">
+<meta name="sc" content="SC-1,SC-2">
+<title>Sale — variant D (icon rail + tile grid + cart panel with a pinned Checkout)</title>
+<!-- THROWAWAY elicitation mockup. Layout re-expressed from Shopify POS (App Store listing, iPad "New order" screenshot): narrow icon rail at left · search + scan bar over a two-column tile grid in the centre (collections, custom sale, discount, ship, gift card, add tile) · cart panel at right with a customer chip, line items with thumbnails, subtotal/taxes and a full-width Checkout pinned at the bottom. No code, CSS, icons, logos or copy taken from the reference. Never product code. -->
+<style>
+*{box-sizing:border-box}body{margin:0;font:14px/1.4 system-ui,sans-serif;color:#111;background:#f1f2f4}
+.banner{background:#ffe08a;color:#5a4300;padding:6px 12px;font-weight:600;text-align:center}
+.app{display:grid;grid-template-columns:64px 1fr 320px;min-height:740px}
+nav.rail{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 0;background:#f7f7f8;border-right:1px solid #e3e4e8}
+nav.rail a{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;color:#333;text-decoration:none;font-size:18px;position:relative}
+nav.rail a.on{background:#fff;box-shadow:inset 3px 0 0 #1f5eff}
+nav.rail a .n{position:absolute;top:2px;right:2px;background:#1f5eff;color:#fff;border-radius:8px;font-size:10px;padding:0 4px}
+nav.rail .spacer{flex:1}nav.rail .dev{border:1px solid #d9dadf;background:#fff;color:#555}
+main{padding:16px}
+.search{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #d9dadf;border-radius:10px;padding:10px 14px;color:#666}
+.search .scan{margin-left:auto;font-size:16px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+.tile{background:#fff;border:1px solid #e3e4e8;border-radius:10px;min-height:88px;padding:12px;display:flex;flex-direction:column;justify-content:flex-end;font-weight:600}
+.tile small{display:block;font-weight:400;color:#666}
+.tile.img{background:#5f6b7a;color:#fff;min-height:96px;position:relative}.tile.img small{color:#dfe3ea}
+.tile.img .count{position:absolute;top:8px;right:8px;background:#111;color:#fff;border-radius:6px;padding:1px 6px;font-size:12px}
+.tile .ic{font-size:16px;color:#1f5eff;margin-bottom:auto}
+.cart{background:#fff;border-left:1px solid #e3e4e8;display:flex;flex-direction:column}
+.cart header{display:flex;align-items:baseline;gap:8px;padding:14px 16px 8px}.cart header h2{margin:0;font-size:16px}.cart header small{color:#666}.cart header .x{margin-left:auto;color:#c0392b}
+.cust{display:flex;align-items:center;gap:10px;margin:0 16px;padding:10px 0;border-bottom:1px solid #eee}
+.cust .av{width:32px;height:32px;border-radius:50%;background:#e9ecf2;display:grid;place-items:center;font-size:12px;font-weight:600}.cust small{display:block;color:#666}
+.line{display:flex;align-items:center;gap:10px;margin:0 16px;padding:10px 0;border-bottom:1px solid #eee}
+.line .th{width:32px;height:32px;border-radius:6px;background:#d6dae3}.line .nm{flex:1}.line .nm small{display:block;color:#666}
+.sum{margin:8px 16px 0;display:grid;grid-template-columns:1fr auto;row-gap:6px;color:#333}
+.empty{margin:16px;padding:20px;text-align:center;color:#666;border:1px dashed #d9dadf;border-radius:10px}
+.error{margin:8px 16px;padding:10px 12px;background:#fde8e8;color:#7a1f1f;border-left:4px solid #c62828;border-radius:6px}
+.cart .pay{margin-top:auto;padding:12px 16px}
+button[data-primary]{width:100%;display:flex;justify-content:space-between;background:#1f5eff;color:#fff;border:0;border-radius:8px;padding:12px 16px;font-size:15px;font-weight:600}
+@media (max-width:900px){.app{grid-template-columns:56px 1fr}.cart{grid-column:1/-1;border-left:0;border-top:1px solid #e3e4e8}}
+</style>
+</head>
+<body>
+<div class="banner">THROWAWAY — elicitation mockup, variant D. React to it; it is never product code.</div>
+<div class="app">
+<nav class="rail" aria-label="Primary">
+  <a href="#sale" class="on" title="Sale">⌂</a>
+  <a href="#orders" title="Orders">☰<span class="n">2</span></a>
+  <a href="#products" title="Products">⚲</a>
+  <a href="#customers" title="Customers">☺</a>
+  <a href="#more" title="More">⋯</a>
+  <span class="spacer"></span>
+  <a href="#printer" class="dev" title="Receipt printer">▤</a>
+  <a href="#drawer" class="dev" title="Cash drawer">▭</a>
+  <a href="#lock" class="dev" title="Lock register">🔒</a>
+</nav>
+<main>
+  <div class="search">🔍 <span>Search products or scan a barcode</span><span class="scan">▦</span></div>
+  <div class="tiles">
+    <div class="tile img">Bigas &amp; staples<small>Rice 5kg · ₱ 280</small></div>
+    <div class="tile img"><span class="count">32</span>Mabilis mabenta<small>Best sellers</small></div>
+    <div class="tile"><span class="ic">✎</span>Custom item<small>Takal, bottle deposit, odd price</small></div>
+    <div class="tile"><span class="ic">%</span>Suki discount<small>₱5 off every ₱100</small></div>
+    <div class="tile"><span class="ic">✉</span>Utang (listahan)<small>Charge to the customer's tab</small></div>
+    <div class="tile"><span class="ic">☏</span>Load &amp; e-wallet<small>Globe, Smart, GCash cash-in</small></div>
+    <div class="tile"><span class="ic">▣</span>Gift pack<small>Christmas basket</small></div>
+    <div class="tile"><span class="ic">+</span>Add tile</div>
+  </div>
+</main>
+<aside class="cart" aria-label="Current sale">
+  <header><h2>New sale</h2><small>2 items</small><span class="x">🗑</span></header>
+  <div class="cust"><span class="av">AM</span><div>Aling Marites<small>Suki · 19 sales · utang ₱ 120</small></div></div>
+  <div class="line"><span class="th"></span><div class="nm">Rice 5kg (Sinandomeng)<small>Takal · 1 kg</small></div><strong>₱ 280.00</strong></div>
+  <div class="line"><span class="th"></span><div class="nm">Coke 1.5L<small>Bottle returned</small></div><strong>₱ 85.00</strong></div>
+  <p class="empty" data-state="empty" hidden>Walang laman pa — tap a tile or scan to start the sale.</p>
+  <p class="error" data-state="error" hidden>Hindi na-save ang benta: the receipt printer is offline. Retry, or save as a draft.</p>
+  <div class="sum"><span>Subtotal</span><span>₱ 365.00</span><span>Suki discount</span><span>− ₱ 15.00</span></div>
+  <div class="pay"><button data-primary><span>Checkout</span><span>₱ 350.00</span></button></div>
+</aside>
+</div>
+</body>
+</html>

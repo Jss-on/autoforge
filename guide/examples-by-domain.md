@@ -16,7 +16,7 @@ Iterations: 20
 Goal: Increase test coverage from 72% to 90%
 Scope: src/**/*.test.ts, src/**/*.ts
 Metric: coverage % (higher is better)
-Verify: npm test -- --coverage | grep "All files"
+Verify: npm test -- --coverage | grep "All files" | awk -F'|' '{print $2}'
 ```
 
 ### Reduce bundle size
@@ -27,7 +27,7 @@ Iterations: 15
 Goal: Reduce production bundle size below 200KB
 Scope: src/**/*.tsx, src/**/*.ts
 Metric: bundle size in KB (lower is better)
-Verify: npm run build 2>&1 | grep "First Load JS"
+Verify: npm run build 2>&1 | grep "First Load JS" | awk '{print $(NF-1)}'
 Guard: npm test
 ```
 
@@ -39,7 +39,7 @@ Iterations: 20
 Goal: API response time under 100ms (p95)
 Scope: src/api/**/*.ts, src/services/**/*.ts
 Metric: p95 response time in ms (lower is better)
-Verify: npm run bench:api | grep "p95"
+Verify: npm run bench:api | grep "p95" | awk '{print $NF}' | tr -d 'ms'
 Guard: npm test
 ```
 
@@ -63,7 +63,7 @@ Iterations: 10
 Goal: Zero flaky tests — all tests pass 5 consecutive runs
 Scope: src/**/*.test.ts
 Metric: failure count across 5 runs (lower is better)
-Verify: for i in {1..5}; do npm test 2>&1; done | grep -c "FAIL"
+Verify: for i in {1..5}; do npm test 2>&1; done | grep -c "FAIL" || true
 ```
 
 ### Lighthouse performance score
@@ -139,7 +139,7 @@ Iterations: 20
 Goal: Reduce p95 response time to under 50ms
 Scope: app/routers/**/*.py, app/services/**/*.py
 Metric: p95 response time in ms (lower is better)
-Verify: python scripts/bench_api.py | grep "p95"
+Verify: python scripts/bench_api.py | grep "p95" | awk '{print $NF}' | tr -d 'ms'
 Guard: pytest
 ```
 
@@ -354,7 +354,7 @@ Iterations: 25
 Goal: Increase scraper success rate from 85% to 99%
 Scope: scrapers/**/*.py
 Metric: success rate % (higher is better)
-Verify: python scripts/scraper-test.py --sample 100 | grep "success_rate"
+Verify: python scripts/scraper-test.py --sample 100 | grep "success_rate" | awk '{print $NF}'
 Guard: python -m pytest tests/scrapers/
 ```
 
@@ -387,7 +387,7 @@ Iterations: 10
 Goal: Reduce Docker image size below 100MB
 Scope: Dockerfile, .dockerignore
 Metric: image size in MB (lower is better)
-Verify: docker build -t bench . 2>&1 && docker images bench --format "{{.Size}}"
+Verify: docker build -q -t bench . && docker image inspect bench --format '{{.Size}}'
 ```
 
 ### Optimize CI/CD pipeline duration
@@ -477,7 +477,7 @@ Iterations: 15
 Goal: Reduce total query execution time for dashboard queries
 Scope: queries/dashboard/*.sql
 Metric: total execution time in ms (lower is better)
-Verify: psql -f scripts/bench-queries.sql | grep "total_ms"
+Verify: psql -f scripts/bench-queries.sql | grep "total_ms" | awk '{print $NF}'
 ```
 
 ---
@@ -492,7 +492,7 @@ Iterations: 25
 Goal: Reach WCAG 2.1 AA — zero axe violations
 Scope: src/components/**/*.tsx
 Metric: axe violation count (lower is better)
-Verify: npx playwright test a11y.spec.ts | grep "violations"
+Verify: npx playwright test a11y.spec.ts | grep "violations" | awk '{print $NF}'
 ```
 
 ### Replace hardcoded colors with design tokens

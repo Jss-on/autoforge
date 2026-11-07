@@ -30,6 +30,7 @@ not finished until its handoff validates.
 | `research` | `verdict` (`DOSSIER_READY` \| `DOSSIER_BLOCKED`) **and** `report` (path to the dossier). SHOULD also carry `claims_tsv`, `sources_tsv`, and `findings` (per-RQ one-line answers + the contested list). |
 | `investigate` | `case_file` (path to `case.json`), `report` (path to `report.md`), `conclusion` (`demonstrated` \| `supported` \| `unresolved`) and `structure_verdict` (`STRUCTURE_VALID` \| `STRUCTURE_INVALID`). COMPLETE requires STRUCTURE_VALID and means the report is ready; its conclusion may remain unresolved. BLOCKED/ERROR may carry STRUCTURE_INVALID. Work status never proves a root cause. The handoff validates these fields only; consumers must inspect the case and rerun its evidence check. Structural validity does not establish factual truth. |
 | `android` | `verdict` (`STORE_READY` \| `BLOCKED`) **and** `results_tsv` (`android-results.tsv`). SHOULD also carry `package_id`, `host`, `artifacts` (apk/aab paths or release-asset URLs), `repo`, `pr`, `workflow_run` (device-gate run URL), and `native_needs` (the native-only list) when blocked. |
+| `forge` / `loop` | `results_tsv` (`forge-results.tsv`) and the `loop` receipts block written by `scripts/loop.cjs summary` (see Loop receipts below); the loop writes schema `3.4.0`. Required for every 3.4.0+ loop handoff, and validated whenever an older one carries the block: the validator reruns `scripts/loop.cjs check`, which recomputes every row, decision and verdict from `receipts/` and git. Older loop records without the block stay readable and never pass `--require-pass`, which requires verdict `IMPROVED`. |
 | `backlog` | `results_tsv` (the `backlog.tsv` ledger — schema in `host-protocol.md` §5). SHOULD also carry `remaining` (number of items still to start or rework), `host`, `role`, and `findings` (blocked items with the question each waits on). COMPLETE means nothing is left to start, never that anything merged. |
 | `review` | `verdict` (`SAFE_TO_MERGE` \| `NEEDS_CHANGES` \| `CANNOT_VERIFY`, as printed by `review.cjs verdict`) **and** `report` (`report.html`). SHOULD also carry `review_file` (`review.json`), `document` (the Google Doc URL or null), `host`, `role`, and `findings` (open blocking findings). A verdict is never a merge: approval and the merge itself remain people's steps. |
 | `security` | Current 3.x+ writers require the typed `security` record below. COMPLETE describes report completion, not a passing security disposition. |
@@ -168,7 +169,7 @@ current deployment must agree in all three identity fields and target must match
 The outer artifact names the revision being restored. Missing reversibility or a changed current
 deployment blocks restoration. Obtain the observed identity before mutation, then save the new receipt.
 
-`validate-handoff.sh <handoff.json> security|ship|build|feature --require-pass` additionally requires successful
+`validate-handoff.sh <handoff.json> security|ship|build|feature|loop --require-pass` additionally requires successful
 disposition and every referenced evidence file to exist, be nonempty and regular, and resolve inside
 the run directory (including symlinks). Absolute paths, URLs and traversal are refused. This checks
 record consistency and evidence presence; consumers must independently read the evidence and verify
@@ -193,6 +194,36 @@ when resuming), and obtain fresh scan/task evidence before accepting delivery. O
 or a COMPLETE label cannot substitute for passing required rows. File hashes, attempt accounting,
 provenance and motion profiles are checked by asset/design seams, not the handoff shape validator.
 Unknown provider model, service job ID or cost remains null/unknown, never invented.
+
+### Loop receipts
+
+The classic loop writes no number by hand. `scripts/loop.cjs calibrate` pins `loop.json`
+(commands, scope, direction, samples, `min_delta`, the baseline median and spread); every
+`decide` appends `receipts/NNN.json` with the experiment range (`base`, `head`, `commits`),
+changed and out-of-scope files, each Verify sample's exit code and output hash, the guard
+result, the LOC delta and the decision, then the matching TSV row. `summary` re-measures Verify
+once at the ledger end, derives the block below and runs `check`, which re-derives it: contiguous
+receipts, unchanged `loop.json`, rows equal to their receipts, each value the median of its
+samples, each decision what the rule gives for those samples, changed files, scope and LOC equal
+to git's diff of the range, every non-keep range reverted to the base tree, HEAD at the ledger
+end, `summary.json` and `handoff.json` equal to the recomputation. Validation reads receipts and
+git; it never re-runs Verify. Receipts are unsigned, so a forged but self-consistent receipt
+passes `check`; the final re-measurement is what anchors the ledger's end value to reality
+(`DRIFT` when it disagrees beyond the noise floor), and nothing here proves the metric measures
+the goal. Run the validator from inside the project (or set `FORGE_PROJECT_ROOT`): the receipts
+name commits that must exist there.
+
+```json
+{"loop": {"receipts": "receipts", "receipts_sha256": "…", "iterations": 12, "kept": 4, "discarded": 6,
+  "crashed": 1, "metric_errors": 0, "out_of_scope": 1, "guard_failed": 0, "no_ops": 0,
+  "direction": "higher_is_better", "min_delta": 0.4, "start": 85.2, "final": 88.3, "final_remeasured": 88.3,
+  "improvement_pct": 3.638498, "holdout": {"start": 0.91, "final": 0.93, "spread": 0.01, "moved": true}, "verdict": "IMPROVED"}}
+```
+
+`verdict` is `IMPROVED` (final beats start by at least `min_delta`), `UNCHANGED`, `OVERFIT` (the
+metric improved while the holdout did not move beyond its calibration spread) or `DRIFT` (the
+fresh measurement differs from `final` by more than `max(baseline spread, min_delta)`). Loop
+handoffs below 3.4.0 without a `loop` block stay readable; they cannot pass `--require-pass`.
 
 ### Handoff shape gate
 

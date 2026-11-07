@@ -1,0 +1,8 @@
+# After a github-actions bump: bash scripts/transform.sh and commit — references/vercel-pilot*.yml
+# in every tree are byte-for-byte copies of .github/workflows/forge-pilot*.yml (tests compare them).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

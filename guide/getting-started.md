@@ -113,7 +113,7 @@ lists all 25 commands. The orchestrator is a mode of the root command, not an ad
 Goal: Increase test coverage from 72% to 90%
 Scope: src/**/*.test.ts, src/**/*.ts
 Metric: coverage % (higher is better)
-Verify: npm test -- --coverage | grep "All files"
+Verify: npm test -- --coverage | grep "All files" | awk -F'|' '{print $2}'
 ```
 
 That's it. Claude reads all files, establishes a baseline, and starts iterating.
@@ -126,7 +126,7 @@ Iterations: 10
 Goal: Increase test coverage from 72% to 90%
 Scope: src/**/*.test.ts, src/**/*.ts
 Metric: coverage % (higher is better)
-Verify: npm test -- --coverage | grep "All files"
+Verify: npm test -- --coverage | grep "All files" | awk -F'|' '{print $2}'
 ```
 
 Run 10 iterations first. Review the TSV log. If the approach looks right, remove the limit.
