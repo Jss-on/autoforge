@@ -77,7 +77,7 @@ For any domain with computation or stateful rules (payroll, accounting, POS, bil
 ## 2. DevOps (0.15)
 
 - [ ] **Container hosting only: Dockerfile** — multi-stage, pinned base image, runs as a **non-root** user, has a `HEALTHCHECK`
-- [ ] **CI pipeline** (GitHub Actions or equivalent) runs lint → test → build → dependency-scan, all green
+- [ ] **CI pipeline** (GitHub Actions or equivalent) runs lint → test → build → dependency-scan, all green — as parallel jobs with cached dependencies and browsers and sharded e2e per `references/ci-protocol.md`; **wall-clock ≤ 8 min** on hosted runners, evidence names the run
 - [ ] **Provisioning** ? native managed configuration for PaaS/static hosting; for containers, **Compose / IaC** — `docker-compose.yml` (or Terraform/k8s manifests) brings up app + datastore
 - [ ] **Stateful services: DB migrations** — versioned, forward-only by default, run on deploy
 - [ ] **Graceful shutdown** — handles `SIGTERM`, drains in-flight requests, closes pool

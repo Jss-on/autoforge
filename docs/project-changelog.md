@@ -2,6 +2,19 @@
 
 All notable changes to the forge project are documented here.
 
+## Unreleased — generated CI finishes in minutes (2026-11-07)
+
+**Theme:** every forge-built repo shipped one serial CI job (lint → unit → build → browser download →
+e2e with `workers: 1`); across 29 output repos the e2e step was 60–95 % of a 4–16 minute pipeline.
+
+**Added:**
+
+- `references/ci-protocol.md` — budget (≤ 8 min wall-clock, measured), three parallel jobs
+  (`checks`, sharded `e2e` with a database per shard, `container` with the GHA layer cache),
+  dependency + Playwright browser caches, `concurrency` cancellation, a copyable skeleton.
+- `build` DevOps dimension and the hardening checklist's CI row now require that shape; evidence
+  names the green run and its minutes.
+
 ## Unreleased — /forge:requirements: wireframes cloned from popular open-source and premium peers, gated by a quality–diversity score (2026-11-07)
 
 **Theme:** the artifact-reaction loop invented its throwaway wireframes from scratch. Now it sweeps
