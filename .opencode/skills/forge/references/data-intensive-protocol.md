@@ -97,7 +97,10 @@ growth projection, hot keys or heavy users (p.34-36, p.50). Rules: one order of 
 headroom at most (p.52); "you're not Google" — a single-node database while it fits (p.49-50, p.253);
 shard only for data volume or write throughput, replicate for reads (p.253); never a monotonically
 increasing key as the first element of a partition key (p.257); hash the partition key, never
-`hash mod N` (p.258-259); uniform keys are not uniform load — name the celebrity (p.263-264).
+`hash mod N` (p.258-259); uniform keys are not uniform load — name the celebrity (p.263-264). A
+secondary index on sharded data is either local (every shard indexes its own rows; reads scatter and
+gather) or global (sharded by the indexed value; updated asynchronously) — `model.indexes` names which
+when the store is sharded (p.268-271).
 
 ### 2.2 `slo` — response time, errors, availability (DDIA2 ch.2)
 `response_time_ms: { p50, p95, p99 }` measured **client side** under an **open (arrival-rate) load
@@ -121,8 +124,11 @@ name, per index, the query it serves; a hot query that still scans the table has
 p.132-133, p.145). LSM for write-heavy, B-tree for read-heavy, "benchmark your own workload" and long
 enough for compaction (p.129-131); embedded engines (SQLite, DuckDB) when the data fits one machine
 (p.125). Analytics gets its own column store fed from the system of record, never ad-hoc SQL on the
-OLTP database (p.6-7, p.136-137). N+1 is a defect: statement count must not grow with list length
-(p.68-69).
+OLTP database (p.6-7, p.136-137); its schema is a star or snowflake (a fact table and its dimensions,
+p.77-80), and every materialized view or data cube in it is a derived dataset with an update process
+(p.143-145). Full-text and vector indexes (`model.primary: search | vector`) are derived data too:
+embeddings are rebuildable from the source and inherit its deletion obligation (p.145-149). N+1 is a
+defect: statement count must not grow with list length (p.68-69).
 
 ### 2.4 `integrity` — transactions, constraints, idempotency (DDIA2 ch.8, ch.10, ch.13)
 Declare the isolation level actually in force (the default in PostgreSQL, Oracle and SQL Server is
@@ -137,8 +143,10 @@ weaker level is safe" (p.308). Every retried request carries an end-to-end **ide
 enforced by a uniqueness constraint; processed-message IDs live in the same transaction as the effect
 (p.334-335, p.563-564). Retries: transient errors only, bounded, exponential backoff; constraint
 violations are never retried (p.288). Strict uniqueness needs one decider (single leader or shard by
-the unique value), never asynchronous multi-leader (p.217, p.567). Hard invariants vs apology
-workflows is an owner decision recorded here (p.573-574).
+the unique value), never asynchronous multi-leader (p.217, p.567). Unique or monotonic identifiers
+come from the database's sequence, a single decider or a logical clock — never from wall-clock
+timestamps, which skew and collide (p.363-364, p.417-424). Hard invariants vs apology workflows is an
+owner decision recorded here (p.573-574).
 
 ### 2.5 `evolution` — encoding, compatibility, migrations (DDIA2 ch.5)
 Rolling upgrades mean old and new code and old and new data coexist: new code must read old data
@@ -150,7 +158,9 @@ or lock-taking statement is allowed only as an annotated contract step (`-- cont
 whose code stopped reading it>`). Schema-driven encodings (Protobuf tags never reused, Avro fields only
 added/removed with defaults) and a schema registry that checks compatibility before deploy (p.169-178).
 Service APIs: requests backward-compatible, responses forward-compatible; public APIs versioned and
-kept indefinitely (p.186).
+kept indefinitely (p.186). Durable-execution / workflow engines replay a workflow's history after a
+crash, so every step with an external side effect (a charge, an email, a shipment) is idempotent and
+keyed — the §2.4 idempotency rule applied to orchestration (p.187-189).
 
 ### 2.6 `durability` — replication, failover, backup (DDIA2 ch.2, ch.6, ch.9-10)
 Keep backups even when replicating — replicas replicate deletions (p.198); acknowledged writes
@@ -161,7 +171,10 @@ p.201, p.206). If replicas serve reads, pin the **lag budget** and the guarantee
 (p.209-214); monitor lag = leader position − follower position and alert (p.234-235). Failover
 without a proven consensus algorithm is "likely to be unsafe" (p.437); fence the old leader (p.205-
 206, p.375-376). Multi-zone survives a zonal outage; multi-region costs latency, throughput and bills
-and needs multi-leader with conflict resolution (p.212, p.216-217). RPO/RTO are numbers a drill
+and needs multi-leader with conflict resolution (p.212, p.216-217). Offline-capable and local-first
+apps are multi-leader by construction (each device is a leader): the merge rule is a decision — CRDTs
+or an application-level merge, version vectors to detect concurrency, never last-writer-wins on wall
+clocks (p.220-229, p.237-243). RPO/RTO are numbers a drill
 measures: restore into an isolated destination, time from incident to the service answering its
 journey, compare row counts and content digests (`operational.cjs recovery`).
 
@@ -186,7 +199,9 @@ of record **and every derived copy** — indexes, caches, exports, warehouses, t
 `sla_days` ≤ 30 (GDPR Art. 12(3): without undue delay, at the latest one month; DDIA2 p.24, p.591,
 p.597); immutable logs need per-user keys and crypto-shredding or excision (p.104, p.512-513); LSM
 tombstones must have compacted through every level before deletion is real (p.132). State what is
-deliberately not stored (p.597). When the system decides about people, name the accountable human,
+deliberately not stored (p.597). Each personal-data item may name its legal `basis` (`consent |
+contract | legal-obligation | legitimate-interest`); consent is not freely given when declining means
+losing the service, and data collected for one purpose is not reused for another (p.591-593). When the system decides about people, name the accountable human,
 the explanation path and the correction path, and watch for proxies of protected traits (p.586-588).
 
 ## §3 Elicitation — the data & scale round (client language; each decides a group)
@@ -273,7 +288,7 @@ derived:                       # or { na: <reason> }
   daily_sales_report: { source: sales, mechanism: batch, freshness_s: 3600, reconcile: "node scripts/reconcile-report.cjs" }
 retention:
   personal_data:               # or `none`
-    customer_phone: { purpose: "SMS receipt", retention: "2 years after last sale" }
+    customer_phone: { purpose: "SMS receipt", retention: "2 years after last sale", basis: consent }   # basis optional
   deletion: { sla_days: 30, covers_derived: true, path: "DELETE /customers/:id purges row, index, report cache" }
   minimization: "no card numbers stored; names on receipts only on request"
 ---
@@ -326,6 +341,11 @@ Rows 1-8 are the gated `data` dimension; the Tier B rows apply when the record d
 | B4 | Overload behaviour | backoff with jitter observed under injected failures; breaker opens; after the overload ends, throughput and latency recover without a restart | `slo` | p.38 | fault-injection test |
 | B5 | Clock and pause discipline | durations from a monotonic clock (stepping the wall clock back never yields a negative duration); clock offset exported; GC pause budget | distributed deployments | p.359-371 | test + metric |
 | B6 | Decision accountability | for systems that decide about people: every decision explainable (inputs + reasons), a correction path recomputes it, outcome disparity across groups monitored | `retention`/AI | p.586-588 | tests + metric |
+
+The distributed paths earn trust the way the book's ch.9 closes: randomized and property-based tests
+and fault injection (killed processes, partitioned nodes, stepped clocks) over the anomaly tests of
+row 5 and the Tier B rows, not a vendor's correctness claim (p.384-388; Jepsen/Elle in the research
+above).
 
 **Monitoring rows this adds** (the `monitoring` dimension, so the numbers above keep existing in
 production): a request-duration **histogram** on `/metrics` (buckets, never pre-averaged percentiles,
@@ -444,3 +464,10 @@ self-reported number — the receipts and the independent verify before converge
 - UK Government Data Quality Framework (DAMA dimensions: accuracy, completeness, uniqueness, consistency, timeliness, validity) — https://www.gov.uk/government/news/meet-the-data-quality-dimensions
 - OpenTelemetry semantic conventions, `db.client.operation.duration` (histogram, seconds) — https://opentelemetry.io/docs/specs/semconv/database/database-metrics/
 - GDPR Articles 12(3) and 17 as applied in EDPB-published decisions (one month, extendable with notice) — https://www.edpb.europa.eu/
+
+## §10 Coverage of the book
+
+`references/data-intensive-book-map.md` maps every section of the book's table of contents to its
+home in forge — a gate, a `DATA.md` decision, protocol guidance, the stack decision, or a reasoned
+"not mechanized" (engine internals, Byzantine faults, HPC). Read it when a review asks "where did the
+book's chapter on X go?".

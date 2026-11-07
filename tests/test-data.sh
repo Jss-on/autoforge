@@ -46,6 +46,23 @@ else
 fi
 
 # ============================================================================
+printf '\n--- the book coverage map: every chapter mapped, mirrored into every tree ---\n'
+# ============================================================================
+BOOKMAP="$REPO_ROOT/.claude/skills/forge/references/data-intensive-book-map.md"
+[[ -s "$BOOKMAP" ]] && pass "book map exists" || fail "book map missing"
+for ch in 1 2 3 4 5 6 7 8 9 10 11 12 13 14; do
+  grep -qE "^### Chapter $ch " "$BOOKMAP" && pass "book map: chapter $ch mapped" || fail "book map: chapter $ch missing"
+done
+grep -q "data-intensive-book-map.md" "$PROTO" && pass "protocol §10 points at the book map" || fail "protocol does not reference the book map"
+for m in "$REPO_ROOT/claude-plugin/skills/forge/references/data-intensive-book-map.md" \
+         "$REPO_ROOT/.agents/skills/forge/references/data-intensive-book-map.md" \
+         "$REPO_ROOT/plugins/forge/skills/forge/references/data-intensive-book-map.md" \
+         "$REPO_ROOT/.opencode/skills/forge/references/data-intensive-book-map.md" \
+         "$REPO_ROOT/.cursor/skills/forge/references/data-intensive-book-map.md"; do
+  cmp -s "$BOOKMAP" "$m" && pass "book map mirror: ${m#$REPO_ROOT/}" || fail "book map mirror differs: ${m#$REPO_ROOT/}"
+done
+
+# ============================================================================
 printf '\n--- data-score.cjs: verdict lines are one-line contracts ---\n'
 # ============================================================================
 OUT=$(node "$SEAM" lint "$FIX/DATA.md" 2>/dev/null); RC=$?

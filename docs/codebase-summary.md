@@ -31,6 +31,7 @@ AutoForge v2.1.0 ships as a modular, multi-platform autonomous iteration framewo
 | `.claude/skills/forge/references/reason-judge-protocol.md` | Blind judge scoring protocol for reason subcommand |
 | `.claude/skills/forge/references/security-checklist.md` | STRIDE + OWASP checklist used by security subcommand |
 | `.claude/skills/forge/references/data-intensive-protocol.md` | The data-side contract for requirements + build (after Kleppmann & Riccomini, DDIA 2nd ed.): eight decisions, `DATA.md` schema, the mechanical data metrics, the gated `data` dimension's rows |
+| `.claude/skills/forge/references/data-intensive-book-map.md` | Every section of DDIA 2nd ed. mapped to its home in forge (gate · record · guide · stack · not mechanized) |
 | `scripts/data-score.cjs` | Seam for the data architecture: `DATA_LINT`, `DATA_COVERAGE`, `DATA_SLO`, `DATA_RECONCILE`, `MIGRATION_SAFETY`, `DATA_INDEXES` |
 | `scripts/data-load.cjs` | Open-model (arrival-rate) load generator for the `DATA_SLO` check when k6 is absent; latency from the planned arrival, `# load_model`/`# dropped` in-band |
 | `tests/data-e2e.test.cjs` + `tests/fixtures/data/app/` | A real POS on `node:sqlite` (two processes, one database) driven through every data gate end to end; the measured `data_gate=PASS` / `DATA_COVERAGE: 1.00` evidence, run by `tests/test-data.sh` |

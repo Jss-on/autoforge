@@ -12,7 +12,7 @@ An autonomous iteration engine for Claude Code, OpenCode, OpenAI Codex, and Curs
 [![OpenCode](https://img.shields.io/badge/OpenCode-Skill-purple)](https://opencode.ai)
 [![Codex](https://img.shields.io/badge/Codex-Plugin-green?logo=openai&logoColor=white)](https://developers.openai.com/codex)
 [![Cursor](https://img.shields.io/badge/Cursor-Skill-black)](https://cursor.com/docs/skills)
-![Version](https://img.shields.io/badge/version-3.6.0-blue.svg)
+![Version](https://img.shields.io/badge/version-3.7.0-blue.svg)
 [![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 
 **26 commands · 4 agent platforms · bounded iteration · evidence-backed gates**

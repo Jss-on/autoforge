@@ -2,7 +2,12 @@
 
 All notable changes to the forge project are documented here.
 
-## Unreleased — forge designs and builds data-intensive systems: the data-intensive protocol, `DATA.md` and the gated `data` dimension (2026-11-07)
+## v3.7.0 — forge designs and builds data-intensive systems: the data-intensive protocol, `DATA.md` and the gated `data` dimension (2026-11-07)
+
+**Release note:** v3.7.0 also ships every entry below marked *Unreleased* down to and including
+"/forge:review: is this merge request safe to merge? (2026-10-06)" — the generated-CI speedup, the
+premium wireframe sweep, semantic-release for every project, the fix-loop rules, the designed SRS PDF
+and the review command. After merging, `/plugin marketplace update autoforge` then update `forge`.
 
 **Theme:** forge's mission is software + data, but the pipeline measured the UI (`DESIGN.md`, `ux`),
 the domain math (`logic`) and the shell; the data side of every build was one bullet ("schema +
@@ -62,6 +67,14 @@ with a fixed set of mechanical metrics.
   (Data dimension, DATA.md, system of record / derived data), `acceptance-evidence.md`,
   `handoff-schema.md`, and the "six dimensions" mentions in the game, integrations and migration
   protocols updated.
+- `references/data-intensive-book-map.md` — every section of the book's table of contents mapped to
+  its home in forge (gate · `DATA.md` decision · guidance · stack decision · reasoned "not
+  mechanized"), so "did chapter X land?" has a lookup answer. Closing the map added to the protocol:
+  sharded secondary indexes (local vs global, §2.1), star/snowflake schemas, materialized views and
+  vector indexes as derived data (§2.3), id generation never from wall clocks (§2.4), durable
+  execution / workflow steps as idempotent effects (§2.5), local-first and sync engines as multi-leader
+  with an explicit merge rule (§2.6), the optional legal `basis` per personal-data item and purpose
+  limitation (§2.8), randomized / fault-injection testing of the distributed paths (§5), and §10.
 - `scripts/data-load.cjs` — an open-model (arrival-rate) load generator for when k6 is absent:
   requests start on a fixed schedule regardless of completion, client-side timing, `# load_model:
   open` / `# dropped: N` declared in-band for `data-score.cjs slo`.
