@@ -1354,7 +1354,8 @@ critical still blocks release until the chained `test` re-engagement confirms it
 self-certify.
 
 **Every fix leaves tests behind:** the regression test is committed with the fix and
-`scripts/score-fix.cjs prove` shows it failing without the fix and passing with it; an angle table
+`scripts/score-fix.cjs prove` shows it failing without the fix — on the failure the tester recorded,
+not just any failure — and passing with it; an angle table
 lists the twelve ways the fixed code can still fail (all tested or excused for critical/high, inputs
 and boundaries for medium); the root cause's pattern is swept across the repository and every hit
 dispositioned; critical/high fixes are pinned by three or more planted defects the new tests kill;

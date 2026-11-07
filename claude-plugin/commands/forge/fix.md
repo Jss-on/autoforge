@@ -97,12 +97,19 @@ to prove stays a gap, said so. A receipt is still a file the agent could forge: 
 runs `check --rerun` itself, and the evidence document shows the raw outputs.
 1. **A committed test, proved.** The regression test lives in the project's own test framework,
    **in the fix commit**. `score-fix.cjs prove <run> requests/<item>-prove.json` (`{item, repo,
-   commit, tests, argv}`; `link` names dependency folders a throwaway checkout borrows — default
-   `node_modules`, `.venv`, `venv`, `vendor`; `copy` names git-ignored files such as `.env.test` —
-   a source file the fix needs belongs in the commit) runs
+   commit, tests, argv, signature}`; `link` names dependency folders a throwaway checkout borrows —
+   default `node_modules`, `.venv`, `venv`, `vendor`; `copy` names git-ignored files such as
+   `.env.test` — a source file the fix needs belongs in the commit) runs
    the tests in two throwaway checkouts: at the parent commit they must fail **on an assertion**, at
    the fix they must pass → `PROVE: DETECTS`. `NOT_PROVEN` names the reason (they pass before the
    fix; they fail to load rather than to assert; they fail after) — fix the test, not the ledger.
+   **The red must be the reported failure, not just a failure.** `signature` quotes, verbatim, what
+   the tester saw — the *actual* line of `defect-reports.md`: an error message, a status, `3 !== 6`
+   — and the parent's output must carry it, or the test detects some other defect:
+   `NOT_PROVEN — fails, but not with the reported failure`. Assert on what the tester observed (the
+   message, the status, the value) so the red carries it. Every item of the run's `defects.tsv`
+   needs one (`n/a: <why>` only for a failure no text shows, such as a visual one — a reported gap);
+   `check --defects` pins the quote to the tester's report.
    `tests.tsv` (`item category tests mutation reason`) has one row per kept item: `proved`, or an
    exemption with its reason — `type`, `lint`, `build` (the checker is the test; the red and green
    evidence files prove it), `design-scan`, `no-runner` (no test framework: the probe in `evidence/`
@@ -173,8 +180,12 @@ reselect if applicability inputs change. Read `references/procedural-lessons.md`
 candidate capture. Apply only a procedure supported by this item's root cause and current Scope.
 
 ### Phase 2 — Reproduce RED (defect mode)
-Run the defect report's exact repro steps first; tee raw output to `evidence/def-<id>-red.txt`. Mark
-the ledger row `in-progress`. **Cannot reproduce** → do NOT self-reject: record the attempt in
+Run the defect report's exact repro steps first; tee raw output to `evidence/def-<id>-red.txt`.
+**A red is a reproduction only when it is the reported failure:** the output must carry the *actual*
+the tester recorded in `defect-reports.md` (`grep -F` the quote) — then mark the ledger row
+`in-progress`. Some other failure in the output is a different defect, not this one: record it in
+`evidence/` (a new `open` row if it is real), leave this item `open` and move on — a root cause hunted
+on the wrong red fixes the wrong thing. **Cannot reproduce** → do NOT self-reject: record the attempt in
 `evidence/`, note it in the ledger's summary column, leave status `open` for the tester to
 adjudicate on re-engagement, and move on. (In error mode the failing Target output IS the red state —
 tee it to `evidence/<item>-red.txt`; the clean output after the fix goes to `evidence/<item>-green.txt`.)
@@ -207,8 +218,9 @@ recoverable. Git is the experiment ledger.
   regression** — re-run the test rows from `test-results.tsv` that trace to the same requirement(s)
   and anything sharing the touched files.
 - Error mode: run Target → count errors → delta (expected: decreased, nothing new appeared).
-- **Prove the test** (both modes): `score-fix.cjs prove` → `PROVE: DETECTS`, then the sweep;
-  critical and high → the planted defects, all killed (the section above).
+- **Prove the test** (both modes): `score-fix.cjs prove`, with the item's `signature` →
+  `PROVE: DETECTS`, then the sweep; critical and high → the planted defects, all killed (the
+  section above).
 - Run Guard — fast path: the **touched suite** per slice, the **full Guard** at checkpoints (every 5
   kept fixes), before the PR and before COMPLETE (`--thorough`: full Guard per slice). Guard red →
   the fix is wrong regardless of the item going green.
