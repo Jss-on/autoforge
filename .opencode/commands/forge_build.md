@@ -374,7 +374,9 @@ Design the system **and** the interface before coding:
   what the `logic` golden cases assert. The **state machines + decision flowcharts from requirements**
   drive the engine's control flow — implement one transition/branch at a time, each with its golden
   case. The engine is implemented and golden-tested before any UI.
-- **Data architecture — `DATA.md` via `references/data-intensive-protocol.md`** — the machine-readable
+- **Data architecture — `DATA.md` via `references/data-intensive-protocol.md`** (the chapter digests in
+  `references/data-intensive-digest-chNN.md` hold the page-cited rules and verifiable properties behind each
+  group; the Phase 4 review reads the digest of every chapter a group cites) — the machine-readable
   data record beside `DESIGN.md`, adopted from the requirements draft (`Data:` arg → the spec's
   `data:` block → else generate from the SRS, never from invented numbers). Its eight groups are the
   decisions every data system must make (protocol §2): **workload** (peak reads/s, writes/s,

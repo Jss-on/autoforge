@@ -2,6 +2,15 @@
 
 All notable changes to the forge project are documented here.
 
+## v3.7.2 — the book's content, not only its headings: chapter digests as a reference, verified section by section (2026-11-07)
+
+**Theme:** v3.7.1 proved that every heading of *Designing Data-Intensive Applications*, 2nd ed. has a row in forge. A heading is not its content. This release ships the content layer and a check that measures it.
+
+- **Fourteen chapter digests** (`references/data-intensive-digest-ch01.md` … `data-intensive-digest-ch14.md`, 600 KB, page-cited): thesis, decision rules, metrics and numbers, failure modes and anti-patterns, elicitation questions, verifiable properties and terms per chapter — the full layer under the protocol's condensed §0-§8 and the map's rows. The requirements data round asks its questions from them; the build Phase 4 review reads the digest of every chapter a `DATA.md` group cites.
+- **Content verified mechanically.** `tests/book-concepts-verify.cjs` takes every section of the book, extracts its most distinctive terms from the body text (tf × idf across sections), and requires them in forge's corpus. Before the digests: mean 78 %, 6 sections under 50 %. With them: `BOOK_CONCEPTS_VERIFY: PASS mean=95% weak=2` — the two residues are a references page and Datalog example identifiers. Run by `tests/test-data.sh` when `DDIA_PAGES_JSON` is set, beside the heading-level check from v3.7.1.
+- **Two mechanisms the check found thin are now explicit in the protocol:** storage-engine effects (LSM compaction stalls versus B-tree write cost, measured by the SLO run at the pinned write rate; §2.3) and atomic commit across systems (two-phase commit inside one database, never XA across heterogeneous systems — idempotency key, outbox/CDC with idempotent consumers, or a compensating action; §2.4).
+- **Research trail for the metric choices** stays in §9 (fourteen sources) and was re-consulted for this release: k6's open-versus-closed model page on coordinated omission; the SRE Workbook's data-processing chapter for freshness, correctness, completeness and skew SLOs; Squawk's rule list for the migration lint.
+
 ## v3.7.1 — the book map covers every section, verified against the body text (2026-11-07)
 
 **Theme:** v3.7.0 mapped the table of contents of *Designing Data-Intensive Applications*, 2nd ed. to forge but left four sections as "n/a" and had no check that the rows matched the book's text. This release closes both.
