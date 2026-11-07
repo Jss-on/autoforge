@@ -309,7 +309,9 @@ playback and finalizes this document. No new scope may enter through translation
   state transition + every decision branch must map to a golden vector**, so the diagrams are the
   completeness checklist for the logic spec.
 - **Data architecture (the `DATA.md` draft)** — the eight decisions of
-  `references/data-intensive-protocol.md` §2, each traced to the `A-n` that decided it: workload
+  `references/data-intensive-protocol.md` §2, each traced to the `A-n` that decided it (for the chapters a
+  group's §2 heading cites, the page-cited rules and elicitation questions are in
+  `references/data-intensive-digest-chNN.md`; ask from them, never from memory): workload
   (peak reads/s, writes/s, concurrency, volume, growth, hot keys), slo (client-side p50/p95/p99,
   error ratio, window, open load model), model (relational / document / graph / event log by the
   shape of the relationships; the store; one index per hot access pattern), integrity (isolation level,

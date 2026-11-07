@@ -61,6 +61,20 @@ if [[ -n "${DDIA_PAGES_JSON:-}" && -f "${DDIA_PAGES_JSON}" ]]; then
 else
   pass "book map body-text check skipped (set DDIA_PAGES_JSON to the locally extracted pages to run it)"
 fi
+DIGESTS="$REPO_ROOT/.claude/skills/forge/references"
+[[ $(ls "$DIGESTS"/data-intensive-digest-ch*.md 2>/dev/null | wc -l) -eq 14 ]] && pass "chapter digests: 14 files" || fail "chapter digests: expected 14 files"
+dg_bad=0; for f in "$DIGESTS"/data-intensive-digest-ch*.md; do for h in "## Thesis" "## Decision rules" "## Metrics and numbers" "## Failure modes and anti-patterns" "## Elicitation questions" "## Verifiable properties"; do grep -q "^$h" "$f" || { dg_bad=$((dg_bad+1)); echo "  missing \"$h\" in ${f##*/}"; }; done; done
+[[ $dg_bad -eq 0 ]] && pass "chapter digests: thesis, rules, metrics, failure modes, questions, properties in every chapter" || fail "chapter digests: $dg_bad missing section(s)"
+grep -q "data-intensive-digest-ch" "$PROTO" && pass "protocol §10 points at the digests" || fail "protocol does not reference the digests"
+grep -q "data-intensive-digest-ch" "$REPO_ROOT/.claude/commands/forge/requirements.md" && grep -q "data-intensive-digest-ch" "$REPO_ROOT/.claude/commands/forge/build.md" && pass "requirements and build consult the digests" || fail "commands do not consult the digests"
+for m in "$REPO_ROOT/claude-plugin/skills/forge/references/data-intensive-digest-ch08.md" "$REPO_ROOT/plugins/forge/skills/forge/references/data-intensive-digest-ch08.md" "$REPO_ROOT/.agents/skills/forge/references/data-intensive-digest-ch08.md" "$REPO_ROOT/.opencode/skills/forge/references/data-intensive-digest-ch08.md" "$REPO_ROOT/.cursor/skills/forge/references/data-intensive-digest-ch08.md"; do
+  cmp -s "$DIGESTS/data-intensive-digest-ch08.md" "$m" && pass "digest mirror: ${m#$REPO_ROOT/}" || fail "digest mirror differs: ${m#$REPO_ROOT/}"
+done
+if [[ -n "${DDIA_PAGES_JSON:-}" && -f "${DDIA_PAGES_JSON}" ]]; then
+  BCV="$(node "$REPO_ROOT/tests/book-concepts-verify.cjs" "$DDIA_PAGES_JSON" "$REPO_ROOT" 2>&1)" && pass "book content verified section by section: $(printf '%s' "$BCV" | grep BOOK_CONCEPTS_VERIFY)" || fail "book content check: $(printf '%s' "$BCV" | grep -E 'weak|BOOK_CONCEPTS_VERIFY' | tr '\n' ' ')"
+else
+  pass "book content check skipped (set DDIA_PAGES_JSON to run tests/book-concepts-verify.cjs)"
+fi
 for m in "$REPO_ROOT/claude-plugin/skills/forge/references/data-intensive-book-map.md" \
          "$REPO_ROOT/.agents/skills/forge/references/data-intensive-book-map.md" \
          "$REPO_ROOT/plugins/forge/skills/forge/references/data-intensive-book-map.md" \

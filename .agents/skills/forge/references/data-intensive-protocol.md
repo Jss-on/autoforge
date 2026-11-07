@@ -130,6 +130,8 @@ p.77-80), and every materialized view or data cube in it is a derived dataset wi
 embeddings are rebuildable from the source and inherit its deletion obligation (p.145-149). N+1 is a
 defect: statement count must not grow with list length (p.68-69).
 
+**Storage engines (ch.4 pp.116-134).** Whether the store is log-structured (LSM-tree: memtable, SSTables, compaction, Bloom filters) or page-oriented (B-tree: in-place pages, write-ahead log) is the stack record's choice; what forge pins is the application-visible effect. An LSM store trades write amplification for compaction stalls that appear as p99 spikes under sustained writes; a B-tree store pays on every write but reads with fewer surprises. The SLO run (§5 row 1) at the pinned write rate, with `dropped = 0`, is where that effect shows; a tail that breaches the budget under compaction is a stack finding, not a tuning note. In-memory stores (p.133) still owe durability: their write-ahead log or snapshot cadence sets the RPO in `durability.backup`.
+
 ### 2.4 `integrity` — transactions, constraints, idempotency (DDIA2 ch.8, ch.10, ch.13)
 Declare the isolation level actually in force (the default in PostgreSQL, Oracle and SQL Server is
 read committed, p.292; "repeatable read" means different things per vendor, p.298). Name every
@@ -149,6 +151,8 @@ timestamps, which skew and collide (p.363-364, p.417-424). Hard invariants vs ap
 owner decision recorded here (p.573-574).
 
 **Trust model (ch.9 pp.377-380).** Nodes inside the deployment are assumed honest but fallible; Byzantine fault tolerance is not designed for, on the book's own advice. The "weak forms of lying" it does guard against are gates here: digests compared on every restore drill (`operational.cjs recovery`), input validation at every trust boundary (the `hardening` rows), and more than one time source for clocks (§2.6).
+
+**Atomic commit across systems (ch.8 pp.323-335).** Two-phase commit (a coordinator asks every participant to prepare, then commits or aborts all of them) is sound inside one database and fragile across heterogeneous systems: XA transactions block on a crashed coordinator, hold locks meanwhile and are rarely well supported. forge therefore does not accept an XA transaction as the technique for a cross-system invariant in `integrity.transactions`; the accepted techniques are the end-to-end idempotency key, the transactional outbox or change-data-capture feeding an idempotent consumer, and a compensating action where the business can apologize (pp.333-335, 562-566). A database-internal distributed transaction is the stack's business and is cited, not re-argued.
 
 ### 2.5 `evolution` — encoding, compatibility, migrations (DDIA2 ch.5)
 Rolling upgrades mean old and new code and old and new data coexist: new code must read old data
@@ -473,7 +477,19 @@ self-reported number — the receipts and the independent verify before converge
 
 ## §10 Coverage of the book
 
-`references/data-intensive-book-map.md` maps every section of the book's table of contents to its
-home in forge — a gate, a `DATA.md` decision, protocol guidance, the stack decision, or a reasoned
-"not mechanized" (engine internals, Byzantine faults, HPC). Read it when a review asks "where did the
-book's chapter on X go?".
+The book lives in forge in three layers. This protocol is the condensed layer (§0-§8: the decisions, the
+rules, the metrics). `references/data-intensive-book-map.md` is the row-level map: every section of the
+table of contents and its home — a gate, a `DATA.md` decision, protocol guidance or the stack decision;
+no section is left as "not applicable". `references/data-intensive-digest-ch01.md` … `data-intensive-digest-ch14.md` are
+the full layer: one page-cited digest per chapter (thesis, decision rules, metrics and numbers, failure
+modes, elicitation questions, verifiable properties, terms) that the requirements data round and the
+build Phase 4 review consult for the chapters a group cites in its §2 heading.
+
+Both lower layers are verified against the book's text, not against its headings:
+`tests/book-map-verify.cjs` checks that every map row's section titles occur on the pages it cites and
+that every table-of-contents entry is covered; `tests/book-concepts-verify.cjs` takes each section's
+most distinctive terms from the body text and requires them in this corpus (mean ≥ 90 %). The book is
+copyrighted and stays out of the repository: `tests/test-data.sh` runs both checks when
+`DDIA_PAGES_JSON` points at a locally extracted page text and records the skip otherwise. Read the map
+when a review asks "where did the book's chapter on X go?"; read the digest when it asks "what exactly
+does the book say to do here?".
