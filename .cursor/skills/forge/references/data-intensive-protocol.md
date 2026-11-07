@@ -313,6 +313,10 @@ is thin.
 
 ## §5 The mechanical metrics — researched, decided
 
+The research behind every row of this section — the candidate measures considered, the primary-source
+statements quoted, the decision and the rejected alternatives — is `references/data-intensive-metrics-research.md`;
+re-argue a metric from that ledger, not from taste.
+
 **Research.** The book's own metric chapter (DDIA2 ch.2) plus: Google SRE (SLI/SLO/SLA definitions;
 indicators per system type — availability, latency, throughput; durability for storage; end-to-end
 latency and throughput for data pipelines; correctness, freshness and coverage/completeness for
@@ -456,7 +460,7 @@ self-reported number — the receipts and the independent verify before converge
 | Hoarding personal data "in case" | toxic asset; breach, fines, compelled disclosure | purpose + retention + purge | p.25, p.594-597 |
 | Distributing before one machine is exhausted | complexity with no benefit | single node, embedded engine first | p.20-21, p.253, p.389 |
 
-## §9 Sources this protocol rests on (accessed 2026-11-07)
+## §9 Sources this protocol rests on (accessed 2026-11-07; re-consulted and quoted per metric in `references/data-intensive-metrics-research.md` on 2026-11-08)
 
 - Kleppmann, M. & Riccomini, C., *Designing Data-Intensive Applications*, 2nd ed., O'Reilly Media,
   2026 (ISBN 978-1-098-11906-5) — ch.1 Trade-offs; ch.2 Nonfunctional requirements; ch.3 Data models;
@@ -488,7 +492,8 @@ build Phase 4 review consult for the chapters a group cites in its §2 heading.
 Both lower layers are verified against the book's text, not against its headings:
 `tests/book-map-verify.cjs` checks that every map row's section titles occur on the pages it cites and
 that every table-of-contents entry is covered; `tests/book-concepts-verify.cjs` takes each section's
-most distinctive terms from the body text and requires them in this corpus (mean ≥ 90 %). The book is
+most distinctive terms from the body text and requires them in this corpus (every section covered, by
+its terms or by a digest citing its pages; mean term coverage ≥ 90 %). The book is
 copyrighted and stays out of the repository: `tests/test-data.sh` runs both checks when
 `DDIA_PAGES_JSON` points at a locally extracted page text and records the skip otherwise. Read the map
 when a review asks "where did the book's chapter on X go?"; read the digest when it asks "what exactly

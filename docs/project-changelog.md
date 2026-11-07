@@ -2,6 +2,11 @@
 
 All notable changes to the forge project are documented here.
 
+## v3.7.3 — the metrics research ledger; every section of the book covered (2026-11-08)
+
+- **`references/data-intensive-metrics-research.md`** — the research step behind protocol §5 made a deliverable: for each of the nine gated metrics, the candidate measures considered, the primary-source statements (quoted, with URL and access date: the SRE book and workbook, k6's open-model and constant-arrival-rate pages and its `dropped_iterations` definition, HdrHistogram's corrected recording, Elle, strong_migrations and Squawk, PostgreSQL's replication lag columns, AWS REL09-BP04, OpenTelemetry's database histogram, GDPR Articles 12 and 17, the UK data-quality dimensions), the decision and the rejected alternatives. Protocol §5 and §9 point at it; the suite asserts nine metric sections and at least twelve distinct sources.
+- **Content check: every section covered.** `tests/book-concepts-verify.cjs` now keeps chapter summaries as window boundaries (the last section of a chapter was being measured over the chapter's reference pages) and counts a section covered when its distinctive terms are in the corpus or a digest cites its pages. Result on the second-edition text: `BOOK_CONCEPTS_VERIFY: PASS mean=97% uncovered=0` (201 sections by terms, 1 by citation).
+
 ## v3.7.2 — the book's content, not only its headings: chapter digests as a reference, verified section by section (2026-11-07)
 
 **Theme:** v3.7.1 proved that every heading of *Designing Data-Intensive Applications*, 2nd ed. has a row in forge. A heading is not its content. This release ships the content layer and a check that measures it.
