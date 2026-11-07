@@ -1,0 +1,7 @@
+# metric_direction: higher_is_better
+spec	dimension	assertion	weight	status	detail	traces
+x	logic	golden-total	2	pass	ok	FR-1
+x	functional	crud	1	pass	ok	FR-2
+x	ux	a11y	1	pass	ok	NFR-1
+x	data	slo-p99	2	pass	ok	data:slo
+x	data	checkout-no-lost-update	2	fail	two concurrent checkouts oversold	data:integrity

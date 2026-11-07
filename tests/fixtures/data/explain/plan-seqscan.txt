@@ -1,0 +1,8 @@
+-- query: SC-3 end-of-day report (missing index)
+Aggregate  (cost=1890.00..1890.01 rows=1 width=8)
+  ->  Seq Scan on sales  (cost=0.00..1750.00 rows=56000 width=4)
+        Filter: ((store_id = 1) AND (sold_at >= '2026-11-07'::date))
+
+-- query: sqlite product search without an index
+QUERY PLAN
+`--SCAN products

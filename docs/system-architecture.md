@@ -199,6 +199,7 @@ claude-plugin/
 | 8 TSV status values | baseline, keep, discard, crash, no-op, hook-blocked, metric-error, keep (reworked) |
 | handoff.json for chain integration | Structured handoff between subcommands; evals reads `*-results.tsv` directly |
 | Hook system with fail-open design | Hooks never block Claude due to crashes; safety without fragility |
+| `data` as a gated seventh acceptance dimension + machine-readable `DATA.md` | The data side of every build (load model, SLO percentiles under an open load, model and indexes, integrity, evolution, durability, derived data, retention) is decided in a record and measured by `scripts/data-score.cjs`, gated under the same 0.50 cap as `logic`; legacy specs without `data` rows are unchanged (weights renormalize) |
 | Session state via temp file | Hooks are subprocesses — can't share env vars. `/tmp/ar-session-{hash}.json` persists across hook calls |
 | Iteration-based throttling (every 5th) | AutoForge is loop-driven; time-based throttling doesn't match iteration cadence |
 

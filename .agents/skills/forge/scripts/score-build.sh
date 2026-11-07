@@ -3,19 +3,25 @@
 #
 #   rubric    [file]                       → grep-rubric capability score of build.md → "SCORE: N"
 #   pass-rate [results.tsv|spec…]          → weighted acceptance pass-rate from a build-results TSV
-#   coverage  [results.tsv] [requirements] → PRD + design traceability gate (REQ_/DESIGN_COVERAGE)
+#   coverage  [results.tsv] [requirements] [DATA.md] → PRD + design (+ data) traceability gate
+#               (REQ_/DESIGN_COVERAGE; DATA_COVERAGE when a DATA.md is named or BUILD_DATA_MD is set)
 #   interactions <baseline.tsv> <candidate.tsv> → efficiency ratchet over key-path rows carrying
 #               `interactions=N` in detail (clicks + keystrokes + navigations) → "INTERACTIONS: STABLE|REGRESSED"
 #
 # pass-rate logic (metric_direction: higher_is_better):
-#   - acceptance assertions are grouped into 6 dimensions, each with a weight:
-#       logic 0.30 · functional 0.30 · ux 0.20 · devops 0.15 · monitoring 0.15 · hardening 0.20
-#     (weights renormalize over the dims that ran, so adding `logic` does NOT rescore a
-#      legacy spec that declares no `logic` rows — it just renormalizes over the old five.)
+#   - acceptance assertions are grouped into 7 dimensions, each with a weight:
+#       logic 0.30 · functional 0.30 · ux 0.20 · devops 0.15 · monitoring 0.15 · hardening 0.20 · data 0.20
+#     (weights renormalize over the dims that ran, so adding `logic` or `data` does NOT rescore a
+#      legacy spec that declares no such rows — it just renormalizes over the old dimensions.)
 #     UI/UX is first-class and gates the score — a working-but-ugly/inaccessible app is capped.
 #   - LOGIC GATE: `logic` rows are business-rule golden cases and are must-pass. While ANY
 #     `logic` row is red, the headline pass-rate is capped at LOGIC_GATE_CAP (default 0.50) —
 #     you cannot ride ux/devops/monitoring/hardening polish to "done" while domain math is wrong.
+#   - DATA GATE: `data` rows are the data-architecture properties (references/data-intensive-protocol.md:
+#     the SLO under an open load model, no lost update, expand/contract migrations, restore within
+#     RPO/RTO, derived data that reconciles with its system of record, deletion that reaches every
+#     copy). They are must-pass under the same cap: an app that loses, corrupts or leaks data is not
+#     "done" however polished.
 #   - applicable unresolved rows count in the denominator; legacy skip rows are excluded
 #   - dimension weights are renormalized over the dimensions that actually ran.
 #   - no measurable rows at all → PASS_RATE: 0.00 (honest baseline: nothing built yet).
@@ -23,8 +29,8 @@
 #     The per-dim breakdown + dims_ran/dims_unavailable go to STDERR.
 #   - exit 0 always on a well-formed/empty TSV (baseline is valid); exit 2 only on hard error.
 #
-# Overridable env: BUILD_RESULTS, REQUIREMENTS_MD, BUILD_DESIGN_TAGS, BUILD_W_LOGIC, BUILD_W_FUNCTIONAL,
-#                  BUILD_W_UX, BUILD_W_DEVOPS, BUILD_W_MONITORING, BUILD_W_HARDENING, LOGIC_GATE_CAP
+# Overridable env: BUILD_RESULTS, REQUIREMENTS_MD, BUILD_DATA_MD, BUILD_DESIGN_TAGS, BUILD_W_LOGIC, BUILD_W_FUNCTIONAL,
+#                  BUILD_W_UX, BUILD_W_DEVOPS, BUILD_W_MONITORING, BUILD_W_HARDENING, BUILD_W_DATA, LOGIC_GATE_CAP
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -37,8 +43,10 @@ BUILD_W_UX="${BUILD_W_UX:-0.20}"
 BUILD_W_DEVOPS="${BUILD_W_DEVOPS:-0.15}"
 BUILD_W_MONITORING="${BUILD_W_MONITORING:-0.15}"
 BUILD_W_HARDENING="${BUILD_W_HARDENING:-0.20}"
+BUILD_W_DATA="${BUILD_W_DATA:-0.20}"
 # Logic gate: until every `logic` (business-rule golden) row passes, the headline pass-rate
 # is capped here — domain correctness can't be bypassed by polishing the other dimensions.
+# The `data` dimension (data-architecture properties) is gated under the same cap.
 LOGIC_GATE_CAP="${LOGIC_GATE_CAP:-0.50}"
 
 # Canonical DESIGN.md token groups every `ux` row must collectively trace (drives DESIGN_COVERAGE).
@@ -251,7 +259,7 @@ pass-rate() {
   if ! results="$(resolve_results "$@")"; then
     echo "PASS_RATE: 0.00"
     echo "dims_ran=none" >&2
-    echo "dims_unavailable=logic,functional,ux,devops,monitoring,hardening" >&2
+    echo "dims_unavailable=logic,functional,ux,devops,monitoring,hardening,data" >&2
     echo "reason=no-results-tsv (pass an explicit path or set BUILD_RESULTS)" >&2
     return 0
   fi
@@ -271,7 +279,7 @@ pass-rate() {
   local headline
   headline="$(awk -v FS='\t' \
       -v wL="$BUILD_W_LOGIC" -v wF="$BUILD_W_FUNCTIONAL" -v wU="$BUILD_W_UX" -v wD="$BUILD_W_DEVOPS" \
-      -v wM="$BUILD_W_MONITORING" -v wH="$BUILD_W_HARDENING" -v gate="$LOGIC_GATE_CAP" '
+      -v wM="$BUILD_W_MONITORING" -v wH="$BUILD_W_HARDENING" -v wX="$BUILD_W_DATA" -v gate="$LOGIC_GATE_CAP" '
     { sub(/\r$/, "") }
     /^#/            { next }
     $1=="spec" && $2=="dimension" { next }
@@ -282,12 +290,13 @@ pass-rate() {
       else if (st=="fail" || st=="blocked" || st=="flaky" || st=="not_run") {
         den[dim]+=wt;
         if (dim=="logic") logic_unresolved=1;
+        if (dim=="data") data_unresolved=1;
       }
       # status=skip (n/a) excluded from both numerator and denominator
     }
     END {
-      w["logic"]=wL; w["functional"]=wF; w["ux"]=wU; w["devops"]=wD; w["monitoring"]=wM; w["hardening"]=wH;
-      n=split("logic,functional,ux,devops,monitoring,hardening", order, ",");
+      w["logic"]=wL; w["functional"]=wF; w["ux"]=wU; w["devops"]=wD; w["monitoring"]=wM; w["hardening"]=wH; w["data"]=wX;
+      n=split("logic,functional,ux,devops,monitoring,hardening,data", order, ",");
 
       tot=0; ran=""; unavail="";
       for (i=1;i<=n;i++) {
@@ -303,7 +312,7 @@ pass-rate() {
       if (tot == 0) {
         print "PASS_RATE: 0.00";
         print "dims_ran=none" > "/dev/stderr";
-        print "dims_unavailable=logic,functional,ux,devops,monitoring,hardening" > "/dev/stderr";
+        print "dims_unavailable=logic,functional,ux,devops,monitoring,hardening,data" > "/dev/stderr";
         exit 0;
       }
 
@@ -325,11 +334,20 @@ pass-rate() {
         if (logic_unresolved) { if (disp > gate0) disp = gate0; logicgate = sprintf("CAPPED@%.2f", gate0) }
         else logicgate = "PASS";
       }
+      # DATA GATE — the data-architecture rows (SLO under open load, no lost update, safe migrations,
+      # restore within RPO/RTO, derived data reconciled, deletion reaches every copy) are must-pass
+      # under the same cap: polish never buys "done" for an app that loses, corrupts or leaks data.
+      datagate = "n/a";
+      if ("data" in score) {
+        if (data_unresolved) { if (disp > gate0) disp = gate0; datagate = sprintf("CAPPED@%.2f", gate0) }
+        else datagate = "PASS";
+      }
 
       printf "PASS_RATE: %.2f\n", disp;
       printf "dims_ran=%s\n", ran > "/dev/stderr";
       printf "dims_unavailable=%s\n", (unavail==""?"none":unavail) > "/dev/stderr";
       printf "logic_gate=%s\n", logicgate > "/dev/stderr";
+      printf "data_gate=%s\n", datagate > "/dev/stderr";
       for (i=1;i<=n;i++) { d=order[i]; if (d in score)
         printf "  %-11s score=%.2f weight=%.2f\n", d, int(score[d]*100)/100, w[d] > "/dev/stderr"; }
       printf "  pass_rate=%.2f over dims_ran=%s\n", disp, ran > "/dev/stderr";
@@ -344,10 +362,12 @@ pass-rate() {
 # resolve_requirements: pick the requirements.md (PRD) whose FR-/NFR- IDs form
 # the coverage universe. A .md arg wins; else env REQUIREMENTS_MD; else convention.
 # ---------------------------------------------------------------------------
+is_data_md() { [[ "${1##*/}" =~ ^[Dd][Aa][Tt][Aa]\.md$ ]]; }
+
 resolve_requirements() {
   local a
   for a in "$@"; do
-    if [[ "$a" == *.md && -f "$a" ]]; then printf '%s' "$a"; return 0; fi
+    if [[ "$a" == *.md && -f "$a" ]] && ! is_data_md "$a"; then printf '%s' "$a"; return 0; fi
   done
   if [[ -n "${REQUIREMENTS_MD:-}" ]]; then
     [[ -f "$REQUIREMENTS_MD" ]] && { printf '%s' "$REQUIREMENTS_MD"; return 0; }
@@ -360,24 +380,51 @@ resolve_requirements() {
 }
 
 # ---------------------------------------------------------------------------
+# resolve_data_md: the DATA.md (data-architecture record) whose applicable groups form the
+# DATA_COVERAGE universe. An arg named DATA.md wins; else env BUILD_DATA_MD; else none (n/a).
+# ---------------------------------------------------------------------------
+resolve_data_md() {
+  local a
+  for a in "$@"; do
+    if is_data_md "$a" && [[ -f "$a" ]]; then printf '%s' "$a"; return 0; fi
+  done
+  # An explicit BUILD_DATA_MD is authoritative: set-but-missing is an error (exit 2), never a silent n/a.
+  if [[ -n "${BUILD_DATA_MD:-}" ]]; then
+    [[ -f "$BUILD_DATA_MD" ]] && { printf '%s' "$BUILD_DATA_MD"; return 0; }
+    return 2
+  fi
+  return 1
+}
+
+# ---------------------------------------------------------------------------
 # coverage: structural traceability gate (no orphans). Every PRD requirement ID
 # (FR-/NFR- in requirements.md) must be named by >=1 acceptance row's `traces`
-# (TSV col 7); every BUILD_DESIGN_TAGS group must be traced by >=1 `ux` row.
+# (TSV col 7); every BUILD_DESIGN_TAGS group must be traced by >=1 `ux` row; when a
+# DATA.md is named, every applicable data group must be traced by >=1 `data` row
+# (data-score.cjs coverage — `data:<group>` for workload · slo · model · integrity ·
+# evolution · durability · derived · retention).
 # A trace to a non-existent requirement is an orphan and also fails the gate.
-#   STDOUT: "REQ_COVERAGE: N.NN" then "DESIGN_COVERAGE: N.NN"
-#   STDERR: req_total/req_covered/untraced, design_total/.../design_missing, orphan_traces
-#   exit 0 iff both == 1.00 and no orphans ; exit 1 if incomplete ; exit 2 hard error.
+#   STDOUT: "REQ_COVERAGE: N.NN" then "DESIGN_COVERAGE: N.NN" then "DATA_COVERAGE: N.NN|n/a"
+#   STDERR: req_total/req_covered/untraced, design_total/.../design_missing, orphan_traces, data_*
+#   exit 0 iff all == 1.00 and no orphans ; exit 1 if incomplete ; exit 2 hard error.
 # ---------------------------------------------------------------------------
 coverage() {
-  local results reqs
+  local results reqs datamd=""
   if ! results="$(resolve_results "$@")"; then
-    echo "REQ_COVERAGE: 0.00"; echo "DESIGN_COVERAGE: 0.00"
+    echo "REQ_COVERAGE: 0.00"; echo "DESIGN_COVERAGE: 0.00"; echo "DATA_COVERAGE: n/a"
     echo "reason=no-results-tsv" >&2; return 2
   fi
   if ! reqs="$(resolve_requirements "$@")"; then
-    echo "REQ_COVERAGE: 0.00"; echo "DESIGN_COVERAGE: 0.00"
+    echo "REQ_COVERAGE: 0.00"; echo "DESIGN_COVERAGE: 0.00"; echo "DATA_COVERAGE: n/a"
     echo "reason=no-requirements-md" >&2; return 2
   fi
+  local dmrc=0
+  datamd="$(resolve_data_md "$@")" || dmrc=$?
+  if [[ "$dmrc" -eq 2 ]]; then
+    echo "REQ_COVERAGE: 0.00"; echo "DESIGN_COVERAGE: 0.00"; echo "DATA_COVERAGE: 0.00"
+    echo "reason=data-md-missing (BUILD_DATA_MD=$BUILD_DATA_MD is not a file)" >&2; return 2
+  fi
+  [[ "$dmrc" -eq 0 ]] || datamd=""
 
   local out
   out="$(awk -v FS='\t' -v REQFILE="$reqs" -v DESIGN_TAGS="$BUILD_DESIGN_TAGS" '
@@ -433,6 +480,15 @@ coverage() {
     }
   ' "$results")"
   local rc=$?
+  local dline="DATA_COVERAGE: n/a"
+  if [[ -n "$datamd" ]]; then
+    local drc=0
+    dline="$(node "$SCRIPT_DIR/data-score.cjs" coverage "$datamd" "$results")" || drc=$?
+    [[ -n "$dline" ]] || dline="DATA_COVERAGE: 0.00"
+    if [[ "$drc" -ge 2 ]]; then echo "reason=data-score-error (exit $drc; is node on PATH and $SCRIPT_DIR/data-score.cjs shipped?)" >&2; rc=2
+    elif [[ "$drc" -ne 0 ]]; then rc=1; fi
+  fi
+  out="$out"$'\n'"$dline"
   printf '%s\n' "$out"
   log_invocation "coverage" "$results" "$(printf '%s' "$out" | tr '\n' ' ')"
   return $rc
@@ -503,5 +559,5 @@ case "${1:-}" in
     ;;
   coverage)  shift; coverage  "$@" ;;
   bound)     shift; bound     "$@" ;;
-  *) echo "usage: $0 {rubric [file] | pass-rate [--strict-evidence] [results.tsv|spec…] | completion <results.tsv> <plan.json> [project] [plan-sha256] | coverage [results.tsv] [requirements.md] | interactions <baseline.tsv> <candidate.tsv> | bound <iterations.tsv> <max>}" >&2; exit 64 ;;
+  *) echo "usage: $0 {rubric [file] | pass-rate [--strict-evidence] [results.tsv|spec…] | completion <results.tsv> <plan.json> [project] [plan-sha256] | coverage [results.tsv] [requirements.md] [DATA.md] | interactions <baseline.tsv> <candidate.tsv> | bound <iterations.tsv> <max>}" >&2; exit 64 ;;
 esac

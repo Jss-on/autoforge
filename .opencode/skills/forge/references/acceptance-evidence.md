@@ -31,7 +31,7 @@ Applicable `fail`, `blocked`, `flaky`, and `not_run` rows earn zero weight but r
 denominator. A required row in any of those states prevents completion. Missing expected rows
 prevent completion; extra rows are invalid. `skip` is permitted only for an explicitly
 non-applicable pinned check with a reason. At least one applicable required check must exist.
-Logic checks are always required when applicable. Existing security gates remain mandatory.
+Logic and data checks are always required when applicable. Existing security gates remain mandatory.
 
 A passing row still needs confined, nonempty `evidence:<relative-path>` beneath the results
 directory. This initial file check is consistency evidence; trusted execution receipts and CI

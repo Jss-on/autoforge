@@ -5,7 +5,8 @@ const need = (ok, message) => { if (!ok) throw Error(message); };
 const object = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 const text = v => typeof v === 'string' && v.trim().length > 0 && !/[\u0000-\u001f\u007f]/.test(v);
 const digest = v => typeof v === 'string' && /^[a-f0-9]{64}$/.test(v);
-const dims = ['logic', 'functional', 'ux', 'devops', 'monitoring', 'hardening'];
+const dims = ['logic', 'functional', 'ux', 'devops', 'monitoring', 'hardening', 'data'];
+const gated = d => d === 'logic' || d === 'data'; // must-pass dimensions: every applicable check is required
 const statuses = ['pass', 'fail', 'blocked', 'flaky', 'not_run', 'skip'];
 const key = c => JSON.stringify([c.spec, c.id]);
 const json = file => JSON.parse(fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, ''));
@@ -40,7 +41,7 @@ function checks(list) {
   for (const c of list) {
     need(object(c) && text(c.spec) && text(c.id) && dims.includes(c.dimension) && Number.isFinite(c.weight) && c.weight > 0 &&
       typeof c.required === 'boolean' && typeof c.applicable === 'boolean' && (c.applicable || text(c.reason)) &&
-      !(c.dimension === 'logic' && c.applicable && !c.required) && !seen.has(key(c)), 'Invalid/duplicate check or unjustified applicability');
+      !(gated(c.dimension) && c.applicable && !c.required) && !seen.has(key(c)), 'Invalid/duplicate check or unjustified applicability');
     seen.add(key(c));
   }
   need(list.some(c => c.required && c.applicable), 'At least one applicable required check is necessary');

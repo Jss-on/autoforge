@@ -12,6 +12,11 @@
 # The sixth dimension `logic` (business-rule golden oracle) is optional for pure-CRUD apps
 # but, when present, must carry at least one gated golden row (gate: true); set REQUIRE_LOGIC=1
 # to make it mandatory for a computational domain (payroll, accounting, POS, billing).
+# The seventh dimension `data` (data-architecture properties — references/data-intensive-protocol.md)
+# is optional for a stateless or throwaway target but, when present, must carry at least one row
+# tracing a `data:<group>` (workload · slo · model · integrity · evolution · durability · derived ·
+# retention); set REQUIRE_DATA=1 to make it mandatory for a data-intensive target (anything that
+# keeps its own durable data: real product, multi-user, analytics, pipelines).
 # Set REQUIRE_STACK_DECISION=1 to also require `decision:` inside the spec's stack block:
 # a decision directory whose `stack` verdict is READY and whose selected option names the
 # spec's framework. Owner mandates use the same evidence and approval gate.
@@ -105,6 +110,14 @@ validate() {
   has_logic=$(grep -cE '^[[:space:]][[:space:]]logic:' "$spec" || true)
   gate_rows=$(grep -cE 'gate:[[:space:]]*true' "$spec" || true)
 
+  # Data dimension (data-architecture properties). Optional unless REQUIRE_DATA=1; a declared block
+  # must trace at least one `data:<group>` so DATA_COVERAGE has something to count.
+  local has_data data_traces
+  has_data=$(grep -cE '^[[:space:]][[:space:]]data:' "$spec" || true)
+  # Only the acceptance `data:` block's own rows count (an assert elsewhere that mentions data:slo does not).
+  data_traces=$(awk '/^  data:/ { f = 1; next } /^  [A-Za-z_]+:/ { f = 0 } /^[^ ]/ { f = 0 } f' "$spec" | tr -d '\r' \
+    | grep -oE 'data:(workload|slo|model|integrity|evolution|durability|derived|retention)\b' | sort -u | wc -l | tr -d ' ')
+
   local ok=1
   local acceptance_plan="legacy-unverified"
   if [[ "${REQUIRE_ACCEPTANCE_PLAN:-0}" == 1 || -n "${2:-}" ]]; then
@@ -124,6 +137,11 @@ validate() {
   # Opt-in hard requirement for computational domains.
   if [[ "${REQUIRE_LOGIC:-0}" == "1" ]]; then
     [[ "$has_logic" -ge 1 && "$gate_rows" -ge 1 ]] || ok=0
+  fi
+  # A declared `data` block must trace >=1 data group; REQUIRE_DATA=1 makes the block mandatory.
+  [[ "$has_data" -lt 1 || "$data_traces" -ge 1 ]] || ok=0
+  if [[ "${REQUIRE_DATA:-0}" == "1" ]]; then
+    [[ "$has_data" -ge 1 && "$data_traces" -ge 1 ]] || ok=0
   fi
 
   # Opt-in technology-selection requirement (requirements Phase 5 and build's spec intake set it).
@@ -177,6 +195,7 @@ validate() {
   echo "dims_present=${present:-none}"
   echo "dims_missing=${missing:-none}"
   echo "logic=$([[ $has_logic -ge 1 ]] && echo "present(gate_rows=$gate_rows)" || echo absent) require_logic=${REQUIRE_LOGIC:-0}"
+  echo "data=$([[ $has_data -ge 1 ]] && echo "present(groups_traced=$data_traces)" || echo absent) require_data=${REQUIRE_DATA:-0}"
   echo "stack_decision=$stack_decision require_stack_decision=${REQUIRE_STACK_DECISION:-0}"
   echo "acceptance_plan=$acceptance_plan"
   [[ "$ok" -eq 1 ]] && return 0 || return 1

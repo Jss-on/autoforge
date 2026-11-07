@@ -1,0 +1,15 @@
+{
+  "options": {
+    "summaryTrendStats": ["avg", "med", "p(95)", "p(99)", "max"],
+    "scenarios": {
+      "checkout": { "executor": "constant-arrival-rate", "rate": 20, "timeUnit": "1s", "duration": "2m", "preAllocatedVUs": 20, "maxVUs": 80 },
+      "lookups": { "executor": "ramping-arrival-rate", "startRate": 10, "timeUnit": "1s", "preAllocatedVUs": 10, "maxVUs": 60 }
+    }
+  },
+  "metrics": {
+    "http_reqs": { "type": "counter", "values": { "count": 4812, "rate": 40.1 } },
+    "http_req_duration": { "type": "trend", "values": { "avg": 131.2, "med": 98.4, "p(95)": 312.7, "p(99)": 702.3, "max": 1480.0 } },
+    "http_req_failed": { "type": "rate", "values": { "rate": 0.0004, "passes": 2, "fails": 4810 } },
+    "dropped_iterations": { "type": "counter", "values": { "count": 0, "rate": 0 } }
+  }
+}

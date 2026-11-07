@@ -85,6 +85,19 @@ function usage() {
 // DESIGN.md frontmatter → allowed fonts / colors / radii (design-token drift rule)
 // Handles the DESIGN.md spec's block YAML plus the `{ k: v, k: v }` flow-map style.
 // ---------------------------------------------------------------------------
+// Split a flow map/list body on top-level commas: a comma inside quotes or nested [] / {} is content
+// (`{ key: "a, b" }`, `{ columns: [a, b], query: c }`), never a separator.
+function splitFlow(s) {
+  const out = []; let cur = '', depth = 0, q = null;
+  for (const ch of s) {
+    if (q) { cur += ch; if (ch === q) q = null; continue; }
+    if (ch === '"' || ch === "'") { q = ch; cur += ch; continue; }
+    if (ch === '[' || ch === '{') depth++; else if (ch === ']' || ch === '}') depth--;
+    if (ch === ',' && depth === 0) { out.push(cur); cur = ''; } else cur += ch;
+  }
+  if (cur.trim()) out.push(cur);
+  return out;
+}
 function parseFrontmatter(md) {
   const lines = String(md).split(/\r?\n/);
   if (lines[0].trim() !== '---') return null;
@@ -106,14 +119,14 @@ function parseFrontmatter(md) {
     if (rest === '') { const o = {}; parent[key] = o; stack.push({ indent, obj: o }); continue; }
     if (rest.startsWith('{') && rest.endsWith('}')) {
       const o = {};
-      rest.slice(1, -1).split(',').forEach(pair => {
+      splitFlow(rest.slice(1, -1)).forEach(pair => {
         const j = pair.indexOf(':'); if (j < 0) return;
         o[pair.slice(0, j).trim()] = pair.slice(j + 1).trim().replace(/^['"]|['"]$/g, '');
       });
       parent[key] = o; continue;
     }
-    // `[a, b]` values are lists (DESIGN.md `terms:` avoid-lists); flow maps stay comma-split as before
-    if (rest.startsWith('[') && rest.endsWith(']')) { parent[key] = rest.slice(1, -1).split(',').map(s => s.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean); continue; }
+    // `[a, b]` values are lists (DESIGN.md `terms:` avoid-lists); commas inside quotes or brackets do not split
+    if (rest.startsWith('[') && rest.endsWith(']')) { parent[key] = splitFlow(rest.slice(1, -1)).map(s => s.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean); continue; }
     parent[key] = rest.replace(/^['"]|['"]$/g, '');
   }
   return root;

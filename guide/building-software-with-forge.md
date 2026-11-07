@@ -110,9 +110,12 @@ they explain *why* the system behaves the way it does.
 
 The build pipeline adds two software-specific properties on top:
 
-- **Acceptance as a weighted metric** across six dimensions (logic, functional, UI/UX, devops,
-  monitoring, hardening) — so "it works" is never enough on its own, and domain math (`logic`) is
+- **Acceptance as a weighted metric** across seven dimensions (logic, functional, UI/UX, devops,
+  monitoring, hardening, data) — so "it works" is never enough on its own, and domain math (`logic`) is
   must-pass: while any business-rule golden case is red, the headline score is hard-capped at 0.50.
+  The data architecture (`data`) is must-pass the same way: while the SLO under an open load, a
+  concurrency anomaly, a migration, the restore drill, a derived dataset's reconciliation or the
+  erasure test is red, the cap stays (see the [data-intensive protocol](../claude-plugin/skills/forge/references/data-intensive-protocol.md)).
 - **The non-regression ratchet** for features — rule 5 (rollback) extended across the *whole*
   existing acceptance set, not just the current change.
 
@@ -294,8 +297,9 @@ It follows the classical requirements-engineering lifecycle:
 4. **Validation (sign-off gate).** It plays the full requirements back to you and waits for explicit
    sign-off before generating anything.
 5. **Generate the spec.** Emits `evals/fullstack/<name>.spec.yaml` with `stack`, an optional
-   `design:` block, and an `acceptance:` block across all six dimensions — golden `logic` vectors
-   for every computed business rule, plus the five operational dimensions — weighted by MoSCoW
+   `design:` block, a `data:` block (the `DATA.md` draft), and an `acceptance:` block across all seven
+   dimensions — golden `logic` vectors for every computed business rule, the `data` rows for every
+   applicable data decision, plus the five operational dimensions — weighted by MoSCoW
    (Must = 2, Should = 1).
 6. **Mechanical validate-until-VALID.** Runs `scripts/score-requirements.sh validate <spec>`. The
    spec is released to `build` only when it prints `VALIDATION: VALID`: the five operational
@@ -464,7 +468,7 @@ Regression: scripts/score-regression.sh verdict <results.tsv>
 keep iff: new-assertion pass_rate rose  AND  regression STABLE  AND  guard green
 ```
 
-The delta spans the same six dimensions: any new business rule ships its `logic` golden vectors
+The delta spans the same seven dimensions: any new business rule ships its `logic` golden vectors
 first, and the 0.50 logic-gate cap applies to the **union** — a feature with wrong domain math
 cannot converge on polish. Verification carries `build`'s evidence contract too: raw outputs teed
 into `<run-dir>/evidence/`, rows flipped to pass only with an `evidence:` detail, and the union
@@ -555,22 +559,25 @@ then a weighted average, renormalized over the dimensions that ran, with the log
 ```
 pass_rate   = Σ ( dim_weight[d] * dim_score[d] )  /  Σ dim_weight[d]    for d in dims_that_ran
 if logic ran and dim_score[logic] < 1.00:  pass_rate = min(pass_rate, 0.50)   # LOGIC_GATE_CAP
+if data  ran and dim_score[data]  < 1.00:  pass_rate = min(pass_rate, 0.50)   # same cap: data_gate
 ```
 
 Output is one line — `PASS_RATE: 0.NN` — floored to two decimals (so a near-miss never displays as
-a perfect pass); the per-dimension breakdown and `logic_gate=PASS|CAPPED@0.50|n/a` go to stderr.
-Worked example, all six dimensions running (declared weights sum 1.30, so each is renormalized by
-÷1.30):
+a perfect pass); the per-dimension breakdown, `logic_gate=PASS|CAPPED@0.50|n/a` and
+`data_gate=PASS|CAPPED@0.50|n/a` go to stderr.
+Worked example, all seven dimensions running (declared weights sum 1.50, so each is renormalized by
+÷1.50):
 
 | Dim | declared weight | effective weight | dim_score | contribution |
 |---|---|---|---|---|
-| logic | 0.30 | ≈ 0.231 | 1.00 | 0.231 |
-| functional | 0.30 | ≈ 0.231 | 1.00 | 0.231 |
-| ux | 0.20 | ≈ 0.154 | 1.00 | 0.154 |
-| devops | 0.15 | ≈ 0.115 | 1.00 | 0.115 |
-| monitoring | 0.15 | ≈ 0.115 | 0.667 (2 of 3 weight green) | 0.077 |
-| hardening | 0.20 | ≈ 0.154 | 1.00 | 0.154 |
-| **total** | 1.30 | 1.00 | | **0.96** |
+| logic | 0.30 | 0.200 | 1.00 | 0.200 |
+| functional | 0.30 | 0.200 | 1.00 | 0.200 |
+| ux | 0.20 | ≈ 0.133 | 1.00 | 0.133 |
+| devops | 0.15 | 0.100 | 1.00 | 0.100 |
+| monitoring | 0.15 | 0.100 | 0.667 (2 of 3 weight green) | 0.067 |
+| hardening | 0.20 | ≈ 0.133 | 1.00 | 0.133 |
+| data | 0.20 | ≈ 0.133 | 1.00 | 0.133 |
+| **total** | 1.50 | 1.00 | | **0.96** |
 
 That 0.96 is a real signal: every dimension perfect except `monitoring`, which carries one failed
 assertion. The loop's job is to find the slice that turns that red row green without dropping any
@@ -596,6 +603,7 @@ design:                      # optional; build adopts as DESIGN.md
   ref: linear                # slug / path / url
 acceptance:
   logic:      [ { id, assert, weight, gate: true } , ... ]   # business-rule golden vectors: exact input → expected output; must-pass
+  data:       [ { id, assert, weight, traces } , ... ]       # data-architecture rows tracing data:<group> (DATA.md); must-pass
   functional: [ { id, assert, weight } , ... ]
   ux:         [ { id, assert, weight } , ... ]   # responsive, a11y, e2e, states, design-conformance
   devops:     [ { id, assert, weight } , ... ]   # docker, CI, compose, migrations

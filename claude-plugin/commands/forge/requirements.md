@@ -96,7 +96,11 @@ retain unchanged confirmations. Preserve decision history and the review revisio
   (who may see/do/approve what) → **day-in-the-life walkthrough** → objects & lifecycle (create /
   states / edit-void-delete / correction path / retention per noun) → **money & rules** (exact
   rates, caps, boundaries, rounding — a **worked example per rule**, which becomes its golden
-  vector) → design via artifacts → edges & elasticity (offline, concurrent edits, peak numbers,
+  vector) → **data & scale** (`references/data-intensive-protocol.md` §3: the peak load in numbers,
+  how long screens may take typically and at worst, what may be lost when a server dies and how fast
+  service must resume, which rules must never break vs can be apologized for, what must never happen
+  twice, where else the data must appear and how stale each copy may be, which facts are about people
+  and when they must be forgotten) → design via artifacts → edges & elasticity (offline, concurrent edits, peak numbers,
   import from the old system) → delivery & life after launch → out-of-scope + MoSCoW.
 - **User stories + day-in-the-life walkthrough (protocol §3): Forge drafts, owner corrects.** Start
   in Phase 0 for each known primary role, including owner/operator/support roles where relevant.
@@ -189,7 +193,8 @@ retain unchanged confirmations. Preserve decision history and the review revisio
   | NFR family | → build dimension |
   |---|---|
   | usability, accessibility, responsive | **ux** |
-  | performance, observability, SLOs | **monitoring** |
+  | observability, alerting, operability | **monitoring** |
+  | performance (response-time percentiles under a stated load model), scalability, durability & recovery (RPO/RTO), consistency & integrity, derived-data freshness, data lifecycle & erasure | **data** (`references/data-intensive-protocol.md`; every such NFR is a number with its load model, never an adjective) |
   | security, privacy, compliance | **hardening** |
   | deployability, CI/CD, scaling, ops | **devops** |
   | behavior, data, app flows (CRUD, status codes) | **functional** |
@@ -303,6 +308,20 @@ playback and finalizes this document. No new scope may enter through translation
   **decision flowcharts** (`flowchart`, the branching rule logic). Tie them to correctness: **every
   state transition + every decision branch must map to a golden vector**, so the diagrams are the
   completeness checklist for the logic spec.
+- **Data architecture (the `DATA.md` draft)** — the eight decisions of
+  `references/data-intensive-protocol.md` §2, each traced to the `A-n` that decided it: workload
+  (peak reads/s, writes/s, concurrency, volume, growth, hot keys), slo (client-side p50/p95/p99,
+  error ratio, window, open load model), model (relational / document / graph / event log by the
+  shape of the relationships; the store; one index per hot access pattern), integrity (isolation level,
+  every read-modify-write with its invariant and protecting technique, the idempotency key, the
+  constraints the database enforces), evolution (compatibility, expand/contract migrations), durability
+  (replication and lag budget, read-your-writes, failover, backup RPO/RTO), derived (every cache / index
+  / view / export / model: source, change-stream mechanism, freshness, reconcile check — never a dual
+  write) and retention (personal data with purpose + retention, erasure within ≤ 30 days reaching every
+  copy). Written as `<run-dir>/DATA.md` (frontmatter schema in protocol §4, worked example
+  `tests/fixtures/data/DATA.md`) with the `## Systems of record and derived data` and `## Trade-offs`
+  prose; `node scripts/data-score.cjs lint <run-dir>/DATA.md` must print **`DATA_LINT: VALID`**
+  before sign-off. `build` adopts it at the project root beside `DESIGN.md`.
 - **Constraints**, **assumptions**, **out-of-scope**
 - **Provenance appendix** — `client-review.md` revision and owner responses (final approval pending
   until Phase 4), every FR/NFR
@@ -327,8 +346,12 @@ shows an SC card, the screen shows ₱X because …"), (b) the reference capture
 worked-example table for every money rule, (d) the **derived-requirements list read back item by
 item** — `derived-domain` provenance is where miscommunication lives, so each gets its own yes/no —
 (e) the Won't/deferred list with consequences, (f) delivery, deployment, security/compliance,
-operation and exit scenarios/decisions, and (g) the **stack decision** as approved in Phase 2b
-(its Y-statement, accepted downsides and what would reopen it) — sign-off cannot proceed while
+operation and exit scenarios/decisions, (g) the **stack decision** as approved in Phase 2b
+(its Y-statement, accepted downsides and what would reopen it), and (h) the **data decisions** in plain
+words — how many people and how much data, how long screens may take typically and at worst, how much
+work may be lost and how fast service returns, which rules never break and which can be apologized
+for, how stale each copy (search, reports, app) may be, and when a person who asks is forgotten from
+every copy — sign-off cannot proceed while
 `score-requirements.sh stack` is not READY. Clients correct narratives and pictures far more reliably than clauses;
 sign-off on the playback IS sign-off on the SRS. Check **complete, consistent, testable, feasible,
 unambiguous** — every requirement verifiable, traced, and provenance-tagged with zero `open` items
@@ -357,6 +380,7 @@ stack: { language: <…@major>, framework: <…@major>, datastore: <…>, hostin
 design: { source: catalog|file|url|generate, ref: <slug/path/url>, mode: operate|persuade|read|experience,
           dislikes: [ <reactions the client rejected> ] }   # build adopts as DESIGN.md via the direction protocol
                                                             # a Figma URL is source: url — build routes it through the design bridge
+data:   { source: file|generate, ref: <run-dir>/DATA.md, kind: operational|analytical|mixed }  # the data architecture record (data-intensive-protocol §4); build adopts as DATA.md
 tracker: { record: github|linear, team: <team name> }       # optional; linear arms tracker sync (integrations-protocol §3)
 assets: { budget: <N jobs|off>, manifest: <planning-manifest path> } # optional; default 12; copied/adopted into target by build
 acceptance:
@@ -366,6 +390,7 @@ acceptance:
   devops:     [ { id, assert, weight, traces } … ]
   monitoring: [ { id, assert, weight, traces } … ]
   hardening:  [ { id, assert, weight, traces } … ]        # SECURITY + PERFORMANCE layers
+  data:       [ { id, assert, weight, traces } … ]        # data-architecture properties; traces data:<group>; gated like logic
 ```
 - `name`, `summary`, `stack` — the **Phase 2b decision**, never a hint copied through: every
   component pinned to a major, `decision:` pointing at the record dir (the `stack` gate re-runs on
@@ -377,8 +402,11 @@ acceptance:
   `references/design-protocol.md`); `dislikes` are the directions/patterns the client rejected in the
   artifact-reaction loop (the direction protocol keeps them out). `build` adopts this as the project's
   `DESIGN.md` via `/forge:design system`. Omit/`generate` if none chosen.
-- `acceptance:` block with **all six dimensions** — `logic`, `functional`, `ux`, `devops`,
-  `monitoring`, `hardening` — each a list of `{id, assert, weight, traces}` derived directly from the
+- `data:` — the data architecture record from Phase 3: `{ source: file, ref: <run-dir>/DATA.md, kind }`.
+  `build` adopts it as the project's `DATA.md`; `generate` only when the target keeps no durable
+  data of its own (recorded as an `A-n` with its reason).
+- `acceptance:` block with **all seven dimensions** — `logic`, `functional`, `ux`, `devops`,
+  `monitoring`, `hardening`, `data` — each a list of `{id, assert, weight, traces}` derived directly from the
   acceptance criteria (Given/When/Then → a mechanical `assert`). Weight by MoSCoW (Must=2, Should=1).
   The **`logic` block** is one assertion per **golden vector** — `assert` states the exact
   `input → expected output` (e.g. "gross 30000 semi-monthly → SSS EE 675, withholding 1158.33, net …")
@@ -400,7 +428,14 @@ acceptance:
   list+CRUD, form/wizard, POS, settings, auth, onboarding/empty — protocol §2). The
   **`hardening` block spans two layers** — **security** (secrets, headers, input validation,
   per-resource authZ, OWASP Top 10) and **performance** (p95 latency SLO, no N+1, pagination, caching,
-  Core Web Vitals) — so a build is "safe to expose" only when it is also fast under load.
+  Core Web Vitals) — so a build is "safe to expose" only when it is also fast under load. The
+  **`data` block** carries one row per applicable `DATA.md` group, each tracing its NFR **and**
+  `data:<group>` (canonical rows in `references/data-intensive-protocol.md` §6): the pinned load model
+  reached, `DATA_SLO: PASS` under an open arrival-rate run, `DATA_INDEXES: PASS` on the hot queries,
+  no lost update / exactly one winner under concurrency, the idempotent retry, durable acknowledged
+  writes, `MIGRATION_SAFETY: PASS`, the restore drill within RPO/RTO (and replica lag + read-your-writes
+  when replicated), `DATA_RECONCILE: PASS` + freshness per derived dataset, and erasure that leaves no
+  copy. `data` rows are must-pass: while any is red `build`'s headline is capped at 0.50.
 - Security assertions include the applicable negative scenarios from the reviewed threat model.
   Cross-user/tenant checks exercise direct API access, lists, downloads/exports and mutations;
   hiding a button is not authorization. Every security assertion joins the build's planned audit
@@ -419,7 +454,9 @@ acceptance:
   the shipped seam dir — first existing of `${CLAUDE_PLUGIN_ROOT}/skills/forge/scripts/`,
   `.claude/skills/forge/scripts/`, or repo `scripts/`; for a computational domain
   — payroll, accounting, POS, billing — run it with `REQUIRE_LOGIC=1` so a missing `logic` block is a
-  hard failure). **Always run it with `REQUIRE_STACK_DECISION=1`** so a spec whose `stack.decision`
+  hard failure; for every target that keeps its own durable data run it with **`REQUIRE_DATA=1`** so a
+  missing or untraced `data` block is a hard failure — the exemption is a recorded `A-n`, never a
+  default). **Always run it with `REQUIRE_STACK_DECISION=1`** so a spec whose `stack.decision`
   is missing, BLOCKED (evidence or approval missing/stale) or still carries `NEEDS CLARIFICATION` is
   INVALID. It MUST print `VALIDATION: VALID` (all five operational dimensions present + weighted;
   any declared `logic` block carries ≥1 `gate: true` golden row; `stack_decision=ready`). If `INVALID`, fix the flagged
@@ -472,7 +509,10 @@ Lead with the plain-language agreed scope, key decisions/exclusions and how the 
 and run. Link the approved client review, the SRS and its designed document (`requirements.pdf`:
 pages, diagrams rendered / total, images — or the HTML and why no PDF). Then print: # functional reqs, # NFRs (by dimension), MoSCoW counts, **provenance counts (stated /
 derived-domain / default-confirmed — zero open)**, must-be checklist disposition tally, # scenarios +
-# wireframes reacted to with the `WIREFRAMES:` verdict line and # references swept, **the stack decision** (`STACK_DECISION` verdict, the recommended option's
+# wireframes reacted to with the `WIREFRAMES:` verdict line and # references swept, **the data
+architecture** (`DATA_LINT` verdict, the pinned peak load and p50/p95/p99 SLO, # derived datasets with
+their freshness budgets, # personal-data items and the erasure SLA, groups marked n/a with their
+reasons), **the stack decision** (`STACK_DECISION` verdict, the recommended option's
 Y-statement, confidence + robustness, # candidates / # drivers / # sources by tier, the approval line
 — `approved` or `owner-mandated`, never "chosen by Forge"), generated spec path, validation verdict,
 and the `/forge:build` invocation. Open assumptions mean the draft is unfinished; list them with the next needed answer,

@@ -12,12 +12,18 @@ testing → deployment → operations/maintenance), not a one-shot scaffold. Eve
 gate carrying its **named deliverable** (project charter, feasibility verdict, SRS + RTM, HLD/LLD +
 `DESIGN.md`, source + CI, test plan/summary, release notes + user manual, runbook) — kept
 **agile-right-sized**: just-enough living artifacts, never phase-gate tomes. This is the dedicated
-command the orchestrator hands `build-feature` greenfield scope to. "Done" is **passing acceptance across six weighted dimensions** —
-**logic 0.30** · functional 0.30 · **ux 0.20** · devops 0.15 · monitoring 0.15 · hardening 0.20 — measured
+command the orchestrator hands `build-feature` greenfield scope to. "Done" is **passing acceptance across seven weighted dimensions** —
+**logic 0.30** · functional 0.30 · **ux 0.20** · devops 0.15 · monitoring 0.15 · hardening 0.20 · **data 0.20** — measured
 by `scripts/score-build.sh pass-rate`. **`logic` is first-class for complex, multi-rule domains**
 (payroll, accounting, POS): business-rule computations are pinned to **golden cases** (exact
 `input → expected output`) and are **must-pass** — while any `logic` row is red the pass-rate is
-**capped at 0.50**, so a build can never ride ux/devops polish to "done" with wrong math. UI/UX is also
+**capped at 0.50**, so a build can never ride ux/devops polish to "done" with wrong math. **`data` is
+first-class for every system that keeps its own durable data** (`references/data-intensive-protocol.md`,
+the DDIA 2nd-edition decision procedure): the load model and response-time percentiles under an open
+load, indexed hot paths, no lost update, idempotent retries, expand/contract migrations, a measured
+restore drill, derived data that reconciles with its system of record, and erasure that reaches every
+copy — gated under the same 0.50 cap (`data_gate`), so an app that can lose, corrupt or leak data never
+converges on polish. UI/UX is also
 first-class: a working-but-ugly or inaccessible app is capped, never shipped as "done". A **seed-only
 demo** — pre-seeded read-only data with no create/persist path, or a store that resets on restart — is
 likewise **not "done"**: a real product runs on the user's **own, durably-persisted data** (accounts,
@@ -33,6 +39,8 @@ re-reads `requirements.md` and confirms every **goal (G-n) + FR + NFR** is genui
 exercise — not merely traced. **Self-contained** — the SDLC phase-gate table + principles are folded in
 at the end of this doc. Companion contracts: `references/uiux-checklist.md`,
 `references/design-protocol.md` (visitor modes, direction protocol, DESIGN.md schema, craft floor, design QA),
+`references/data-intensive-protocol.md` (the eight data decisions, `DATA.md` schema, the mechanical
+data metrics and the `data` dimension's canonical rows),
 `references/fullstack-hardening-checklist.md`, `references/integrations-protocol.md` (optional MCP
 families: generative media for real imagery/animation/3D, Figma-class design bridge, Linear-class
 tracker sync — availability-gated, degrade to the named fallback).
@@ -241,6 +249,10 @@ Extract from $ARGUMENTS:
   e.g. `linear`), a file path, a URL — a **Figma URL** routes through the design bridge
   (integrations-protocol §2: variables/components/frames → DESIGN.md) — or `generate`. Default:
   the spec's `design:` block, else generate.
+- `Data:` / `--data` — DATA.md source: the requirements run's draft (`forge/requirements-…/DATA.md`),
+  another file path, or `generate` (derive it from the SRS per `references/data-intensive-protocol.md`
+  §2-§4). Default: the spec's `data:` block, else generate. The eight decisions it records are
+  the owner's (`A-n`); `generate` fills the record from them, never invents load numbers or SLOs.
 - `Tracker:` / `--tracker` — `github` (default) | `linear` (arms tracker sync, integrations-protocol §3).
 - `Host:` / `--host` — `github` (default) | `gitlab`: where the output repo lives (`references/host-protocol.md`).
 - `Assets: N|off` — generation-attempt budget (default 12 when suitable native/MCP tools are available;
@@ -362,8 +374,25 @@ Design the system **and** the interface before coding:
   what the `logic` golden cases assert. The **state machines + decision flowcharts from requirements**
   drive the engine's control flow — implement one transition/branch at a time, each with its golden
   case. The engine is implemented and golden-tested before any UI.
-- **Database design** — the concrete schema/ER + a forward-only migration plan derived from the
-  domain model.
+- **Data architecture — `DATA.md` via `references/data-intensive-protocol.md`** — the machine-readable
+  data record beside `DESIGN.md`, adopted from the requirements draft (`Data:` arg → the spec's
+  `data:` block → else generate from the SRS, never from invented numbers). Its eight groups are the
+  decisions every data system must make (protocol §2): **workload** (peak reads/s, writes/s,
+  concurrency, volume, growth, hot keys), **slo** (client-side p50/p95/p99, error ratio, window, an
+  *open* arrival-rate load model), **model** (relational / document / graph / event log … by the shape
+  of the relationships; the store; one index per hot access pattern naming the query it serves),
+  **integrity** (the isolation level actually in force; every read-modify-write with its invariant and
+  technique — atomic update, `SELECT FOR UPDATE`, compare-and-set, a uniqueness or check constraint,
+  serializable for phantoms; the end-to-end idempotency key), **evolution** (backward + forward
+  compatibility, expand/contract migrations, the encoding), **durability** (replication and its lag
+  budget and read-your-writes rule, failover, backup with RPO/RTO), **derived** (every cache, index,
+  view, export or model with its source, change-stream mechanism, freshness and reconcile check —
+  dual writes forbidden) and **retention** (personal data with purpose and retention, erasure that
+  reaches every copy within ≤ 30 days). The concrete schema/ER, the migrations plan (expand/contract)
+  and the `## Systems of record and derived data` and `## Trade-offs` prose complete it. Gate:
+  `node scripts/data-score.cjs lint DATA.md` → **`DATA_LINT: VALID`**. Every applicable group is
+  traced by ≥1 `data` acceptance row (`data:<group>`, canonical rows in protocol §6):
+  `scripts/score-build.sh coverage build-results.tsv requirements.md DATA.md` → **`DATA_COVERAGE: 1.00`**.
 - **Adopt a `DESIGN.md` via the direction protocol** — run `/forge:design system` (inline; same
   run dir) per `references/design-protocol.md` §3: read the room (audience, scene, **visitor mode**
   per surface — Operate for app UI, Persuade for the landing page — brand assets, the client's
@@ -420,13 +449,15 @@ Design the system **and** the interface before coding:
 **Gate:** `DESIGN.md` committed with `DESIGN_LINT: VALID` + design tokens derived from it; full design
 traceability — `scripts/score-build.sh coverage` reports `DESIGN_COVERAGE: 1.00`, i.e. every DESIGN.md
 token group (`design:type` · `design:color` · `design:spacing` · `design:radius` · `design:motion` ·
-`design:states` · `design:floor`) is traced by ≥1 `ux` acceptance row (orphan token = gate FAIL).
-(Reuse `reason` to pick between options.)
+`design:states` · `design:floor`) is traced by ≥1 `ux` acceptance row (orphan token = gate FAIL);
+`DATA.md` committed with `DATA_LINT: VALID` and `DATA_COVERAGE: 1.00` (every applicable data group
+traced by ≥1 `data` row; a trace to an n/a group is an orphan). (Reuse `reason` to pick between options.)
 
 ## Phase 5 — Implementation (TDD)
 Build in a **red → green** TDD ladder, one slice per iteration. Pick the lowest-scoring dimension
-first — **but the gating `logic` dimension is attacked before ops/UX polish** while it has red rows,
-since the pass-rate is capped at 0.50 until every golden case is green. Every slice climbs the
+first — **but the gating `logic` and `data` dimensions are attacked before ops/UX polish** while they
+have red rows, since the pass-rate is capped at 0.50 until every golden case and every data-architecture
+row is green. Every slice climbs the
 **ponytail ladder** before a line is written — shortest working diff, fewest files, `ponytail:`
 markers on deliberate ceilings. Order within a build:
 1. **Scaffold** — skeleton, dependency manifest, linter/formatter, test runner.
@@ -435,18 +466,32 @@ markers on deliberate ceilings. Order within a build:
    **end-to-end golden case** that runs real input through the live app path and asserts the same
    number — this proves the engine is **wired in**, catching "function defined but never called" (the
    classic multi-rule failure). The engine is green before the functional shell leans on it.
-3. **Functional (real product, not a demo)** — wire the app to the **real datastore end-to-end**
+3. **Data (the architecture record made true, protocol §5-§6)** — the system of record first: schema
+   + constraints as declared in `DATA.md` (`unique`, `check`, foreign keys — the database enforces
+   invariants, never only the app), durable acknowledged writes (fsync/WAL; a `SIGKILL` + restart test),
+   the idempotency key stored in the same transaction as its effect, one concurrent test per
+   `integrity.transactions` entry (lost update, write skew/phantom, uniqueness under concurrency),
+   expand/contract migrations (`node scripts/data-score.cjs migrations <dir>` → `MIGRATION_SAFETY:
+   PASS`), the index per hot access pattern (`EXPLAIN` → `DATA_INDEXES: PASS`), each derived dataset's
+   consumer (outbox / CDC / batch job — the only writer of the derived store) with its reconcile
+   command, the deletion path that purges every copy, and the retention purge job. The datastore
+   decisions (engine, isolation level, replication) come from the approved stack record, never
+   re-argued here.
+4. **Functional (real product, not a demo)** — wire the app to the **real datastore end-to-end**
    (UI → API → DB + migrations); data created in the UI **persists** (survives a restart). Build the
    **full CRUD** surface (create / edit / delete) for each core entity, **accounts + auth**, **settings**
    (account + org), and **onboarding** so a **fresh account/tenant starts EMPTY** and creates its own
    data. Seeded rows are **fixtures for tests only — never the app's only data path** (an in-memory /
    seed-only store that resets is a demo, not a product). Frontend wired to the design system → tests green.
-4. **DevOps** — multi-stage **Dockerfile** (non-root, `HEALTHCHECK`), compose/IaC, CI (lint+test+build+dep-scan)
+5. **DevOps** — multi-stage **Dockerfile** (non-root, `HEALTHCHECK`), compose/IaC, CI (lint+test+build+dep-scan)
    shaped per `references/ci-protocol.md` — parallel jobs, cached dependencies and browsers, sharded e2e,
    **≤ 8 min wall-clock** on the output repo — release automation (`semver.cjs init` once CI exists — "Output repository"),
    forward-only migrations, `SIGTERM` graceful shutdown, env config + `.env.example`.
-5. **Monitoring** — `/healthz`, `/readyz`, `/metrics` (Prometheus), structured JSON logs, trace/correlation IDs.
-6. **UX** — implement the design system under the surface's **visitor-mode rules** (protocol §1:
+6. **Monitoring** — `/healthz`, `/readyz`, `/metrics` (Prometheus: a request-duration **histogram** —
+   buckets, never pre-averaged percentiles — plus replication lag, consumer lag / oldest unprocessed
+   event age, derived-data freshness, dead-letter depth where the data record declares them),
+   structured JSON logs, trace/correlation IDs.
+7. **UX** — implement the design system under the surface's **visitor-mode rules** (protocol §1:
    Operate = earned familiarity, restrained color, one family, 150–250 ms state motion only, no
    modal-first) and archetype patterns (§2); responsive layouts; **accessibility** (WCAG 2.2 AA:
    labels, contrast, keyboard nav incl. dialogs, focus visible + not obscured, aria, ≥24px targets);
@@ -454,13 +499,15 @@ markers on deliberate ceilings. Order within a build:
    **craft floor** loaded before editing UI (protocol §5) — no emoji icons, no kicker on every
    heading, no nested cards, no reflex palette; run `design-scan.cjs` on the touched routes before
    the slice is measured.
-7. **Hardening (security + performance layers)** —
+8. **Hardening (security + performance layers)** —
    - **Security layer** — no hardcoded **secret**s; security headers (CSP/HSTS/X-CTO/X-Frame); input
      validation at the boundary; authN + **per-resource** authZ (no IDOR); CSRF + SSRF guards;
      rate-limiting; dependency scan clean; secrets redacted from logs; TLS-ready. Reuse
      `/forge:security` for an **OWASP Top 10** pass (`references/security-checklist.md`).
-   - **Performance layer** — meet the **p95 latency SLO under expected load** (load test: k6 /
-     autocannon / locust); **no N+1** (JOIN/batch); every collection endpoint **paginated + bounded**
+   - **Performance layer** — meet the **response-time SLO under the pinned load** — p50/p95/p99 from
+     client-side samples under an **open, arrival-rate** load model at the `DATA.md` peak (k6
+     `constant-arrival-rate`; a closed loop hides the tail — coordinated omission), scored by
+     `data-score.cjs slo` → `DATA_SLO: PASS`; **no N+1** (JOIN/batch); every collection endpoint **paginated + bounded**
      (`LIMIT`/cursor); indexes on hot filter/join/sort columns; **caching** on expensive reads with
      correct invalidation; response compression; frontend **bundle budget + Core Web Vitals**
      (LCP/CLS/INP) measured via Playwright.
@@ -507,9 +554,20 @@ IEEE-829-style incident report, right-sized to its `iterations.tsv` line.
   critique. Require both motion profiles on every applicable route × viewport, and a keyboard e2e
   assertion of the actual task outcome (`design:motion`). Inspect normal/reduced captures and verify
   image decoding, intrinsic dimensions, alt text and loading. Map provenance to `hardening` and
-  actual file/initial-payload budgets to `devops`; preserve the six dimensions and seven design tags.
-- **Performance** — run a **load test** (k6 / autocannon / locust) asserting the p95 latency SLO and
-  **zero N+1** on the primary flows; check frontend bundle budget + Core Web Vitals via Playwright.
+  actual file/initial-payload budgets to `devops`; preserve the seven dimensions, seven design tags and eight data groups.
+- **Performance** — run a **load test** under an **open arrival-rate model** at the `DATA.md` peak
+  (k6 `constant-arrival-rate`, `summaryTrendStats` incl. `p(99)`; `dropped_iterations` must be 0) and
+  score it: `node scripts/data-score.cjs slo k6-summary.json --data DATA.md` → `DATA_SLO: PASS`
+  (p50/p95/p99 and the error ratio within the SLO, n ≥ `samples_min`); **zero N+1** on the primary
+  flows; check frontend bundle budget + Core Web Vitals via Playwright.
+- **Data (the data-intensive protocol §5 metrics)** — the `data` rows run and leave evidence under
+  `evidence/data/`: `DATA_INDEXES: PASS` over `EXPLAIN` plans of every `model.indexes` query; the
+  concurrent anomaly tests (lost update, write skew/phantom, uniqueness) and the idempotent-retry test
+  (same key twice, and after a crash between commit and ack → one effect); acknowledged writes survive
+  `SIGKILL`; `MIGRATION_SAFETY: PASS`; the restore drill (`operational.cjs recovery` → `RECOVERED`
+  within RPO/RTO with equal counts and digests); replication lag within `lag_budget_s` and
+  read-your-writes when replicated; `DATA_RECONCILE: PASS` and freshness ≤ `freshness_s` per derived
+  dataset; the erasure test (zero residual references in every store) and the retention purge test.
 - **Security (mandatory completion gate)** — run `/forge:security` on this candidate, with High or
   stricter failure threshold, the baseline from `references/fullstack-hardening-checklist.md`, and
   every applicable security acceptance assertion. Include real negative tests for access, session
@@ -529,7 +587,8 @@ pyramid (scope, approach, item pass/fail criteria); **test cases** are the execu
 **defect reports** are the Defect Loop's records; the **Test Summary Report** is the final
 per-dimension breakdown (written into `evals-summary.md` / the Summary).
 **Gate:** every layer green; coverage ≥ floor; e2e + axe clean; UI conforms to `DESIGN.md`
-(`SLOP_GATE: PASS`, no design drift), the design audit's verdict is `SHIP`, and security readiness PASS.
+(`SLOP_GATE: PASS`, no design drift), the design audit's verdict is `SHIP`, every `data` row green
+(`data_gate=PASS`), and security readiness PASS.
 
 ## Phase 7 — Deployment
 Write the release deliverables, then hand to `forge:ship` (8-phase: checklist → dry-run →
@@ -549,7 +608,10 @@ generated `CHANGELOG.md`.
 The SDLC is a **cycle** — maintenance feeds back into planning. Build's share is docs + wiring (build
 never operates prod):
 - **Runbook** (`RUNBOOK.md`) — boot/stop commands, the health (`/healthz`, `/readyz`) + `/metrics`
-  endpoints to watch, datastore backup/restore, common failures → fixes, log locations +
+  endpoints to watch, datastore backup/restore (the drill command, its cadence and the measured
+  RPO/RTO), the data dashboards (request-duration histogram, replication lag, consumer lag and
+  derived-data freshness against their `DATA.md` budgets), the reconcile and purge commands and what
+  to do when they fail ("If I do X, Y will happen"), common failures → fixes, log locations +
   correlation-ID usage. Every command/endpoint named in it is **verified against the running app**.
 - **Security operations** — access-removal/key-rotation procedure, patch ownership, security alerts
   with redacted data, incident contact and a restore exercise using test data. Record what production
@@ -570,9 +632,9 @@ iteration:
 
 1. **Read before write** — read `build-results.tsv` + `git log`/`git diff` of recent `experiment:`
    commits to see what's been tried, what worked, what regressed; pick the lowest-scoring dimension
-   that still has red rows — **but while any `logic` (golden) row is red, fix it first**: the headline
-   pass-rate is capped at 0.50 until the `logic` dimension is 100% green, so logic is the only
-   dimension that lifts the ceiling.
+   that still has red rows — **but while any `logic` (golden) or `data` (architecture) row is red, fix
+   it first**: the headline pass-rate is capped at 0.50 until both gated dimensions are 100% green, so
+   they are the only dimensions that lift the ceiling.
 2. **One change** — make ONE focused slice: the **shortest working diff** that turns the target row
    green (ponytail ladder — skip / reuse / stdlib / native / installed dep before new code; fewest
    files). Atomic: if it breaks, you know exactly which change did it.
@@ -598,7 +660,8 @@ iteration:
    insertions + deletions from `git diff --shortstat HEAD~1..HEAD`, and the ponytail line
    `skipped: X, add when Y`) to `iterations.tsv`.
 7. **Repeat** until (`pass-rate --strict-evidence >= Target-rate` **AND** `logic_gate == PASS` **AND**
-   `REQ_COVERAGE == 1.00` **AND** `DESIGN_COVERAGE == 1.00` **AND** `SLOP_GATE == PASS` with
+   `data_gate == PASS` **AND** `REQ_COVERAGE == 1.00` **AND** `DESIGN_COVERAGE == 1.00` **AND**
+   `DATA_COVERAGE == 1.00` (when the spec carries a `data:` block) **AND** `SLOP_GATE == PASS` with
    `DESIGN_VERDICT: SHIP` **AND** security readiness PASS **AND** the requirement-satisfaction audit
    passes **AND** `scripts/score-build.sh bound iterations.tsv <N>` prints `BOUND: OK`) or the bound
    (`Iterations: N`, default 40) is reached — **bounded by default**; `Iterations: unlimited` opts out.
@@ -635,7 +698,12 @@ Two **structural** gates close that gap — both mechanical counts (not judgemen
 - **`DESIGN_COVERAGE`** = (DESIGN.md token groups traced by ≥1 `ux` row) ÷ (total groups — seven:
   type · color · spacing · radius · motion · states · **floor**). Must be `1.00` from the Phase 4 gate
   onward.
-- **`traces` column** (TSV col 7, comma-separated `FR-n`/`NFR-n`/`design:<group>`; the `detail` col may
+- **`DATA_COVERAGE`** = (applicable DATA.md groups traced by ≥1 `data` row) ÷ (applicable groups —
+  up to eight: workload · slo · model · integrity · evolution · durability · derived · retention; a
+  group declared `{ na: <reason> }` leaves the universe and a trace to it is an orphan). Printed when
+  `DATA.md` is named as the third argument (or `BUILD_DATA_MD`), computed by `data-score.cjs
+  coverage`. Must be `1.00` from the Phase 4 gate onward for every data-intensive build.
+- **`traces` column** (TSV col 7, comma-separated `FR-n`/`NFR-n`/`design:<group>`/`data:<group>`; the `detail` col may
   be empty but the tab must be present) — every acceptance row names what it satisfies. The reverse is
   enforced too: a trace pointing to a requirement/token that does not exist is an **invented** assertion
   (`orphan_traces`) and fails the gate — delete or re-point it.
@@ -658,9 +726,11 @@ can re-run the scorer on the stored ledger and check every pass row's evidence f
   the anchored localhost/_test allowlist. No real secrets — throwaway dev creds via env, never committed.
 
 ## Summary
-Print: final pass-rate, **logic_gate (PASS|CAPPED)**, **REQ_COVERAGE + DESIGN_COVERAGE**, **`SLOP` +
-`SLOP_GATE` + `DESIGN_VERDICT`** (the design QA line), per-dimension
-scores (incl **logic** + **ux**), assertions green/total, **security PASS|FAIL|BLOCKED with evidence and
+Print: final pass-rate, **logic_gate (PASS|CAPPED)**, **data_gate (PASS|CAPPED|n/a)**, **REQ_COVERAGE +
+DESIGN_COVERAGE + DATA_COVERAGE**, **`SLOP` + `SLOP_GATE` + `DESIGN_VERDICT`** (the design QA line), **the
+data line** (`DATA_LINT`, `DATA_SLO` with its p50/p95/p99 and n, `DATA_INDEXES`, `MIGRATION_SAFETY`,
+`DATA_RECONCILE` per derived dataset, the restore drill's measured RTO/RPO), per-dimension
+scores (incl **logic**, **data** + **ux**), assertions green/total, **security PASS|FAIL|BLOCKED with evidence and
 untested production assumptions**, **requirement-satisfaction audit verdict**,
 phases completed (of the 8 SDLC phases), iterations used, kept vs discarded slices, total `loc_delta`
 + **ponytail debt rows** harvested into `DEBT.md`, build output
@@ -678,7 +748,8 @@ recommend a spec/stack/design rethink. At loop end → `evals-summary.md` in the
 ## Chain Handoff
 Write handoff.json: version "3.3.0", source "build", timestamp, status
 (COMPLETE|BOUNDED|CONVERGED|BLOCKED|USER_INTERRUPT|ERROR), results_tsv, metric (fullstack_pass_rate),
-coverage{requirements, design}, design{lint, slop, verdict, design_md}, phases_completed, findings = remaining red
+coverage{requirements, design, data — when DATA.md exists}, design{lint, slop, verdict, design_md},
+data{lint, data_md, slo, gate} (optional, additive), phases_completed, findings = remaining red
 assertions + untraced requirements/tokens + open design defects + ponytail debt rows, config{spec,
 scope, stack, stack_decision: <decision-directory path>, target_rate}.
 For COMPLETE/CONVERGED, include the existing typed `security` record from the current audit, with
@@ -707,10 +778,10 @@ living — never heavyweight documents for their own sake.
 | 1 | **Planning / Initiation** | `plan`, `predict` | **Project charter** (`charter.md`): vision, in/out scope, stakeholders/ICP, iteration budget, risk register | charter committed with objectives, in/out scope, iteration budget, ≥3 risks + mitigations; build target dir resolved (never the skill repo) |
 | 2 | **Feasibility** | `requirements` Phase 2b (stack decision) | **Feasibility verdict** in `charter.md` (spike results: technical, **stack confirmation**, operational, schedule, licensing) + the **stack ADR bundle** (`docs/adr/0001-tech-stack/`) | toolchain spike boots (runtime + DB/docker + Playwright); `score-requirements.sh stack` returns `STACK_DECISION: READY` and the pre-registered spike thresholds are met (≥5 runs, results in `confirmation-results.md`; a miss supersedes the decision → owner re-approval); acceptance-size vs iteration budget sane; licenses permissive; verdict **GO** with stack pinned (NO-GO → re-scope with the user) |
 | 3 | **Requirements Analysis** | `probe`, `predict` | **SRS** (`requirements.md`, IEEE 830 / ISO 29148-shaped) + **RTM** (the `traces` column + coverage report) | every requirement carries a stable `FR-`/`NFR-` ID; **for logic-heavy domains, logic diagrams (ER + state machines + sequence + decision flowcharts) with every state transition / decision branch mapped to a golden vector**; every acceptance assertion enumerated + tagged `dimension`+`weight`+`traces`; `REQ_COVERAGE == 1.00` (every ID traced, no orphan assertion); baseline `build-results.tsv` seeded (`fail`) → pass-rate `0.00` |
-| 4 | **Design** | `design system`, `reason` | **HLD** (architecture) + **LLD** (domain engine + rule matrix, diagrams) + **DB schema** + **UI/UX system** (`DESIGN.md` via the direction protocol + tokens + the `## Navigation` route table, which is the wireframes deliverable, `ROUTES: PARITY`) | `DESIGN.md` (architecture: modules, data model, API contract; **for logic-heavy domains, a pure calculation engine + the rule matrix with citations**) **and** UI/UX design system (visitor mode per surface; machine-readable tokens: type, color+contrast pairs, spacing, radius, motion, component states; `DESIGN_LINT: VALID`; wireframes) committed; `DESIGN_COVERAGE == 1.00` (every token group incl. `design:floor` traced by ≥1 `ux` assertion) |
-| 5 | **Implementation** | TDD ladder | **Source code + build artifacts + CI** (lint, tests, container) | domain engine built first and **every `logic` golden case green** (incl one end-to-end case proving it is wired in); each accepted slice turns a red assertion green; guard green; no green→red regression; the app is wired to a **real persisted datastore** (UI→API→DB) with full CRUD + accounts + settings + onboarding (**fresh account starts empty**), not a seed-only/in-memory demo; headline pass-rate stays capped at 0.50 until the `logic` gate clears |
+| 4 | **Design** | `design system`, `reason` | **HLD** (architecture) + **LLD** (domain engine + rule matrix, diagrams) + **data architecture** (`DATA.md` via the data-intensive protocol: the eight decisions, schema, expand/contract migrations plan) + **UI/UX system** (`DESIGN.md` via the direction protocol + tokens + the `## Navigation` route table, which is the wireframes deliverable, `ROUTES: PARITY`) | `DESIGN.md` (architecture: modules, data model, API contract; **for logic-heavy domains, a pure calculation engine + the rule matrix with citations**) **and** `DATA.md` (`DATA_LINT: VALID`; `DATA_COVERAGE == 1.00` — every applicable data group traced by ≥1 `data` assertion) **and** UI/UX design system (visitor mode per surface; machine-readable tokens: type, color+contrast pairs, spacing, radius, motion, component states; `DESIGN_LINT: VALID`; wireframes) committed; `DESIGN_COVERAGE == 1.00` (every token group incl. `design:floor` traced by ≥1 `ux` assertion) |
+| 5 | **Implementation** | TDD ladder | **Source code + build artifacts + CI** (lint, tests, container) | domain engine built first and **every `logic` golden case green** (incl one end-to-end case proving it is wired in); each accepted slice turns a red assertion green; guard green; no green→red regression; the app is wired to a **real persisted datastore** (UI→API→DB) with full CRUD + accounts + settings + onboarding (**fresh account starts empty**), not a seed-only/in-memory demo; the data rows (durable acks, constraints + idempotency, safe migrations, indexed hot paths, derived consumers, erasure) built before polish; headline pass-rate stays capped at 0.50 until the `logic` and `data` gates clear |
 | ‡ | **Defect loop (debugging — cross-phase, inside 5–6)** | `debug` | **Defect records** (symptom → root cause → fix, in `iterations.tsv`) | every failing assertion traced to a **root cause** before a fix lands (iron law: no symptom patches) |
-| 6 | **Testing** | — | **Test plan** (acceptance TSV + pyramid) + **test cases** (suites) + **Test summary report** (`evals-summary.md`) | test pyramid green: **golden oracle (every rule-matrix vector + edge cases, incl end-to-end)** + unit + integration + e2e (Playwright) + accessibility (axe) + **design QA (`SLOP_GATE: PASS`, DESIGN.md conformance, heuristic critique, `DESIGN_VERDICT: SHIP`)** + **load/perf (p95 SLO, no N+1)** + **security (OWASP Top 10)** + **real-product (anti-demo): a UI-created record persists across a restart, a fresh account starts empty, CRUD + settings round-trip**; **requirement-satisfaction audit — every goal/FR/NFR exercised end-to-end in the live app, no user-facing FR met by an engine/unit test alone**; coverage ≥ floor (80%) |
+| 6 | **Testing** | — | **Test plan** (acceptance TSV + pyramid) + **test cases** (suites) + **Test summary report** (`evals-summary.md`) | test pyramid green: **golden oracle (every rule-matrix vector + edge cases, incl end-to-end)** + unit + integration + e2e (Playwright) + accessibility (axe) + **design QA (`SLOP_GATE: PASS`, DESIGN.md conformance, heuristic critique, `DESIGN_VERDICT: SHIP`)** + **load/perf (`DATA_SLO: PASS` — p50/p95/p99 under an open arrival-rate load, no N+1)** + **data (concurrency anomalies, idempotent retry, durable acks, `MIGRATION_SAFETY`, restore drill within RPO/RTO, `DATA_RECONCILE` + freshness per derived dataset, erasure + retention purge)** + **security (OWASP Top 10)** + **real-product (anti-demo): a UI-created record persists across a restart, a fresh account starts empty, CRUD + settings round-trip**; **requirement-satisfaction audit — every goal/FR/NFR exercised end-to-end in the live app, no user-facing FR met by an engine/unit test alone**; coverage ≥ floor (80%) |
 | 7 | **Deployment** | `ship` | **Deployment/release plan** + **Release notes** (`RELEASE_NOTES.md`) + **user manual** (quickstart) | checklist → dry-run → deploy → verify + canary — **human-gated**, never automatic |
 | 8 | **Operations / Maintenance** | `feature`, `fix`, `improve` | **Runbook** (`RUNBOOK.md`) + **change-request path** (handoff to feature/fix/improve) | runbook committed with commands/endpoints **verified against the running app**; maintenance path in handoff — the cycle feeds back into planning |
 
@@ -748,6 +819,13 @@ living — never heavyweight documents for their own sake.
   (`input → exact output`) + boundary/interaction edge cases + one end-to-end case (catching "defined
   but never called"). `logic` is **must-pass**: the headline pass-rate is capped at 0.50 until every
   golden case is green, so a complex domain cannot converge "done" on shallow or disconnected math.
+- **Data architecture precedes persistence code — and it is gated.** `DATA.md` (`DATA_LINT: VALID`)
+  records the eight decisions of `references/data-intensive-protocol.md` before the first table is
+  created: the load and its SLO as percentiles under an open load, the model and its indexes by
+  access pattern, the invariants and the technique that protects each, expand/contract evolution,
+  durability with measured RPO/RTO, derived data with a single writer and a reconcile check, and
+  retention with erasure that reaches every copy. Its `data` rows are must-pass under the 0.50 cap:
+  software + data means an app that loses, corrupts or leaks data is not "done" however polished.
 - **Design precedes UI code — and the floor is mechanical.** The design system (mode-aware tokens +
   states, `DESIGN_LINT: VALID`) is committed before frontend slices, so UX is built to a spec; the
   craft floor (`design-scan.cjs` → `SLOP_GATE`) and the design audit's verdict make the `ux`
@@ -770,14 +848,16 @@ living — never heavyweight documents for their own sake.
 
 ## Mapping to the metric
 Phases 5–6 (with the cross-phase defect loop) drive `fullstack_pass_rate` (logic + functional + ux +
-devops + monitoring + hardening). The
-**`logic` dimension is gated** — while any business-rule golden case is red the pass-rate is capped at
-0.50, so domain correctness is a precondition for convergence, not a tradeable component. Phases 1–4
+devops + monitoring + hardening + data). The
+**`logic` and `data` dimensions are gated** — while any business-rule golden case or any
+data-architecture row is red the pass-rate is capped at 0.50, so domain correctness and data integrity
+are preconditions for convergence, not tradeable components. Phases 1–4
 produce the artifacts (`charter.md` incl the feasibility verdict, `requirements.md` incl the rule
-matrix + golden vectors, `DESIGN.md`, tokens)
+matrix + golden vectors, `DATA.md`, `DESIGN.md`, tokens)
 the rubric + gates check; Phases 7–8 are post-convergence + human-gated. Convergence also requires
-`logic_gate == PASS`, `REQ_COVERAGE == 1.00`, and `DESIGN_COVERAGE == 1.00`. A run reports
-`phases_completed`, `logic_gate`, `REQ_COVERAGE`, and `DESIGN_COVERAGE` in its handoff.
+`logic_gate == PASS`, `data_gate == PASS`, `REQ_COVERAGE == 1.00`, `DESIGN_COVERAGE == 1.00` and
+`DATA_COVERAGE == 1.00`. A run reports `phases_completed`, `logic_gate`, `data_gate`, `REQ_COVERAGE`,
+`DESIGN_COVERAGE` and `DATA_COVERAGE` in its handoff.
 
 ## Hosting applicability at intake
 

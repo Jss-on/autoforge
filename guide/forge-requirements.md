@@ -219,6 +219,38 @@ Chrome or Edge the verdict is `EXPORT_UNAVAILABLE` and `requirements.html` — t
 in. `--source playback.md` renders the client review the same way; `--replace` re-renders after a change.
 The document is self-contained: no script, nothing fetched when it is opened.
 
+## 7. The data decisions are asked in plain words and written down as `DATA.md`
+
+Software + data: after the money rules, Forge runs a **data & scale** round from the
+[data-intensive protocol](../claude-plugin/skills/forge/references/data-intensive-protocol.md) — the
+decision procedure of Kleppmann & Riccomini's *Designing Data-Intensive Applications* (2nd ed.) in
+client language. How many people at the busiest moment and how much data in two years. How long the
+main screens may take typically and in the worst case you would still tolerate, and what share of
+requests may fail. Which rules must never break even for a moment (a unique receipt number, stock never
+below zero, no double booking) and which could be apologized for afterwards. What must never happen
+twice when someone clicks twice. How much saved work may be lost if a server dies and how fast service
+must return. Where else the data must appear (search, reports, the app on a phone) and how stale each
+copy may be. Which facts are about people, why each is kept, for how long, and within how many days a
+person who asks must be gone from every copy. Each answer is an `A-n` decision, and the ambiguity audit
+turns every adjective into a number with its load model — "fast" becomes "p95 under 400 ms at 46
+requests per second".
+
+The answers become `DATA.md`, the data twin of `DESIGN.md`: eight groups (workload · slo · model ·
+integrity · evolution · durability · derived · retention) in machine-readable form plus a page that
+says which store is the source of truth for each fact and what was rejected and why. It is linted
+before sign-off:
+
+```text
+node scripts/data-score.cjs lint forge/requirements-<run>/DATA.md
+DATA_LINT: VALID groups=8/8 na=0
+```
+
+A mean instead of percentiles, a closed-loop load model, a cache written by the application next to
+the database (a dual write) or a 90-day erasure promise fails the lint with the book's reason. The
+generated spec carries a `data:` block pointing at the record and a `data` acceptance row per group;
+`REQUIRE_DATA=1` makes the validator refuse a spec for a data-keeping product that lacks them. `build`
+then measures every decision (see the [build guide](forge-build.md)).
+
 ## Specify images, icons and UI motion
 
 ```text
