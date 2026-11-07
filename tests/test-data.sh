@@ -54,6 +54,13 @@ for ch in 1 2 3 4 5 6 7 8 9 10 11 12 13 14; do
   grep -qE "^### Chapter $ch " "$BOOKMAP" && pass "book map: chapter $ch mapped" || fail "book map: chapter $ch missing"
 done
 grep -q "data-intensive-book-map.md" "$PROTO" && pass "protocol §10 points at the book map" || fail "protocol does not reference the book map"
+! grep -q '| n/a |' "$BOOKMAP" && pass "book map: no section left as n/a" || fail "book map still has n/a rows"
+[[ $(grep -c '^| Summary (' "$BOOKMAP") -eq 14 ]] && pass "book map: a Summary row per chapter (14)" || fail "book map: expected 14 Summary rows"
+if [[ -n "${DDIA_PAGES_JSON:-}" && -f "${DDIA_PAGES_JSON}" ]]; then
+  BMV="$(node "$REPO_ROOT/tests/book-map-verify.cjs" "$DDIA_PAGES_JSON" "$BOOKMAP" 2>&1)" && pass "book map verified against the book's body text: $(printf '%s' "$BMV" | grep BOOK_MAP_VERIFY)" || fail "book map vs body text: $(printf '%s' "$BMV" | tail -3 | tr '\n' ' ')"
+else
+  pass "book map body-text check skipped (set DDIA_PAGES_JSON to the locally extracted pages to run it)"
+fi
 for m in "$REPO_ROOT/claude-plugin/skills/forge/references/data-intensive-book-map.md" \
          "$REPO_ROOT/.agents/skills/forge/references/data-intensive-book-map.md" \
          "$REPO_ROOT/plugins/forge/skills/forge/references/data-intensive-book-map.md" \

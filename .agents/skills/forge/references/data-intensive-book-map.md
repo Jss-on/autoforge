@@ -11,7 +11,7 @@ the book land?": each row names a home or says why the harness leaves it to the 
 - **guide** — protocol or command prose that shapes the design and the review (anti-pattern rows, phase text).
 - **research** — informs the §5 metric decision or the stack decision, not a rule of its own.
 - **stack** — decided by `references/stack-selection-protocol.md` (the datastore / hosting / topology choice), cited in `DATA.md`, never re-argued there.
-- **n/a** — engine or vendor internals the book explains so a reader can choose well; forge consumes the choice, not the internals.
+- Every row has one of the five homes above; no section is left as "not applicable". Engine and vendor internals are not re-implemented — their application-visible effect is what forge pins.
 
 ## Part I — Foundations of data systems
 
@@ -28,8 +28,9 @@ the book land?": each row names a home or says why the harness leaves it to the 
 | Operations in the cloud era (17) | `references/operational-recovery.md`, `RUNBOOK.md` (build Phase 8), monitoring rows | guide |
 | Distributed versus single-node systems; problems with distributed systems (19-21) | §0 "single machine first"; §2.1 shard only for volume or write throughput; Tier B5 | guide |
 | Microservices and serverless (21) | HLD module boundaries (build Phase 4); stack-selection "microservice/polyglot envy" failure-mode check | stack |
-| Cloud computing versus supercomputing (23) | HPC is outside the harness's targets | n/a |
+| Cloud computing versus supercomputing (23) | the fault model forge assumes: commodity nodes that fail partially and are replaced while the system keeps serving, never a whole-job checkpoint-restart (§2.6 fault model; the failover and restore rows) | guide |
 | Data systems, law, and society (24) | §2.8 retention, erasure reaching derived data and models, decisions about people | record |
+| Summary (25) | the chapter's rules in one place; each is a row above, and §0 restates the premises in design order | guide |
 
 ### Chapter 2 — Defining nonfunctional requirements (pp. 33-64)
 
@@ -46,6 +47,7 @@ the book land?": each row names a home or says why the harness leaves it to the 
 | Maintainability: operability (53) | `monitoring` rows (histogram, lag, freshness, dead letters); `RUNBOOK.md` | gate |
 | Simplicity: managing complexity (54) | ponytail discipline in `build`; `DEBT.md` | guide |
 | Evolvability: making change easy (55) | `evolution` group; metric row 6 | gate |
+| Summary (56) | the chapter's rules in one place; each is a row above, and §0 restates the premises in design order | guide |
 
 ### Chapter 3 — Data models and query languages (pp. 65-113)
 
@@ -60,6 +62,7 @@ the book land?": each row names a home or says why the harness leaves it to the 
 | GraphQL (98) | service API compatibility rules in §2.5 (requests backward-, responses forward-compatible) | guide |
 | Event sourcing and CQRS (101) | `model.primary: event log + derived views`; `derived.mechanism: event-log`; §2.7 deterministic, idempotent consumers | record |
 | DataFrames, matrices, and arrays (105) | `kind: analytical` workloads; ML features and models are derived data (§2.7) | guide |
+| Summary (107) | the chapter's rules in one place; each is a row above, and §0 restates the premises in design order | guide |
 
 ### Chapter 4 — Storage and retrieval (pp. 115-160)
 
@@ -72,6 +75,7 @@ the book land?": each row names a home or says why the harness leaves it to the 
 | Materialized views and data cubes (143) | every materialized view is a `derived.*` entry with source, mechanism, freshness, reconcile (§2.7) | record |
 | Multidimensional and full-text indexes; full-text search (145-146) | `model.primary: search` or a derived search index (`derived.product_search` in the worked example) | record |
 | Vector embeddings (147) | `model.primary: vector`; embeddings are derived data and inherit the deletion obligation (§2.8) | record |
+| Summary (150) | the chapter's rules in one place; each is a row above, and §0 restates the premises in design order | guide |
 
 ### Chapter 5 — Encoding and evolution (pp. 161-196)
 
@@ -82,6 +86,7 @@ the book land?": each row names a home or says why the harness leaves it to the 
 | Dataflow through services: REST and RPC (180) | §2.5 API compatibility; public APIs versioned and kept | guide |
 | Durable execution and workflows (187) | §2.5: a workflow step with a side effect is idempotent and replay-safe; the idempotency key of §2.4 | guide |
 | Event-driven architectures (189) | `derived.mechanism: outbox \| cdc \| event-log`; §2.7 single writer | record |
+| Summary (191) | the chapter's rules in one place; each is a row above, and §0 restates the premises in design order | guide |
 
 ## Part II — Distributed data
 
@@ -91,12 +96,13 @@ the book land?": each row names a home or says why the harness leaves it to the 
 |---|---|---|
 | Single-leader replication; synchronous versus asynchronous (198-200) | `durability.replication`; §2.6 "a confirmed write can be lost on failover — decide the tolerance" | record |
 | Setting up new followers; handling node outages (201-205) | `durability.failover`; §2.6 fence the old leader; backups beside replication (p.198) | record |
-| Implementation of replication logs (206) | the stack's | n/a |
+| Implementation of replication logs (206) | the stack record names the log type (statement / WAL shipping / logical / trigger); `durability.replication` cites it and `evolution` plans the rolling upgrade that log type allows (§2.6) | record · stack |
 | Problems with replication lag; solutions (209-214) | `durability.lag_budget_s`, `replica_reads: read-your-writes \| eventual`; row 7 (`replay_lag` exported and within budget) | gate |
 | Multi-leader replication; geographically distributed operation (215-219) | `durability.replication: multi-leader`; §3 "survive a whole region?" question; §2.6 cost of multi-region | record |
 | Sync engines and local-first software (220) | §3 "keep working with no internet and merge later?"; `multi-leader` with CRDT or application-level merge (§2.6) | record |
 | Dealing with conflicting writes (222) | §8 anti-pattern "LWW on wall clocks"; version vectors or a single decider | guide |
 | Leaderless replication; writing when a node is down; performance; multi-region; detecting concurrent writes (229-243) | `durability.replication: leaderless`; quorums are the stack's; §8 timestamp-ordering row | record |
+| Summary (243) | the chapter's rules in one place; each is a row above, and §0 restates the premises in design order | guide |
 
 ### Chapter 7 — Sharding (pp. 251-276)
 
@@ -108,6 +114,7 @@ the book land?": each row names a home or says why the harness leaves it to the 
 | Skewed workloads and relieving hot spots (263) | `workload.hot_keys`; Tier B1 shard skew | record |
 | Operations: automatic versus manual rebalancing; request routing (264-267) | the stack's (`stack-decision.md` records the datastore's rebalancing and routing model) | stack |
 | Sharding and secondary indexes: local versus global (268-271) | §2.1: a sharded secondary index is local (scatter/gather reads) or global (asynchronously updated) — name which in `model.indexes` | guide |
+| Summary (271) | the chapter's rules in one place; each is a row above, and §0 restates the premises in design order | guide |
 
 ### Chapter 8 — Transactions (pp. 277-343)
 
@@ -121,6 +128,7 @@ the book land?": each row names a home or says why the harness leaves it to the 
 | Serializability: actual serial execution; two-phase locking; serializable snapshot isolation (308-322) | the stack's implementation; §2.4 "pick serializable when you cannot tell a weaker level is safe" | stack |
 | Distributed transactions; two-phase commit; across different systems; database-internal (323-333) | §0 integrity without distributed transactions; §2.7 outbox/CDC instead of dual writes | guide |
 | Exactly-once message processing revisited (334) | §2.4 processed-message ids in the same transaction as the effect; row 5 idempotent retry | gate |
+| Summary (335) | the chapter's rules in one place; each is a row above, and §0 restates the premises in design order | guide |
 
 ### Chapter 9 — The trouble with distributed systems (pp. 345-399)
 
@@ -130,8 +138,9 @@ the book land?": each row names a home or says why the harness leaves it to the 
 | Unreliable clocks: monotonic versus time-of-day; synchronization and accuracy; relying on synchronized clocks (358-365) | Tier B5 (durations from a monotonic clock, offset exported); §8 "timestamp ordering of cross-node events" | gate (when distributed) |
 | Process pauses (366) | Tier B5 GC-pause budget; leases need fencing | guide |
 | Knowledge, truth, and lies: the majority rules; distributed locks and leases (371-376) | §0 "truth is a quorum; zombies are fenced with monotonic tokens"; `durability.failover` | guide |
-| Byzantine faults (377) | not assumed inside the trusted deployment; input validation at trust boundaries is the application-level analogue (`hardening`) | n/a |
+| Byzantine faults (377) | not tolerated inside the trusted deployment, as the book advises; the "weak forms of lying" it does guard against are mechanical: restore digests (`operational.cjs recovery`), input validation at every trust boundary (`hardening` rows), several time sources (§2.4, §2.6) | gate · guide |
 | System model and reality; formal methods and randomized testing (380-388) | §5 research (Jepsen/Elle); randomized, property-based and fault-injection tests for the distributed paths | research |
+| Summary (388) | the chapter's rules in one place; each is a row above, and §0 restates the premises in design order | guide |
 
 ### Chapter 10 — Consistency and consensus (pp. 401-450)
 
@@ -140,6 +149,7 @@ the book land?": each row names a home or says why the harness leaves it to the 
 | Linearizability: what makes a system linearizable; relying on it; implementing it; its cost (402-416) | §2.4 strict uniqueness needs one decider; §2.6 failover without consensus is unsafe; `replica_reads: read-your-writes` | guide |
 | ID generators and logical clocks; linearizable ID generators (417-424) | §2.4: unique or monotonic ids come from the database or a single decider, never from wall clocks; §8 row | guide |
 | Consensus: the many faces; consensus in practice; coordination services (425-439) | the stack's (Raft/Paxos inside the datastore or a coordination service); `durability.failover: automatic` only with a proven algorithm | stack |
+| Summary (440) | the chapter's rules in one place; each is a row above, and §0 restates the premises in design order | guide |
 
 ## Part III — Derived data
 
@@ -149,8 +159,9 @@ the book land?": each row names a home or says why the harness leaves it to the 
 |---|---|---|
 | Batch processing with Unix tools; log analysis; chain of commands; sorting versus in-memory aggregation (454-457) | `derived.mechanism: batch`; immutability of inputs; §2.7 | guide |
 | Distributed filesystems; object stores; distributed job orchestration (458-465) | the stack's (object storage as the lake, an orchestrator for jobs) | stack |
-| Batch processing models: MapReduce; dataflow engines; shuffling; joins and grouping; query languages; DataFrames (466-475) | engine internals; forge measures the job's outputs (Tier B3 completeness, correctness, freshness) | n/a |
+| Batch processing models: MapReduce; dataflow engines; shuffling; joins and grouping; query languages; DataFrames (466-475) | the application's batch jobs are deterministic and idempotent, so a failure is a re-run and the rebuild must equal live (`DATA_RECONCILE`, §2.7); join and grouping skew is the Tier B shard-skew metric; the engines themselves are the stack's | guide · gate |
 | Batch use cases: analytics; machine learning; serving derived data (476-481) | §2.7 "a batch job writes nothing record-at-a-time into production — bulk load and swap"; ML models are derived data and inherit erasure (§2.8) | record |
+| Summary (481) | the chapter's rules in one place; each is a row above, and §0 restates the premises in design order | guide |
 
 ### Chapter 12 — Stream processing (pp. 487-537)
 
@@ -163,6 +174,7 @@ the book land?": each row names a home or says why the harness leaves it to the 
 | Reasoning about time (518) | event time vs processing time; windows; late events counted (Tier B3 dropped stragglers) | gate (Tier B3) |
 | Stream joins (523) | guidance: join state is derived data with a time bound; nondeterminism of stream-table joins is accepted explicitly | guide |
 | Fault tolerance (526) | §2.7 deterministic idempotent consumers storing the triggering offset; effectively-once (row 5) | gate |
+| Summary (529) | the chapter's rules in one place; each is a row above, and §0 restates the premises in design order | guide |
 
 ### Chapter 13 — A philosophy of streaming systems (pp. 539-583)
 
@@ -175,6 +187,7 @@ the book land?": each row names a home or says why the harness leaves it to the 
 | Enforcing constraints (566) | §2.4 uniqueness via one decider; hard invariants vs apology workflows is the owner's call | record |
 | Timeliness and integrity (571) | §0 premise; `derived.freshness_s` (timeliness) vs reconcile (integrity) | gate |
 | Trust, but verify (575) | reconciliation (row 8), restore drill (row 7), `--strict-evidence`; §0 | gate |
+| Summary (579) | the chapter's rules in one place; each is a row above, and §0 restates the premises in design order | guide |
 
 ### Chapter 14 — Doing the right thing (pp. 585-601)
 
@@ -185,6 +198,7 @@ the book land?": each row names a home or says why the harness leaves it to the 
 | Consent and freedom of choice; privacy and use of data (591-593) | `retention.personal_data.<item>.purpose` and the optional `basis` (consent \| contract \| legal-obligation \| legitimate-interest); purpose limitation | record |
 | Data as assets and power; remembering the industrial revolution (594-595) | §0 "data about people is a toxic asset" — collect less, keep it shorter | guide |
 | Legislation and self-regulation (596) | `deletion.sla_days ≤ 30` (GDPR Art. 12(3), 17); domain recon's regulatory checklist in `requirements` Phase 0 | gate |
+| Summary (597) | the chapter's rules in one place; each is a row above, and §0 restates the premises in design order | guide |
 
 ## What the map shows
 
@@ -192,10 +206,12 @@ the book land?": each row names a home or says why the harness leaves it to the 
   measurable parts are seam verdicts or `data` rows (gate); the engineering judgement the book teaches
   is protocol prose that the review reads back (guide); the choice *between* technologies is the
   stack-selection protocol's (stack), which `DATA.md` cites and never re-argues.
-- **Deliberately not mechanized:** engine internals (LSM compaction, B-tree pages, MapReduce shuffles,
-  Raft), vendor behaviour (rebalancing, request routing), and Byzantine fault tolerance. forge builds
-  applications on these systems; it measures their *effects* on the application (row 4 indexes, row 7
-  lag and restore, Tier B3 pipeline SLIs) rather than re-implementing or re-testing the engines.
+- **Engine internals are not re-implemented, but every section still has a home.** LSM compaction,
+  B-tree pages, MapReduce shuffles, Raft, rebalancing and request routing are the stack's; forge pins
+  their application-visible effect (row 4 indexes, row 7 lag and restore, row 8 rebuild-equals-live,
+  Tier B shard skew and pipeline SLIs). Byzantine fault tolerance is declined on the book's own advice
+  for a trusted deployment, and the weak forms of lying it names are gates (digests, input validation,
+  several time sources). Each chapter's Summary row points back at the rows that carry its rules.
 - **Where the harness goes beyond the book:** the open-model load generator and the `dropped`
   budget (coordinated omission is a 2010s result the book cites in spirit), the migration lint
   catalogue (Squawk / strong_migrations), the GDPR one-month erasure SLA as a hard lint, and the
