@@ -497,7 +497,7 @@ grep -q 'All 26 commands' "$REPO_ROOT/README.md" && pass "README counts 26 comma
 grep -q '25 subcommand files (26 commands total)' "$REPO_ROOT/README.md" && pass "README structure counts updated" || fail "README structure count stale"
 [[ -f "$REPO_ROOT/guide/forge-android.md" ]] && pass "guide/forge-android.md exists" || fail "guide/forge-android.md missing"
 grep -q 'forge-android\.md' "$REPO_ROOT/guide/README.md" && pass "guide index links forge-android" || fail "guide index missing forge-android"
-grep -q '^## v3\.7\.6' "$REPO_ROOT/docs/project-changelog.md" && pass "changelog has v3.7.5 entry" || fail "changelog missing v3.7.5"
+grep -q '^## v3\.7\.7' "$REPO_ROOT/docs/project-changelog.md" && pass "changelog has v3.7.5 entry" || fail "changelog missing v3.7.5"
 grep -q '26 commands' "$REPO_ROOT/AGENTS.md" && pass "AGENTS.md counts 26 commands" || fail "AGENTS.md count stale"
 
 rm -rf "$T"
