@@ -9,6 +9,12 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same PR supersedes the run in flight. Master pushes always finish:
+# release policy verifies them.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test:
     name: ${{ matrix.name }}
@@ -23,7 +29,7 @@ jobs:
           - os: macos-latest
             name: Harness macOS test suites
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 20
     defaults:
       run:
         shell: bash
@@ -37,15 +43,10 @@ jobs:
           package-manager-cache: false
       - name: Run all suites
         run: |
-          set -e
           # Exercise macOS's system Bash and BSD tools, even if Homebrew is installed.
           if [[ "$RUNNER_OS" == macOS ]]; then export PATH="/usr/bin:/bin:/usr/sbin:/sbin:$PATH"; fi
-          fail=0
-          for t in tests/test-*.sh; do
-            echo "== $t"
-            bash "$t" || fail=1
-          done
-          exit $fail
+          # The 35 suites are independent; four at a time matches the hosted runners' cores.
+          bash scripts/run-suites.sh
       - name: Seam smoke (deterministic end-to-end pipeline)
         run: bash scripts/smoke-seam.sh
 
