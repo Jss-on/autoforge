@@ -89,6 +89,8 @@ RESEARCH="$REPO_ROOT/.claude/skills/forge/references/data-intensive-metrics-rese
 [[ $(grep -c "^## Row " "$RESEARCH") -eq 9 ]] && pass "research ledger: one section per gated metric (9)" || fail "research ledger: expected 9 metric sections"
 [[ $(grep -oE "https?://[^ )>]+" "$RESEARCH" | sort -u | wc -l) -ge 12 ]] && pass "research ledger: >= 12 distinct primary sources quoted" || fail "research ledger: too few sources"
 grep -q "data-intensive-metrics-research.md" "$PROTO" && pass "protocol §5 points at the research ledger" || fail "protocol does not reference the research ledger"
+grep -q "^## Source reading log" "$RESEARCH" && pass "research ledger: source reading log present" || fail "research ledger: no source reading log"
+[[ $(awk '/^## Source reading log/{f=1;next} /^## /{f=0} f && /^\| [^|-]/ && !/^\| Source/' "$RESEARCH" | wc -l) -ge 15 ]] && pass "research ledger: reading log has >= 15 source rows (one per quoted source)" || fail "research ledger: reading log too short"
 cmp -s "$RESEARCH" "$REPO_ROOT/claude-plugin/skills/forge/references/data-intensive-metrics-research.md" && pass "research ledger mirror: claude-plugin" || fail "research ledger mirror differs"
 for m in "$REPO_ROOT/claude-plugin/skills/forge/references/data-intensive-book-map.md" \
          "$REPO_ROOT/.agents/skills/forge/references/data-intensive-book-map.md" \

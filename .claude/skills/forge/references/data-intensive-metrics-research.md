@@ -114,6 +114,26 @@ between borrowing a connection and returning it to the pool"), both histograms i
 part of the client-side response time row 1 measures, which is why forge measures at the client and not
 at the engine.
 
+## Source reading log (what was read, how, on 2026-11-08)
+
+| Source | How it was read | Passages used above |
+|---|---|---|
+| SRE book, "Service Level Objectives" | full page, one fetch | percentiles over averages; client-side measurement; "as few SLOs as possible" |
+| SRE Workbook, "Data Processing Pipelines" | full page, one fetch | freshness format and Spotify's timeliness SLO; correctness via golden data; completeness definition and the daily audit; skew definition |
+| k6, "Open and closed models" | full page, one fetch | closed-model definition; "a closed model load test will wait"; coordinated omission named |
+| k6, "constant-arrival-rate" | full page, one fetch | "iterations start independently of system response"; preAllocatedVUs/maxVUs |
+| k6, metrics reference | full page, one fetch | `dropped_iterations` definition verbatim |
+| HdrHistogram README | full page, one fetch (short page) | corrected versus raw recording; the 1 ms/100 s stall example; `recordValueWithExpectedInterval` |
+| Elle, arXiv 2003.10554 | abstract page, one fetch | Adya-style dependency graph; sound and efficient checker definition |
+| Elle README (jepsen-io/elle) | full page, one fetch | the anomaly classes G0, G1a, G1b, G1c, G-Single, G2 and the checker-specific ones; the soundness statement; Jepsen history format |
+| strong_migrations README | full page, one fetch | the dangerous-operation table with reasons and safe alternatives |
+| Squawk rules | full page, one fetch | rule names (adding-not-nullable-field, changing-column-type, renaming-column, renaming-table, require-concurrent-index-creation) |
+| PostgreSQL, "The Cumulative Statistics System" | two fetches (page longer than one read); remainder holds no further lag statement | `write_lag`, `flush_lag`, `replay_lag`, `sent_lsn`, `replay_lsn` definitions |
+| AWS Well-Architected REL09-BP04 | full page, one fetch | the practice statement, anti-patterns, validation and timing steps |
+| OpenTelemetry database metrics | two fetches; remainder adds connection wait/use-time histograms | `db.client.operation.duration` histogram, unit, buckets, required attribute |
+| GDPR Article 17 and Article 12 | full pages, one fetch each | 17(1), 17(2); 12(3) one month, extendable by two |
+| UK Data Quality Framework | full page, one fetch | the six dimensions with definitions |
+
 ## Sources quoted here
 
 - Beyer et al., *Site Reliability Engineering*, "Service Level Objectives" — https://sre.google/sre-book/service-level-objectives/

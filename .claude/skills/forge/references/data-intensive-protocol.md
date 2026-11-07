@@ -143,7 +143,7 @@ p.77-80), and every materialized view or data cube in it is a derived dataset wi
 embeddings are rebuildable from the source and inherit its deletion obligation (p.145-149). N+1 is a
 defect: statement count must not grow with list length (p.68-69).
 
-**Storage engines (ch.4 pp.116-134).** Whether the store is log-structured (LSM-tree: memtable, SSTables, compaction, Bloom filters) or page-oriented (B-tree: in-place pages, write-ahead log) is the stack record's choice; what forge pins is the application-visible effect. An LSM store trades write amplification for compaction stalls that appear as p99 spikes under sustained writes; a B-tree store pays on every write but reads with fewer surprises. The SLO run (§5 row 1) at the pinned write rate, with `dropped = 0`, is where that effect shows; a tail that breaches the budget under compaction is a stack finding, not a tuning note. In-memory stores (p.133) still owe durability: their write-ahead log or snapshot cadence sets the RPO in `durability.backup`.
+**Storage engines (ch.4 pp.116-134).** Whether the store is log-structured or page-oriented is the stack record's choice; what forge pins is the application-visible effect. A log-structured engine appends to a memtable, flushes sorted string tables (SSTables) in segments, merges them by compaction (size-tiered or leveled) and skips absent keys with Bloom filters; its cost is write amplification and compaction stalls. A B-tree keeps fixed-size pages in a balanced tree with a high branching factor, updates pages in place under a write-ahead log, and pays a page write per update; secondary indexes, covering indexes that store values within the index, clustered indexes and in-memory stores are variations on the same two designs. An LSM store trades write amplification for compaction stalls that appear as p99 spikes under sustained writes; a B-tree store pays on every write but reads with fewer surprises. The SLO run (§5 row 1) at the pinned write rate, with `dropped = 0`, is where that effect shows; a tail that breaches the budget under compaction is a stack finding, not a tuning note. In-memory stores (p.133) still owe durability: their write-ahead log or snapshot cadence sets the RPO in `durability.backup`.
 
 **Relationships and query languages (ch.3 pp.75-100).** Many-to-one and many-to-many relationships (a
 person's school and employer, a post's author, a region's people) need shared entities with identifiers
@@ -253,7 +253,9 @@ change log, by batch and by stream alike, instead of writing each from the appli
 Unbundling the database means composing storage technologies (a store, an index, a cache, a queue) with
 dataflow between them, each maintained by exactly one consumer of the log, and designing the application
 itself as stream transformers whose state is derived and observable: reads are queries over derived state
-with a write-to-read latency the design chooses. Correctness then rests on end-to-end measures the book
+with a write-to-read latency the design chooses. The application's own semantics define correct — a purchase charged twice, a credit score computed from
+corrupted history, a reputation lost forever to a duplicated message — and no isolation level addresses
+that by itself; the solution is end-to-end. Correctness then rests on end-to-end measures the book
 names: an operation identifier generated at the end (the client) and carried through every hop makes
 retries idempotent (the end-to-end argument); uniqueness and other constraints are enforced by routing all
 requests for one key through a single partition or log so they are totally ordered, and where the business
@@ -293,8 +295,11 @@ restart); liveness is a probe (`/healthz`, `/readyz`), never connection state (`
 depth is bounded and exported (`Tier B` dead-letter depth); the SLO run of §5 row 1 is the measurement of
 tail latency these effects produce.
 
-**Clocks (pp.358-365).** Time-of-day clocks drift, jump on NTP correction and leap seconds, and disagree
-between machines; monotonic clocks measure elapsed time but mean nothing across nodes. Rules: durations
+**Clocks (pp.358-365).** Time-of-day (wall-clock) clocks are synchronized over the network by NTP from GPS-
+or atomic-clock-backed servers, yet drift between synchronizations, jump backwards on correction, smear or
+repeat leap seconds, and disagree between machines by milliseconds in a good datacenter and by minutes when
+misconfigured; monotonic clocks measure elapsed time with no meaning across nodes; a clock's confidence
+interval (as Spanner's TrueTime exposes it) is the honest representation of "now". Rules: durations
 (timeouts, latencies, the samples `data-load.cjs` records) use a monotonic clock; ordering writes by a
 wall-clock timestamp (last-write-wins) silently drops concurrent writes — §8 names it; a declared clock
 discipline (`Tier B`: more than one time source, skew monitored and alerted, confidence intervals where a
@@ -366,7 +371,9 @@ the freshness measure (§2.7); dead-letter depth and oldest unprocessed event ag
 `derived.*.rerun: idempotent` covers redelivery.
 
 ### 2.10 Decisions about people — predictive analytics, privacy, consent (DDIA2 ch.14; the accountability rows)
-When the system's output is a decision about a person — a loan, an insurance price, a fraud flag, a
+Technology shapes society and the law follows: the book asks engineers to take responsibility for the
+ethical consequences of the systems they build, across countries whose regulation differs, rather than to
+treat data as a neutral asset. When the system's output is a decision about a person — a loan, an insurance price, a fraud flag, a
 ranking, a feed — the data architecture carries ethical obligations the book spells out. **Predictive
 analytics and bias (pp.586-588):** a model learns the bias in its training data and can discriminate
 systematically on protected traits even without seeing them; a decision must be explainable and correctable
