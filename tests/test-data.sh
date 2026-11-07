@@ -75,6 +75,10 @@ if [[ -n "${DDIA_PAGES_JSON:-}" && -f "${DDIA_PAGES_JSON}" ]]; then
 else
   pass "book content check skipped (set DDIA_PAGES_JSON to run tests/book-concepts-verify.cjs)"
 fi
+LEDGER_OUT="$(node "$REPO_ROOT/tests/book-ledger-verify.cjs" "$REPO_ROOT" 2>&1)" && pass "section ledger: $(printf '%s' "$LEDGER_OUT" | grep BOOK_LEDGER_VERIFY)" || fail "section ledger: $(printf '%s' "$LEDGER_OUT" | grep -vE '^BOOK_LEDGER:' | head -5 | tr '\n' ' ')"
+[[ $(wc -l < "$REPO_ROOT/tests/fixtures/data/ddia2-toc.tsv") -eq 217 ]] && pass "table-of-contents fixture: 216 sections + header" || fail "table-of-contents fixture: unexpected line count"
+grep -q "data-intensive-section-ledger.md" "$PROTO" && pass "protocol §10 points at the section ledger" || fail "protocol does not reference the section ledger"
+cmp -s "$REPO_ROOT/.claude/skills/forge/references/data-intensive-section-ledger.md" "$REPO_ROOT/claude-plugin/skills/forge/references/data-intensive-section-ledger.md" && pass "section ledger mirror: claude-plugin" || fail "section ledger mirror differs"
 RESEARCH="$REPO_ROOT/.claude/skills/forge/references/data-intensive-metrics-research.md"
 [[ -s "$RESEARCH" ]] && pass "metrics research ledger exists" || fail "metrics research ledger missing"
 [[ $(grep -c "^## Row " "$RESEARCH") -eq 9 ]] && pass "research ledger: one section per gated metric (9)" || fail "research ledger: expected 9 metric sections"
